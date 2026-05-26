@@ -1,41 +1,16 @@
-async function login(){
+function login(){
 
-    const email =
-    document.getElementById("email").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-    const password =
-    document.getElementById("password").value;
-
-    const response = await fetch(
-        "http://127.0.0.1:8000/login",
-        {
-            method:"POST",
-
-            headers:{
-                "Content-Type":"application/json"
-            },
-
-            body:JSON.stringify({
-                email:email,
-                password:password
-            })
-        }
-    );
-
-    const data = await response.json();
-
-    console.log(data);
-
-    if(response.ok){
-
-        alert("ログイン成功");
-
-        location.href = "files.html";
-
-    }else{
-
-        alert("ログイン失敗");
+    if(email === "" || password === ""){
+        alert("入力してください");
+        return;
     }
+
+    alert("ログイン成功");
+
+    location.href = "files.html";
 }
 function register(){
 
@@ -55,12 +30,6 @@ function register(){
     }
 
     alert("アカウント作成成功");
-
-    location.href = "login.html";
-}
-function logout(){
-
-    alert("ログアウトしました");
 
     location.href = "login.html";
 }
