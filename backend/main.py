@@ -1,33 +1,52 @@
+# FastAPI起動
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
 
+# ログインAPI
+from backend.routes.login import (
+    router as login_router
+)
+
+# 容量API
+from backend.routes.storage import (
+    router as storage_router
+)
+
+
+# アプリ作成
 app = FastAPI()
 
 
-@app.get("/", response_class=HTMLResponse)
+# ==========================
+# トップ画面
+# ==========================
+@app.get("/")
 def home():
 
     return """
     <h1>クラウドストレージ</h1>
 
-    <form>
+    <input placeholder='ユーザー名'>
 
-      <input placeholder="ユーザー名">
+    <br><br>
 
-      <br><br>
+    <input
+    type='password'
+    placeholder='パスワード'>
 
-      <input
-      type="password"
-      placeholder="パスワード"
-      >
+    <br><br>
 
-      <br><br>
-
-      <button>
-
-      ログイン
-
-      </button>
-
-    </form>
+    <button>
+    ログイン
+    </button>
     """
+
+
+# ログイン機能追加
+app.include_router(
+    login_router
+)
+
+# 容量機能追加
+app.include_router(
+    storage_router
+)
