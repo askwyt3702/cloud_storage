@@ -8,10 +8,59 @@ UPLOAD_DIR = "uploads"
 
 
 # =====================================
+# ファイル名の無害化（サニタイズ）
+#
+# 目的:
+#   パストラバーサル攻撃を防ぐ
+#   例: "../../etc/passwd" のような
+#       危険なパスを無効化する
+#
+# 処理内容:
+#   1. basename() でパス部分を除去
+#      "../../etc/passwd" → "passwd"
+#   2. uploadsフォルダ内に収まるか確認
+#   3. 空文字・ドットのみは拒否
+#
+# 引数:
+#   filename : ユーザーから受け取ったファイル名
+#
+# 戻り値:
+#   安全なファイル名（str）
+#   危険と判断した場合は None
+# =====================================
+def sanitize_filename(filename: str) -> str | None:
+
+    # パス部分をすべて取り除く
+    # "../../etc/passwd" → "passwd"
+    # "/absolute/path/file.txt" → "file.txt"
+    safe_name = os.path.basename(filename)
+
+
+    # 空文字・"." や ".." は拒否
+    if not safe_name or safe_name in (".", ".."):
+
+        return None
+
+
+    # 最終確認：uploadsフォルダの外に出ていないか
+    expected_dir = os.path.abspath(UPLOAD_DIR)
+    full_path    = os.path.abspath(
+        os.path.join(UPLOAD_DIR, safe_name)
+    )
+
+    if not full_path.startswith(expected_dir + os.sep):
+
+        return None
+
+
+    return safe_name
+
+
+# =====================================
 # ファイルパス取得
 #
 # 引数:
-#   filename : ファイル名
+#   filename : ファイル名（sanitize済みのもの）
 #
 # 戻り値:
 #   ファイルのフルパス（文字列）
@@ -46,12 +95,11 @@ def file_exists(filename: str) -> bool:
 # =====================================
 def list_files() -> list:
 
-    # uploadsフォルダがなければ空リストを返す
     if not os.path.exists(UPLOAD_DIR):
 
         return []
 
-    # ファイルのみ取得（フォルダは除外）
+
     files = [
         f for f in os.listdir(UPLOAD_DIR)
         if os.path.isfile(
@@ -69,8 +117,7 @@ def list_files() -> list:
 #   filename : ファイル名
 #
 # 戻り値:
-#   ファイルサイズ（バイト）
-#   ファイルが存在しない場合は 0
+#   ファイルサイズ（バイト）、存在しない場合は 0
 # =====================================
 def get_file_size(filename: str) -> int:
 
@@ -84,7 +131,7 @@ def get_file_size(filename: str) -> int:
 
 
 # =====================================
-# ファイル保存（担当Aのupload.pyから呼ばれる想定）
+# ファイル保存（担当AのuploadAPIから呼ばれる想定）
 #
 # 引数:
 #   filename : 保存するファイル名
@@ -98,7 +145,6 @@ def save_file(filename: str, data: bytes) -> bool:
 
     try:
 
-        # uploadsフォルダがなければ作成
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         file_path = get_file_path(filename)
