@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クラウドストレージ</title>
+
+  <link rel="stylesheet" href="style.css">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+/>
+</head>
+
+<body>
+
+  <div class="cloud-box">
+
+    <div class="top-area">
+
+      <div>
+        <h1>☁ Cloud Storage</h1>
+        <p class="storage-text">
+          使用容量：3GB / 10GB
+        </p>
+      </div>
+
+      <button class="logout-btn" onclick="logout()">
+        ログアウト
+      </button>
+
+    </div>
+
+    <div class="upload-buttons">
+
+      <input type="file" id="fileInput" hidden>
+
+      <button onclick="document.getElementById('fileInput').click()">
+        📁 ファイル選択
+      </button>
+
+      <button>
+        ⬆ アップロード
+      </button>
+
+    </div>
+
+    <div class="drop-area">
+      <p class="drop-title">
+        ファイルをドラッグ＆ドロップ
+      </p>
+
+      <p class="drop-sub">
+        またはファイルを選択
+      </p>
+    </div>
+
+   <div class="file-list">
+
+  <div class="file-card">
+
+    <div class="file-info">
+
+      <div class="file-icon pdf-bg">
+        <i class="fa-solid fa-file-pdf"></i>
+      </div>
+
+      <div>
+        <div class="file-name">
+          report.pdf
+        </div>
+
+        <div class="file-detail">
+          PDF ・ 2.3MB
+        </div>
+      </div>
+
+    </div>
+
+    <button class="download-btn">
+      ↓取得
+    </button>
+
+  </div>
+
+
+
+
+
+  <div class="file-card">
+
+    <div class="file-info">
+
+      <div class="file-icon image-bg">
+        <i class="fa-solid fa-file-image"></i>
+      </div>
+
+      <div>
+        <div class="file-name">
+          photo.jpg
+        </div>
+
+        <div class="file-detail">
+          JPG ・ 5.1MB
+        </div>
+      </div>
+
+    </div>
+
+    <button class="download-btn">
+      ↓取得
+    </button>
+
+  </div>
+
+
+
+
+
+  <div class="file-card">
+
+    <div class="file-info">
+
+      <div class="file-icon word-bg">
+        <i class="fa-solid fa-file-word"></i>
+      </div>
+
+      <div>
+        <div class="file-name">
+          test.docx
+        </div>
+
+        <div class="file-detail">
+          DOCX ・ 1.4MB
+        </div>
+      </div>
+
+    </div>
+
+    <button class="download-btn">
+      ↓取得
+    </button>
+
+  </div>
+
+</div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
