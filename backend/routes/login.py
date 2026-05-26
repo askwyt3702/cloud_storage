@@ -53,8 +53,6 @@ def logout():
 
     return {
 
-
         "success": True
-
 
     }
