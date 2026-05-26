@@ -11,6 +11,16 @@ from backend.routes.storage import (
     router as storage_router
 )
 
+# ダウンロード・削除API  ← 担当B追加
+from backend.routes.download import (
+    router as download_router
+)
+
+# アップロードAPI  ← 担当A実装後に有効化
+# from backend.routes.upload import (
+#     router as upload_router
+# )
+
 
 # アプリ作成
 app = FastAPI()
@@ -50,3 +60,13 @@ app.include_router(
 app.include_router(
     storage_router
 )
+
+# ダウンロード・削除機能追加  ← 担当B追加
+app.include_router(
+    download_router
+)
+
+# アップロード機能追加  ← 担当A実装後に有効化
+# app.include_router(
+#     upload_router
+# )
