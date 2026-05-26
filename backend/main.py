@@ -21,10 +21,10 @@ from backend.routes.download import (
 #     router as user_router
 # )
 
-# アップロードAPI  ← 担当A実装後に有効化
-# from backend.routes.upload import (
-#     router as upload_router
-# )
+# アップロードAPI
+from backend.routes.upload import (
+    router as upload_router
+)
 
 
 # アプリ作成
@@ -72,7 +72,7 @@ app.include_router(
 )
 
 
-# アップロード機能追加  ← 担当A実装後に有効化
-# app.include_router(
-#     upload_router
-# )
+# アップロード機能追加
+app.include_router(
+    upload_router
+)
