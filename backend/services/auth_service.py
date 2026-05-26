@@ -1,6 +1,6 @@
 # =====================================
 # 認証サービス
-# ログイン判定を行う
+# ユーザー名とパスワードを確認
 # =====================================
 
 def login_user(
@@ -8,11 +8,17 @@ def login_user(
     password
 ):
 
-    # 仮ユーザー
+    # 仮アカウント
+    correct_username = "admin"
+
+    correct_password = "1234"
+
+
+    # 一致判定
     if (
-        username == "admin"
+        username == correct_username
         and
-        password == "1234"
+        password == correct_password
     ):
 
         return True

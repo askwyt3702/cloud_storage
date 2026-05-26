@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-# 認証関数を読み込む
+# 認証サービス読み込み
 from backend.services.auth_service import (
     login_user
 )
@@ -21,26 +21,31 @@ def login(
 
 ):
 
-    # 認証処理実行
+    # 認証実行
     result = login_user(
         username,
         password
     )
 
 
+    # 成功
     if result:
 
         return {
+
             "success": True,
+
             "message": "ログイン成功"
+
         }
 
 
+    # 失敗
     return {
 
         "success": False,
 
-        "message": "ユーザー名またはパスワード違います"
+        "message": "ユーザー名またはパスワードが違います"
 
     }
 
