@@ -10,7 +10,8 @@ from backend.services.file_service import (
 )
 
 from backend.services.auth_service import (
-    is_logged_in           # ← 認証チェック
+    is_logged_in,          # ← 認証チェック
+    get_current_user       # ← ログイン中ユーザー取得
 )
 
 
@@ -134,7 +135,7 @@ def delete_file(filename: str):
 
     return {
         "success": True,
-        "user": None,
+        "user": get_current_user(),
         "message": f"{safe_name} を削除しました"
     }
 

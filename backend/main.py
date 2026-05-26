@@ -16,9 +16,10 @@ from backend.routes.download import (
     router as download_router
 )
 
-from backend.routes.user import (
-    router as user_router
-)
+# user.py はルートなし（現在未使用）
+# from backend.routes.user import (
+#     router as user_router
+# )
 
 # アップロードAPI  ← 担当A実装後に有効化
 # from backend.routes.upload import (
@@ -70,9 +71,6 @@ app.include_router(
     download_router
 )
 
-app.include_router(
-    user_router
-)
 
 # アップロード機能追加  ← 担当A実装後に有効化
 # app.include_router(
