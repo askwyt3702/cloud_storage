@@ -1,1 +1,39 @@
-aaa
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新規登録</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="login-box">
+
+    <h1>アカウント作成</h1>
+
+    <input type="text" id="username" placeholder="ユーザー名">
+
+    <input type="email" id="register-email" placeholder="メールアドレス">
+
+    <input type="password" id="register-password" placeholder="パスワード">
+
+    <input type="password" id="confirm-password" placeholder="パスワード確認">
+
+    <button onclick="register()">
+      新規登録
+    </button>
+
+    <p class="register-text">
+      既にアカウントをお持ちの方は
+      <a href="login.html">ログイン</a>
+    </p>
+
+  </div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
