@@ -6,7 +6,8 @@ from fastapi.responses import FileResponse
 from backend.services.file_service import (
     get_file_path,
     file_exists,
-    sanitize_filename      # ← ファイル名の無害化
+    sanitize_filename,     # ← ファイル名の無害化
+    list_files             # ← ファイル一覧取得
 )
 
 from backend.services.auth_service import (
@@ -26,6 +27,42 @@ from security.logger import (
 
 
 router = APIRouter()
+
+
+# =====================================
+# ファイル一覧取得API
+#
+# URL:
+# GET /files
+#
+# エラー:
+#   401 : 未ログイン
+# =====================================
+@router.get("/files")
+def get_files():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "LIST", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② ファイル一覧取得
+    current_user = get_current_user()
+    files = list_files(current_user)
+
+    log_success(current_user, "LIST")
+
+    return {
+        "success": True,
+        "user": current_user,
+        "files": files
+    }
 
 
 # =====================================
