@@ -20,6 +20,25 @@ MAX_STORAGE_GB = 10
 #   used : 使用量（GB）
 #   max  : 最大容量（GB）
 # =====================================
+# =====================================
+# 使用バイト数取得（容量チェック用）
+#
+# 引数:
+#   username : ユーザー名
+#
+# 戻り値:
+#   使用バイト数（int）
+# =====================================
+def get_used_bytes(username: str) -> int:
+
+    files = list_files(username)
+
+    return sum(
+        get_file_size(username, f)
+        for f in files
+    )
+
+
 def calculate_storage(username: str) -> dict:
 
     # ユーザーの全ファイルを取得

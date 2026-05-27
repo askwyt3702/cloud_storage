@@ -16,6 +16,13 @@ from security.logger import (
     log_error      # ← エラーログ
 )
 
+from backend.services.storage_service import (
+    get_used_bytes          # ← 使用量チェック
+)
+
+# 最大容量：10GB
+MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024
+
 
 router = APIRouter()
 
@@ -67,7 +74,21 @@ async def upload_file(file: UploadFile = File(...)):
     data = await file.read()
 
 
-    # ④ ファイルの保存
+    # ④ 容量制限チェック
+    #    現在の使用量 + 新ファイルが 10GB を超えたら拒否
+    used_bytes = get_used_bytes(username)
+
+    if used_bytes + len(data) > MAX_STORAGE_BYTES:
+
+        log_failed(username, "UPLOAD", "容量不足")
+
+        raise HTTPException(
+            status_code=413,
+            detail="容量が足りません（上限10GB）"
+        )
+
+
+    # ⑤ ファイルの保存
     #    uploads/{username}/{filename} に保存される
     success = save_file(username, safe_name, data)
 

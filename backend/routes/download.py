@@ -7,7 +7,8 @@ from backend.services.file_service import (
     get_file_path,
     file_exists,
     sanitize_filename,     # ← ファイル名の無害化
-    list_files             # ← ファイル一覧取得
+    list_files,            # ← ファイル一覧取得
+    get_file_size          # ← ファイルサイズ取得
 )
 
 from backend.services.auth_service import (
@@ -27,6 +28,29 @@ from security.logger import (
 
 
 router = APIRouter()
+
+
+# =====================================
+# 内部関数：バイトを読みやすい単位に変換
+#
+# 例:
+#   500      → "500B"
+#   1500     → "1.5KB"
+#   2000000  → "1.9MB"
+# =====================================
+def _format_size(size_bytes: int) -> str:
+
+    if size_bytes < 1024:
+        return f"{size_bytes}B"
+
+    elif size_bytes < 1024 ** 2:
+        return f"{round(size_bytes / 1024, 1)}KB"
+
+    elif size_bytes < 1024 ** 3:
+        return f"{round(size_bytes / (1024 ** 2), 1)}MB"
+
+    else:
+        return f"{round(size_bytes / (1024 ** 3), 2)}GB"
 
 
 # =====================================
@@ -52,9 +76,16 @@ def get_files():
         )
 
 
-    # ② ファイル一覧取得
+    # ② ファイル一覧取得（サイズ付き）
     current_user = get_current_user()
-    files = list_files(current_user)
+
+    files = [
+        {
+            "name": f,
+            "size": _format_size(get_file_size(current_user, f))
+        }
+        for f in list_files(current_user)
+    ]
 
     log_success(current_user, "LIST")
 
