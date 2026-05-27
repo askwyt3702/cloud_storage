@@ -4,8 +4,11 @@ body{
     font-family:sans-serif;
 
     background:
-    radial-gradient(circle at top left,#1e3a8a,#020617 45%),
-    radial-gradient(circle at bottom right,#0f172a,#020617 40%);
+    linear-gradient(
+        135deg,
+        #0f172a,
+        #1e293b
+    );
 
     min-height:100vh;
 
@@ -17,12 +20,13 @@ body{
 }
 
 .login-box{
+
     background:#1e293b;
 
-    padding:40px;
-
-    width:90%;
+    width:100%;
     max-width:400px;
+
+    padding:40px;
 
     border-radius:20px;
 
@@ -31,18 +35,26 @@ body{
 
     gap:20px;
 
-    box-shadow:0 0 20px rgba(0,0,0,0.4);
+    box-shadow:
+    0 0 20px rgba(0,0,0,0.3);
 }
 
 h1{
     color:white;
+
     text-align:center;
+
+    font-size:32px;
+
+    margin-bottom:10px;
 }
 
 input{
+
     padding:15px;
 
     border:none;
+
     border-radius:10px;
 
     background:#334155;
@@ -50,56 +62,60 @@ input{
     color:white;
 
     font-size:16px;
+
+    outline:none;
+}
+
+input:focus{
+
+    border:
+    1px solid #60a5fa;
 }
 
 button{
-    padding:13px 22px;
+
+    padding:15px;
 
     border:none;
 
-    border-radius:14px;
+    border-radius:10px;
 
-    background:
-    linear-gradient(
-        135deg,
-        #2563eb,
-        #3b82f6
-    );
+    background:#2563eb;
 
     color:white;
 
-    font-size:15px;
+    font-size:16px;
+
     font-weight:bold;
 
     cursor:pointer;
 
     transition:0.3s;
-
-    box-shadow:
-    0 4px 15px rgba(37,99,235,0.3);
 }
 
 button:hover{
 
-    transform:
-    translateY(-2px);
-
-    box-shadow:
-    0 8px 25px rgba(59,130,246,0.45);
+    background:#1d4ed8;
 }
+
 .register-text{
-    color:white;
+
+    color:#cbd5e1;
+
     text-align:center;
+
     font-size:14px;
 }
 
 .register-text a{
+
     color:#60a5fa;
+
     text-decoration:none;
-    font-weight:bold;
 }
 
 .register-text a:hover{
+
     text-decoration:underline;
 }
 .files-container{
@@ -119,13 +135,7 @@ button:hover{
     color:white;
 }
 
-.logout-btn{
-    background:#ef4444;
-}
 
-.logout-btn:hover{
-    background:#dc2626;
-}
 
 .storage-box{
     background:#1e293b;
@@ -164,24 +174,9 @@ button:hover{
     margin-bottom:30px;
 }
 
-.file-list{
-    display:flex;
-    flex-direction:column;
 
-    gap:15px;
-}
 
-.file-item{
-    background:#1e293b;
 
-    color:white;
-
-    padding:20px;
-
-    border-radius:12px;
-
-    font-size:18px;
-}
 .cloud-box{
     width:90%;
     max-width:900px;
@@ -251,11 +246,7 @@ button:hover{
     transform:scale(1.01);
 }
 
-.drop-area:hover{
-    background:rgba(96,165,250,0.1);
 
-    transform:scale(1.01);
-}
 
 .drop-title{
     font-size:22px;
@@ -268,12 +259,7 @@ button:hover{
     color:#cbd5e1;
 }
 
-.file-list{
-    display:flex;
-    flex-direction:column;
 
-    gap:15px;
-}
 
 .file-item{
     display:flex;
@@ -431,13 +417,15 @@ button:hover{
     transition:0.35s;
 
     backdrop-filter:blur(15px);
+    animation:
+    fadeUp 0.7s ease;
 }
 
 .file-card:hover{
 
     transform:
-    translateY(-5px)
-    scale(1.01);
+    translateY(-8px)
+    scale(1.02);
 
     background:
     linear-gradient(
@@ -447,18 +435,11 @@ button:hover{
     );
 
     box-shadow:
+    0 0 25px rgba(96,165,250,0.35),
     0 10px 30px rgba(37,99,235,0.18);
 }
 
-.file-card:hover{
-    transform:translateY(-4px);
 
-    box-shadow:
-    0 0 20px rgba(59,130,246,0.25);
-
-    background:
-    rgba(71,85,105,0.9);
-}
 
 .file-info{
     display:flex;
@@ -505,6 +486,65 @@ button:hover{
 
 .file-detail{
     color:#cbd5e1;
+
+    font-size:14px;
+}
+
+
+.file-card{
+
+    animation:
+    fadeUp 0.6s ease;
+}
+@keyframes fadeUp{
+
+    from{
+        opacity:0;
+
+        transform:
+        translateY(25px);
+    }
+
+    to{
+        opacity:1;
+
+        transform:
+        translateY(0);
+    }
+}
+.user-area{
+    display:flex;
+    align-items:center;
+
+    gap:15px;
+}
+
+.user-name{
+    color:white;
+
+    background:
+    rgba(51,65,85,0.8);
+
+    padding:12px 18px;
+
+    border-radius:14px;
+
+    font-size:15px;
+
+    border:
+    1px solid rgba(255,255,255,0.08);
+
+    backdrop-filter:blur(10px);
+
+    box-shadow:
+    0 0 15px rgba(59,130,246,0.12);
+}
+.user-name{
+    color:white;
+
+    text-align:right;
+
+    margin-bottom:10px;
 
     font-size:14px;
 }
