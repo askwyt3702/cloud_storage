@@ -1,5 +1,6 @@
 # FastAPI起動
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 # ログインAPI
 from backend.routes.login import (
@@ -37,7 +38,7 @@ app = FastAPI()
 @app.get("/")
 def home():
 
-    return """
+    return HTMLResponse(content="""
     <h1>クラウドストレージ</h1>
 
     <input placeholder='ユーザー名'>
@@ -53,7 +54,7 @@ def home():
     <button>
     ログイン
     </button>
-    """
+    """)
 
 
 # ログイン機能追加
