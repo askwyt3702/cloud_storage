@@ -1,5 +1,10 @@
 import os
 
+from security.logger import (
+    log_success,   # ← 成功ログ
+    log_error      # ← エラーログ
+)
+
 
 # =====================================
 # ファイル保存先ディレクトリ
@@ -148,6 +153,9 @@ def save_file(username: str, filename: str, data: bytes) -> bool:
 
         return True
 
-    except Exception:
+    except Exception as e:
+
+        # 失敗理由をログに記録
+        log_error(f"ファイル保存失敗: {username}/{filename} - {e}")
 
         return False

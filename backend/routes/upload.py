@@ -10,6 +10,12 @@ from backend.services.auth_service import (
     get_current_user       # ← ログイン中ユーザー取得
 )
 
+from security.logger import (
+    log_success,   # ← 成功ログ
+    log_failed,    # ← 失敗ログ
+    log_error      # ← エラーログ
+)
+
 
 router = APIRouter()
 
@@ -34,6 +40,8 @@ async def upload_file(file: UploadFile = File(...)):
     # ① 認証チェック
     if not is_logged_in():
 
+        log_failed("不明", "UPLOAD", "未ログイン")
+
         raise HTTPException(
             status_code=401,
             detail="ログインが必要です"
@@ -42,9 +50,12 @@ async def upload_file(file: UploadFile = File(...)):
 
     # ② ファイル名の無害化
     #    例: "../../etc/passwd" → "passwd" に変換
+    username = get_current_user()
     safe_name = sanitize_filename(file.filename)
 
     if not safe_name:
+
+        log_failed(username, "UPLOAD", f"不正なファイル名: {file.filename}")
 
         raise HTTPException(
             status_code=400,
@@ -58,7 +69,6 @@ async def upload_file(file: UploadFile = File(...)):
 
     # ④ ファイルの保存
     #    uploads/{username}/{filename} に保存される
-    username = get_current_user()
     success = save_file(username, safe_name, data)
 
     if not success:
@@ -68,6 +78,8 @@ async def upload_file(file: UploadFile = File(...)):
             detail="ファイルの保存に失敗しました"
         )
 
+
+    log_success(username, f"UPLOAD: {safe_name}")
 
     return {
         "success": True,

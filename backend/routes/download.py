@@ -18,6 +18,12 @@ from security.permission import (
     check_permission       # ← 権限チェック
 )
 
+from security.logger import (
+    log_success,   # ← 成功ログ
+    log_failed,    # ← 失敗ログ
+    log_error      # ← エラーログ
+)
+
 
 router = APIRouter()
 
@@ -43,6 +49,8 @@ def download_file(filename: str):
     # ① 認証チェック
     if not is_logged_in():
 
+        log_failed("不明", "DOWNLOAD", "未ログイン")
+
         raise HTTPException(
             status_code=401,
             detail="ログインが必要です"
@@ -54,6 +62,8 @@ def download_file(filename: str):
     current_user = get_current_user()
 
     if not check_permission(current_user, current_user):
+
+        log_failed(current_user, "DOWNLOAD", "権限なし")
 
         raise HTTPException(
             status_code=403,
@@ -67,6 +77,8 @@ def download_file(filename: str):
 
     if not safe_name:
 
+        log_failed(current_user, "DOWNLOAD", f"不正なファイル名: {filename}")
+
         raise HTTPException(
             status_code=400,
             detail="ファイル名が不正です"
@@ -76,6 +88,8 @@ def download_file(filename: str):
     # ④ ファイルの存在チェック
     if not file_exists(current_user, safe_name):
 
+        log_failed(current_user, "DOWNLOAD", f"ファイルなし: {safe_name}")
+
         raise HTTPException(
             status_code=404,
             detail=f"ファイルが見つかりません: {safe_name}"
@@ -84,6 +98,8 @@ def download_file(filename: str):
 
     # ⑤ ダウンロード実行
     file_path = get_file_path(current_user, safe_name)
+
+    log_success(current_user, f"DOWNLOAD: {safe_name}")
 
     return FileResponse(
         path=file_path,
@@ -114,6 +130,8 @@ def delete_file(filename: str):
     # ① 認証チェック
     if not is_logged_in():
 
+        log_failed("不明", "DELETE", "未ログイン")
+
         raise HTTPException(
             status_code=401,
             detail="ログインが必要です"
@@ -126,6 +144,8 @@ def delete_file(filename: str):
 
     if not check_permission(current_user, current_user):
 
+        log_failed(current_user, "DELETE", "権限なし")
+
         raise HTTPException(
             status_code=403,
             detail="このファイルを削除する権限がありません"
@@ -137,6 +157,8 @@ def delete_file(filename: str):
 
     if not safe_name:
 
+        log_failed(current_user, "DELETE", f"不正なファイル名: {filename}")
+
         raise HTTPException(
             status_code=400,
             detail="ファイル名が不正です"
@@ -145,6 +167,8 @@ def delete_file(filename: str):
 
     # ④ ファイルの存在チェック
     if not file_exists(current_user, safe_name):
+
+        log_failed(current_user, "DELETE", f"ファイルなし: {safe_name}")
 
         raise HTTPException(
             status_code=404,
@@ -162,6 +186,8 @@ def delete_file(filename: str):
             detail="ファイルの削除に失敗しました"
         )
 
+
+    log_success(current_user, f"DELETE: {safe_name}")
 
     return {
         "success": True,
@@ -189,6 +215,9 @@ def _delete_file_from_storage(username: str, filename: str) -> bool:
         os.remove(file_path)
         return True
 
-    except Exception:
+    except Exception as e:
+
+        # 失敗理由をログに記録
+        log_error(f"ファイル削除失敗: {username}/{filename} - {e}")
 
         return False
