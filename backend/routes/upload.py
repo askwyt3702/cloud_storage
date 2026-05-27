@@ -57,7 +57,9 @@ async def upload_file(file: UploadFile = File(...)):
 
 
     # ④ ファイルの保存
-    success = save_file(safe_name, data)
+    #    uploads/{username}/{filename} に保存される
+    username = get_current_user()
+    success = save_file(username, safe_name, data)
 
     if not success:
 
@@ -69,6 +71,6 @@ async def upload_file(file: UploadFile = File(...)):
 
     return {
         "success": True,
-        "user": get_current_user(),
+        "user": username,
         "message": f"{safe_name} をアップロードしました"
     }

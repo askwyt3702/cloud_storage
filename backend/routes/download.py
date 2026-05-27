@@ -14,6 +14,10 @@ from backend.services.auth_service import (
     get_current_user       # ← ログイン中ユーザー取得
 )
 
+from security.permission import (
+    check_permission       # ← 権限チェック
+)
+
 
 router = APIRouter()
 
@@ -29,6 +33,7 @@ router = APIRouter()
 #
 # エラー:
 #   401 : 未ログイン
+#   403 : 権限なし（他人のファイル）
 #   400 : ファイル名が不正
 #   404 : ファイルが存在しない
 # =====================================
@@ -44,7 +49,19 @@ def download_file(filename: str):
         )
 
 
-    # ② ファイル名の無害化
+    # ② 権限チェック
+    #    ログインユーザーは自分のファイルのみアクセス可
+    current_user = get_current_user()
+
+    if not check_permission(current_user, current_user):
+
+        raise HTTPException(
+            status_code=403,
+            detail="このファイルにアクセスする権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
     #    例: "../../etc/passwd" → "passwd" に変換
     safe_name = sanitize_filename(filename)
 
@@ -56,8 +73,8 @@ def download_file(filename: str):
         )
 
 
-    # ③ ファイルの存在チェック
-    if not file_exists(safe_name):
+    # ④ ファイルの存在チェック
+    if not file_exists(current_user, safe_name):
 
         raise HTTPException(
             status_code=404,
@@ -65,8 +82,8 @@ def download_file(filename: str):
         )
 
 
-    # ④ ダウンロード実行
-    file_path = get_file_path(safe_name)
+    # ⑤ ダウンロード実行
+    file_path = get_file_path(current_user, safe_name)
 
     return FileResponse(
         path=file_path,
@@ -86,6 +103,7 @@ def download_file(filename: str):
 #
 # エラー:
 #   401 : 未ログイン
+#   403 : 権限なし（他人のファイル）
 #   400 : ファイル名が不正
 #   404 : ファイルが存在しない
 #   500 : 削除処理に失敗した場合
@@ -102,7 +120,19 @@ def delete_file(filename: str):
         )
 
 
-    # ② ファイル名の無害化
+    # ② 権限チェック
+    #    ログインユーザーは自分のファイルのみ削除可
+    current_user = get_current_user()
+
+    if not check_permission(current_user, current_user):
+
+        raise HTTPException(
+            status_code=403,
+            detail="このファイルを削除する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
     safe_name = sanitize_filename(filename)
 
     if not safe_name:
@@ -113,8 +143,8 @@ def delete_file(filename: str):
         )
 
 
-    # ③ ファイルの存在チェック
-    if not file_exists(safe_name):
+    # ④ ファイルの存在チェック
+    if not file_exists(current_user, safe_name):
 
         raise HTTPException(
             status_code=404,
@@ -122,8 +152,8 @@ def delete_file(filename: str):
         )
 
 
-    # ④ 削除実行
-    success = _delete_file_from_storage(safe_name)
+    # ⑤ 削除実行
+    success = _delete_file_from_storage(current_user, safe_name)
 
     if not success:
 
@@ -135,7 +165,7 @@ def delete_file(filename: str):
 
     return {
         "success": True,
-        "user": get_current_user(),
+        "user": current_user,
         "message": f"{safe_name} を削除しました"
     }
 
@@ -144,17 +174,18 @@ def delete_file(filename: str):
 # 内部関数：ファイル削除実行
 #
 # 引数:
+#   username : ユーザー名
 #   filename : 削除対象ファイル名（無害化済み）
 #
 # 戻り値:
 #   True  : 削除成功
 #   False : 削除失敗
 # =====================================
-def _delete_file_from_storage(filename: str) -> bool:
+def _delete_file_from_storage(username: str, filename: str) -> bool:
 
     try:
 
-        file_path = get_file_path(filename)
+        file_path = get_file_path(username, filename)
         os.remove(file_path)
         return True
 
