@@ -9,6 +9,9 @@ __pycache__/
 # データベースファイル
 *.db
 
+# ログファイル（自動生成）
+*.log
+
 # OS・エディタが作る不要ファイル
 .DS_Store
 Thumbs.db
