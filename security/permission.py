@@ -1,11 +1,33 @@
-
 # =========================
 # 権限定義（RBAC）
 # =========================
 PERMISSIONS = {
-    "admin": ["read", "write", "delete", "manage_users"],
-    "user": ["read", "write"],
-    "guest": ["read"]
+    "admin": [
+        "read",
+        "write",
+        "delete",
+        "manage_users",
+        "view_logs"
+    ],
+
+    "user": [
+        "read",
+        "write"
+    ],
+
+    "guest": [
+        "read"
+    ]
+}
+
+
+# =========================
+# ロール優先順位
+# =========================
+ROLE_LEVELS = {
+    "guest": 1,
+    "user": 2,
+    "admin": 3
 }
 
 
@@ -25,57 +47,84 @@ def is_guest(role: str) -> bool:
 
 
 # =========================
-# ロールレベルチェック（強化版）
+# ロール存在確認
+# =========================
+def role_exists(role: str) -> bool:
+    return role in ROLE_LEVELS
+
+
+# =========================
+# ロールレベルチェック
 # =========================
 def has_permission(role: str, target_role: str) -> bool:
     """
-    role: 現在のユーザー権限
-    target_role: アクセス対象の権限
+    自分より下位権限へアクセス可能
     """
 
-    # 管理者はすべて許可
-    if role == "admin":
-        return True
-
-    # 同じレベルのみ許可
-    return role == target_role
-
-
-# =========================
-# 操作ベース権限チェック（メイン）
-# =========================
-def can_access(role: str, action: str) -> bool:
-    """
-    action: read / write / delete など
-    """
-
-    return action in PERMISSIONS.get(role, [])
-
-
-# =========================
-# 管理機能チェック（強化）
-# =========================
-def can_manage_users(role: str) -> bool:
-    return role == "admin"
-
-
-# =========================
-# 追加：安全版アクセスチェック（おすすめ）
-# =========================
-def safe_check(role: str, action: str, target_role: str = None) -> bool:
-    """
-    まとめチェック関数
-    - 操作権限
-    - ロール制御
-    """
-
-    # 管理者はすべてOK
-    if role == "admin":
-        return True
-
-    # ロール制御がある場合
-    if target_role and role != target_role:
+    if not role_exists(role):
         return False
 
-    # 操作チェック
+    if not role_exists(target_role):
+        return False
+
+    return ROLE_LEVELS[role] >= ROLE_LEVELS[target_role]
+
+
+# =========================
+# 操作ベース権限チェック
+# =========================
+def can_access(role: str, action: str) -> bool:
+
+    if not role_exists(role):
+        return False
+
     return action in PERMISSIONS.get(role, [])
+
+
+# =========================
+# 管理者専用チェック
+# =========================
+def can_manage_users(role: str) -> bool:
+    return can_access(role, "manage_users")
+
+
+# =========================
+# ログ閲覧権限
+# =========================
+def can_view_logs(role: str) -> bool:
+    return can_access(role, "view_logs")
+
+
+# =========================
+# 安全版アクセスチェック
+# =========================
+def safe_check(
+    role: str,
+    action: str,
+    target_role: str = None
+) -> bool:
+
+    # ロール存在確認
+    if not role_exists(role):
+        return False
+
+    # 操作権限確認
+    if not can_access(role, action):
+        return False
+
+    # 対象ロール確認
+    if target_role:
+        return has_permission(role, target_role)
+
+    return True
+
+
+# =========================
+# 権限一覧取得
+# =========================
+def get_permissions(role: str) -> list:
+
+    if not role_exists(role):
+        return []
+
+    return PERMISSIONS.get(role, [])
