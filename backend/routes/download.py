@@ -15,7 +15,7 @@ from backend.services.auth_service import (
 )
 
 from security.permission import (
-    check_permission       # ← 権限チェック
+    can_access             # ← 権限チェック
 )
 
 from security.logger import (
@@ -61,7 +61,7 @@ def download_file(filename: str):
     #    ログインユーザーは自分のファイルのみアクセス可
     current_user = get_current_user()
 
-    if not check_permission(current_user, current_user):
+    if not can_access("user", "read"):
 
         log_failed(current_user, "DOWNLOAD", "権限なし")
 
@@ -142,7 +142,7 @@ def delete_file(filename: str):
     #    ログインユーザーは自分のファイルのみ削除可
     current_user = get_current_user()
 
-    if not check_permission(current_user, current_user):
+    if not can_access("user", "write"):
 
         log_failed(current_user, "DELETE", "権限なし")
 
