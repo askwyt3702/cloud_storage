@@ -9,7 +9,7 @@
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-/>
+  />
 </head>
 
 <body>
@@ -20,13 +20,10 @@
 
       <div>
         <h1>☁ Cloud Storage</h1>
-        <p class="storage-text">
-          使用容量：3GB / 10GB
+        <p class="storage-text" id="storageText">
+          使用容量：取得中...
         </p>
       </div>
-      <p class="user-name">
-        👤 admin
-      </p>
 
       <button class="logout-btn" onclick="logout()">
         ログアウト
@@ -42,7 +39,7 @@
         📁 ファイル選択
       </button>
 
-      <button>
+      <button onclick="uploadSelectedFile()">
         ⬆ アップロード
       </button>
 
@@ -52,19 +49,16 @@
       <p class="drop-title">
         ファイルをドラッグ＆ドロップ
       </p>
-
       <p class="drop-sub">
         またはファイルを選択
       </p>
     </div>
 
-   <div class="file-list">
-
-  
+    <div class="file-list" id="fileList">
+      <!-- ここに動的に追加される -->
+    </div>
 
   </div>
-
-</div>
 
   <script src="script.js"></script>
 
