@@ -508,3 +508,29 @@ button:hover{
 
     font-size:14px;
 }
+
+/* ファイルカードのボタンエリア */
+.file-actions{
+    display:flex;
+    gap:10px;
+    flex-shrink:0;
+}
+
+/* 削除ボタン */
+.delete-btn{
+    background:#ef4444;
+}
+
+.delete-btn:hover{
+    background:#dc2626;
+    box-shadow:0 8px 25px rgba(239,68,68,0.4);
+}
+
+/* ファイルアイコン背景色 */
+.excel-bg   { background:#16a34a; }
+.ppt-bg     { background:#f97316; }
+.text-bg    { background:#64748b; }
+.zip-bg     { background:#ca8a04; }
+.video-bg   { background:#9333ea; }
+.audio-bg   { background:#ec4899; }
+.default-bg { background:#475569; }

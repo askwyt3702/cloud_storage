@@ -1,6 +1,7 @@
 # FastAPI起動
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # ログインAPI
 from backend.routes.login import (
@@ -30,6 +31,18 @@ from backend.routes.upload import (
 
 # アプリ作成
 app = FastAPI()
+
+# ==========================
+# CORS設定
+# フロントエンドからのアクセスを許可
+# ==========================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ==========================
