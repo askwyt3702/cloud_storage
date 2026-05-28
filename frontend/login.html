@@ -14,13 +14,25 @@
 
   <h1>Cloud Storage</h1>
 
-  <input type="email" id="email" placeholder="メールアドレス">
+  <div id="login-fields">
+    <input type="email" id="email" placeholder="メールアドレス">
+    <input type="password" id="password" placeholder="パスワード">
+    
+    <button onclick="login()">
+      ログイン
+    </button>
+  </div>
 
-  <input type="password" id="password" placeholder="パスワード">
-
-  <button onclick="login()">
-    ログイン
-  </button>
+  <div id="mfa-fields" style="display: none;">
+    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+      スマートフォン認証アプリに表示されている<br>6桁の認証コードを入力してください。
+    </p>
+    <input type="text" id="mfa-code" placeholder="6桁の認証コード（例: 123456）" maxlength="6" style="text-align: center; letter-spacing: 2px;">
+    
+    <button onclick="verifyMFA()" style="background-color: #28a745;">
+      認証してログイン
+    </button>
+  </div>
 
   <p class="register-text">
     アカウントをお持ちでない方は

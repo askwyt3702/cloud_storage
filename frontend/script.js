@@ -8,9 +8,7 @@ const API_BASE = "http://127.0.0.1:8000";
 // ファイルの拡張子 → アイコン変換
 // =====================================
 function getFileIcon(filename) {
-
     const ext = filename.split(".").pop().toLowerCase();
-
     const iconMap = {
         "pdf":  { icon: "fa-file-pdf",        bg: "pdf-bg"   },
         "jpg":  { icon: "fa-file-image",       bg: "image-bg" },
@@ -28,16 +26,14 @@ function getFileIcon(filename) {
         "mp4":  { icon: "fa-file-video",       bg: "video-bg" },
         "mp3":  { icon: "fa-file-audio",       bg: "audio-bg" },
     };
-
     return iconMap[ext] || { icon: "fa-file", bg: "default-bg" };
 }
 
 
 // =====================================
-// ログインAPI呼び出し
+// ログインAPI呼び出し（MFA対応版に強化）
 // =====================================
 async function login() {
-
     const email    = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -47,7 +43,6 @@ async function login() {
     }
 
     try {
-
         const res = await fetch(`${API_BASE}/login`, {
             method: "POST",
             headers: {
@@ -61,6 +56,19 @@ async function login() {
 
         if (res.ok) {
             const data = await res.json();
+            
+            // 💡 バックエンドからMFA（2段階認証）が必要と言われた場合
+            if (data.mfa_required) {
+                // まずログイン完了後に使うユーザー名を一時保存しておく
+                sessionStorage.setItem("pending_username", data.user);
+                
+                // 通常の入力欄を隠し、MFA入力エリアを表示する
+                document.getElementById("login-fields").style.display = "none";
+                document.getElementById("mfa-fields").style.display = "block";
+                return;
+            }
+
+            // 💡 MFAが不要な場合は、そのままメイン画面（files.html）へ進む
             sessionStorage.setItem("username", data.user);
             location.href = "files.html";
 
@@ -76,10 +84,46 @@ async function login() {
 
 
 // =====================================
+// 【新設】MFA認証コードの検証
+// =====================================
+async function verifyMFA() {
+    const code = document.getElementById("mfa-code").value;
+
+    if (!code || code.length !== 6) {
+        alert("6桁の認証コードを入力してください");
+        return;
+    }
+
+    try {
+        // バックエンドの新設API（/login/mfa）にコードを送信
+        const res = await fetch(
+            `${API_BASE}/login/mfa?code=${encodeURIComponent(code)}`,
+            { method: "POST" }
+        );
+
+        if (res.ok) {
+            // 一時保存しておいたユーザー名を正式なセッションに引き継ぐ
+            const username = sessionStorage.getItem("pending_username");
+            sessionStorage.setItem("username", username);
+            sessionStorage.removeItem("pending_username");
+
+            alert("2段階認証に成功しました！");
+            location.href = "files.html"; // ログイン完了で一覧画面へ
+        } else {
+            const err = await res.json();
+            alert(err.detail || "認証コードが正しくありません");
+        }
+
+    } catch (e) {
+        alert("サーバーに接続できません");
+    }
+}
+
+
+// =====================================
 // 新規登録API呼び出し
 // =====================================
 async function register() {
-
     const username        = document.getElementById("username").value;
     const email           = document.getElementById("register-email").value;
     const password        = document.getElementById("register-password").value;
@@ -96,7 +140,6 @@ async function register() {
     }
 
     try {
-
         const res = await fetch(
             `${API_BASE}/register`,
             {
@@ -109,7 +152,6 @@ async function register() {
         if (res.ok) {
             alert("アカウントを作成しました！");
             location.href = "login.html";
-
         } else {
             const err = await res.json();
             alert(`エラー: ${err.detail}`);
@@ -125,13 +167,11 @@ async function register() {
 // ログアウトAPI呼び出し
 // =====================================
 async function logout() {
-
     try {
         await fetch(`${API_BASE}/logout`, { method: "POST" });
     } catch (e) {
         // エラーでもログアウト処理は続行
     }
-
     sessionStorage.removeItem("username");
     location.href = "login.html";
 }
@@ -141,12 +181,10 @@ async function logout() {
 // ファイル一覧を取得して表示
 // =====================================
 async function loadFiles() {
-
     const fileList = document.getElementById("fileList");
     fileList.innerHTML = "<p style='color:#cbd5e1'>読み込み中...</p>";
 
     try {
-
         const res = await fetch(`${API_BASE}/files`);
 
         if (!res.ok) {
@@ -162,9 +200,7 @@ async function loadFiles() {
         }
 
         fileList.innerHTML = data.files.map(file => {
-
             const { icon, bg } = getFileIcon(file.name);
-
             return `
             <div class="file-card">
                 <div class="file-info">
@@ -181,7 +217,6 @@ async function loadFiles() {
                     <button class="delete-btn"   onclick="deleteFile('${file.name}')">🗑 削除</button>
                 </div>
             </div>`;
-
         }).join("");
 
     } catch (e) {
@@ -194,9 +229,7 @@ async function loadFiles() {
 // 使用容量を取得して表示
 // =====================================
 async function loadStorage() {
-
     try {
-
         const res  = await fetch(`${API_BASE}/storage`);
         const data = await res.json();
 
@@ -204,7 +237,6 @@ async function loadStorage() {
         if (storageText) {
             storageText.textContent = `使用容量：${data.used} / ${data.max}`;
         }
-
     } catch (e) {
         // 取得失敗時は何もしない
     }
@@ -215,7 +247,6 @@ async function loadStorage() {
 // ファイル選択してアップロード
 // =====================================
 async function uploadSelectedFile() {
-
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
 
@@ -225,8 +256,6 @@ async function uploadSelectedFile() {
     }
 
     await uploadFileData(file);
-
-    // 選択をリセット
     fileInput.value = "";
 }
 
@@ -235,12 +264,10 @@ async function uploadSelectedFile() {
 // ファイルアップロード処理
 // =====================================
 async function uploadFileData(file) {
-
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-
         const res = await fetch(`${API_BASE}/upload`, {
             method: "POST",
             body: formData
@@ -250,12 +277,10 @@ async function uploadFileData(file) {
             alert(`${file.name} をアップロードしました！`);
             await loadFiles();
             await loadStorage();
-
         } else {
             const err = await res.json();
             alert(`エラー: ${err.detail}`);
         }
-
     } catch (e) {
         alert("アップロードに失敗しました");
     }
@@ -266,9 +291,7 @@ async function uploadFileData(file) {
 // ファイルダウンロード
 // =====================================
 async function downloadFile(filename) {
-
     try {
-
         const res = await fetch(`${API_BASE}/download/${encodeURIComponent(filename)}`);
 
         if (!res.ok) {
@@ -276,7 +299,6 @@ async function downloadFile(filename) {
             return;
         }
 
-        // ブラウザにファイルをダウンロードさせる
         const blob = await res.blob();
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement("a");
@@ -286,7 +308,6 @@ async function downloadFile(filename) {
         a.click();
 
         URL.revokeObjectURL(url);
-
     } catch (e) {
         alert("ダウンロードに失敗しました");
     }
@@ -297,11 +318,9 @@ async function downloadFile(filename) {
 // ファイル削除
 // =====================================
 async function deleteFile(filename) {
-
     if (!confirm(`「${filename}」を削除しますか？`)) return;
 
     try {
-
         const res = await fetch(
             `${API_BASE}/delete/${encodeURIComponent(filename)}`,
             { method: "DELETE" }
@@ -310,12 +329,10 @@ async function deleteFile(filename) {
         if (res.ok) {
             await loadFiles();
             await loadStorage();
-
         } else {
             const err = await res.json();
             alert(`エラー: ${err.detail}`);
         }
-
     } catch (e) {
         alert("削除に失敗しました");
     }
@@ -326,7 +343,6 @@ async function deleteFile(filename) {
 // ドラッグ＆ドロップ設定
 // =====================================
 function setupDropArea() {
-
     const dropArea = document.querySelector(".drop-area");
     if (!dropArea) return;
 
@@ -353,8 +369,6 @@ function setupDropArea() {
 // ファイル一覧ページの初期化
 // =====================================
 window.addEventListener("load", () => {
-
-    // ファイル一覧ページのみ実行
     if (!document.getElementById("fileList")) return;
 
     const username = sessionStorage.getItem("username");

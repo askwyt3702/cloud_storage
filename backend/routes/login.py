@@ -6,7 +6,8 @@ from backend.services.auth_service import (
     logout_user,
     get_current_user,
     get_current_role,
-    register_user
+    register_user,
+    verify_mfa_login
 )
 
 router = APIRouter()
@@ -39,8 +40,19 @@ def login(body: LoginRequest):
     result = login_user(body.username_or_email, body.password)
 
     if result["success"]:
+        # MFA（2段階認証）が必要な場合
+        if result["mfa_required"]:
+            return {
+                "success": True,
+                "mfa_required": True,
+                "user": result["username"],
+                "message": "ID・パスワード認証成功。MFAコードを入力してください"
+            }
+        
+        # MFA不要な場合はそのままログイン完了
         return {
             "success": True,
+            "mfa_required": False,
             "user": result["username"],
             "message": "ログイン成功"
         }
@@ -90,6 +102,39 @@ def register(body: RegisterRequest):
 
 
 # =====================================
+# MFAコード検証API
+#
+# URL:
+# POST /login/mfa
+#
+# パラメータ:
+#   code : 画面から入力された6桁の数字
+# =====================================
+@router.post("/login/mfa")
+def login_mfa(code: str):
+    if not code:
+        raise HTTPException(
+            status_code=400,
+            detail="認証コードを入力してください"
+        )
+
+    # 6桁のコードを検証
+    is_valid = verify_mfa_login(code)
+
+    if is_valid:
+        return {
+            "success": True,
+            "message": "2段階認証に成功しました。ログイン完了です！"
+        }
+
+    # コードが間違っている場合
+    raise HTTPException(
+        status_code=401,
+        detail="認証コードが正しくないか、有効期限が切れています"
+    )
+
+
+# =====================================
 # ログアウトAPI
 #
 # URL:
@@ -134,7 +179,7 @@ def me():
     if not user:
         raise HTTPException(
             status_code=401,
-            detail="ログインしていません"
+            detail="ログインしていません（または2段階認証が未完了です）"
         )
 
     return {
