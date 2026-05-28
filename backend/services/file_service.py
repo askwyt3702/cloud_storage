@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from security.logger import (
     log_success,   # ← 成功ログ
@@ -123,6 +124,37 @@ def get_file_size(username: str, filename: str) -> int:
         return 0
 
     return os.path.getsize(file_path)
+
+
+# =====================================
+# ファイルメタデータ取得
+#
+# 引数:
+#   username : ユーザー名
+#   filename : ファイル名
+#
+# 戻り値:
+#   uploaded_at : アップロード日時（文字列）
+#   file_type   : 拡張子（例: ".pdf"）
+# =====================================
+def get_file_metadata(username: str, filename: str) -> dict:
+
+    file_path = get_file_path(username, filename)
+
+    # アップロード日時（ファイルの更新日時を使用）
+    mtime = os.path.getmtime(file_path)
+    uploaded_at = datetime.fromtimestamp(mtime).strftime(
+        "%Y-%m-%d %H:%M"
+    )
+
+    # ファイル種類（拡張子）
+    ext = os.path.splitext(filename)[1].lower()
+    file_type = ext if ext else "不明"
+
+    return {
+        "uploaded_at": uploaded_at,
+        "file_type": file_type
+    }
 
 
 # =====================================

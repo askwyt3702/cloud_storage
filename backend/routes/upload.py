@@ -1,8 +1,13 @@
+import os
+
 from fastapi import APIRouter, HTTPException, UploadFile, File
+
+from backend.schemas import MessageResponse
 
 from backend.services.file_service import (
     sanitize_filename,     # ← ファイル名の無害化
-    save_file              # ← ファイル保存
+    save_file,             # ← ファイル保存
+    file_exists            # ← 上書き防止チェック
 )
 
 from backend.services.auth_service import (
@@ -13,15 +18,30 @@ from backend.services.auth_service import (
 from security.logger import (
     log_success,   # ← 成功ログ
     log_failed,    # ← 失敗ログ
-    log_error      # ← エラーログ
 )
 
 from backend.services.storage_service import (
-    get_used_bytes          # ← 使用量チェック
+    get_used_bytes         # ← 使用量チェック
 )
 
-# 最大容量：10GB
+
+# =====================================
+# アップロード制限の定数
+# =====================================
+
+# 総容量上限：10GB
 MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024
+
+# 1ファイルの上限：100MB
+MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
+
+# アップロード許可する拡張子
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".txt", ".csv",
+    ".jpg", ".jpeg", ".png", ".gif",
+    ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".zip", ".mp4", ".mp3"
+}
 
 
 router = APIRouter()
@@ -39,9 +59,12 @@ router = APIRouter()
 # エラー:
 #   401 : 未ログイン
 #   400 : ファイル名が不正
+#   409 : 同名ファイルが存在する
+#   413 : ファイルサイズ超過 / 容量不足
+#   415 : 許可されていないファイル形式
 #   500 : 保存処理に失敗した場合
 # =====================================
-@router.post("/upload")
+@router.post("/upload", response_model=MessageResponse)
 async def upload_file(file: UploadFile = File(...)):
 
     # ① 認証チェック
@@ -54,10 +77,10 @@ async def upload_file(file: UploadFile = File(...)):
             detail="ログインが必要です"
         )
 
+    username = get_current_user()
 
     # ② ファイル名の無害化
     #    例: "../../etc/passwd" → "passwd" に変換
-    username = get_current_user()
     safe_name = sanitize_filename(file.filename)
 
     if not safe_name:
@@ -70,17 +93,53 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
-    # ③ ファイルの読み込み
+    # ③ ファイル形式チェック
+    #    許可されていない拡張子はブロック
+    ext = os.path.splitext(safe_name)[1].lower()
+
+    if ext not in ALLOWED_EXTENSIONS:
+
+        log_failed(username, "UPLOAD", f"許可されていない形式: {ext}")
+
+        raise HTTPException(
+            status_code=415,
+            detail=f"このファイル形式は許可されていません: {ext}"
+        )
+
+
+    # ④ 上書き防止チェック
+    #    同名ファイルが既にある場合は拒否
+    if file_exists(username, safe_name):
+
+        log_failed(username, "UPLOAD", f"同名ファイルあり: {safe_name}")
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のファイルが既に存在します: {safe_name}"
+        )
+
+
+    # ⑤ ファイルの読み込み
     data = await file.read()
 
 
-    # ④ 容量制限チェック
-    #    現在の使用量 + 新ファイルが 10GB を超えたら拒否
+    # ⑥ 1ファイルサイズチェック（100MB上限）
+    if len(data) > MAX_FILE_SIZE_BYTES:
+
+        log_failed(username, "UPLOAD", f"ファイルサイズ超過: {len(data)}bytes")
+
+        raise HTTPException(
+            status_code=413,
+            detail="1ファイルの上限は100MBです"
+        )
+
+
+    # ⑦ 総容量チェック（10GB上限）
     used_bytes = get_used_bytes(username)
 
     if used_bytes + len(data) > MAX_STORAGE_BYTES:
 
-        log_failed(username, "UPLOAD", "容量不足")
+        log_failed(username, "UPLOAD", "総容量不足")
 
         raise HTTPException(
             status_code=413,
@@ -88,8 +147,7 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
 
-    # ⑤ ファイルの保存
-    #    uploads/{username}/{filename} に保存される
+    # ⑧ ファイルの保存
     success = save_file(username, safe_name, data)
 
     if not success:
@@ -102,8 +160,8 @@ async def upload_file(file: UploadFile = File(...)):
 
     log_success(username, f"UPLOAD: {safe_name}")
 
-    return {
-        "success": True,
-        "user": username,
-        "message": f"{safe_name} をアップロードしました"
-    }
+    return MessageResponse(
+        success=True,
+        user=username,
+        message=f"{safe_name} をアップロードしました"
+    )

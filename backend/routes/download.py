@@ -3,12 +3,20 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
+from backend.schemas import (
+    FileInfo,
+    FileListResponse,
+    MessageResponse,
+    RenameRequest
+)
+
 from backend.services.file_service import (
     get_file_path,
     file_exists,
     sanitize_filename,     # ← ファイル名の無害化
     list_files,            # ← ファイル一覧取得
-    get_file_size          # ← ファイルサイズ取得
+    get_file_size,         # ← ファイルサイズ取得
+    get_file_metadata      # ← メタデータ取得
 )
 
 from backend.services.auth_service import (
@@ -57,13 +65,17 @@ def _format_size(size_bytes: int) -> str:
 # ファイル一覧取得API
 #
 # URL:
-# GET /files
+# GET /files?page=1&per_page=20
+#
+# クエリパラメータ:
+#   page     : ページ番号（デフォルト: 1）
+#   per_page : 1ページの件数（デフォルト: 20）
 #
 # エラー:
 #   401 : 未ログイン
 # =====================================
-@router.get("/files")
-def get_files():
+@router.get("/files", response_model=FileListResponse)
+def get_files(page: int = 1, per_page: int = 20):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -76,24 +88,39 @@ def get_files():
         )
 
 
-    # ② ファイル一覧取得（サイズ付き）
+    # ② 全ファイル取得
     current_user = get_current_user()
+    all_files = list_files(current_user)
+    total = len(all_files)
 
-    files = [
-        {
-            "name": f,
-            "size": _format_size(get_file_size(current_user, f))
-        }
-        for f in list_files(current_user)
+
+    # ③ ページネーション
+    #    例: page=2, per_page=20 → 21件目〜40件目
+    start = (page - 1) * per_page
+    end = start + per_page
+    paged_files = all_files[start:end]
+
+
+    # ④ メタデータ付きで整形
+    files_info = [
+        FileInfo(
+            name=f,
+            size=_format_size(get_file_size(current_user, f)),
+            **get_file_metadata(current_user, f)
+        )
+        for f in paged_files
     ]
 
     log_success(current_user, "LIST")
 
-    return {
-        "success": True,
-        "user": current_user,
-        "files": files
-    }
+    return FileListResponse(
+        success=True,
+        user=current_user,
+        files=files_info,
+        total=total,
+        page=page,
+        per_page=per_page
+    )
 
 
 # =====================================
@@ -107,7 +134,7 @@ def get_files():
 #
 # エラー:
 #   401 : 未ログイン
-#   403 : 権限なし（他人のファイル）
+#   403 : 権限なし
 #   400 : ファイル名が不正
 #   404 : ファイルが存在しない
 # =====================================
@@ -126,7 +153,6 @@ def download_file(filename: str):
 
 
     # ② 権限チェック
-    #    ログインユーザーは自分のファイルのみアクセス可
     current_user = get_current_user()
 
     if not can_access("user", "read"):
@@ -140,7 +166,6 @@ def download_file(filename: str):
 
 
     # ③ ファイル名の無害化
-    #    例: "../../etc/passwd" → "passwd" に変換
     safe_name = sanitize_filename(filename)
 
     if not safe_name:
@@ -187,12 +212,12 @@ def download_file(filename: str):
 #
 # エラー:
 #   401 : 未ログイン
-#   403 : 権限なし（他人のファイル）
+#   403 : 権限なし
 #   400 : ファイル名が不正
 #   404 : ファイルが存在しない
 #   500 : 削除処理に失敗した場合
 # =====================================
-@router.delete("/delete/{filename}")
+@router.delete("/delete/{filename}", response_model=MessageResponse)
 def delete_file(filename: str):
 
     # ① 認証チェック
@@ -207,7 +232,6 @@ def delete_file(filename: str):
 
 
     # ② 権限チェック
-    #    ログインユーザーは自分のファイルのみ削除可
     current_user = get_current_user()
 
     if not can_access("user", "write"):
@@ -257,23 +281,114 @@ def delete_file(filename: str):
 
     log_success(current_user, f"DELETE: {safe_name}")
 
-    return {
-        "success": True,
-        "user": current_user,
-        "message": f"{safe_name} を削除しました"
-    }
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を削除しました"
+    )
+
+
+# =====================================
+# ファイルリネームAPI
+#
+# URL:
+# PATCH /rename/{filename}
+#
+# パラメータ:
+#   filename : 変更前のファイル名
+#   body     : { "new_name": "変更後のファイル名" }
+#
+# エラー:
+#   401 : 未ログイン
+#   400 : ファイル名が不正
+#   404 : ファイルが存在しない
+#   409 : 変更後の名前が既に存在する
+#   500 : リネーム処理に失敗した場合
+# =====================================
+@router.patch("/rename/{filename}", response_model=MessageResponse)
+def rename_file(filename: str, body: RenameRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "RENAME", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+    current_user = get_current_user()
+
+
+    # ② 変更前ファイル名の無害化
+    safe_old = sanitize_filename(filename)
+
+    if not safe_old:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ③ 変更後ファイル名の無害化
+    safe_new = sanitize_filename(body.new_name)
+
+    if not safe_new:
+
+        raise HTTPException(
+            status_code=400,
+            detail="変更後のファイル名が不正です"
+        )
+
+
+    # ④ 変更前ファイルの存在チェック
+    if not file_exists(current_user, safe_old):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ファイルが見つかりません: {safe_old}"
+        )
+
+
+    # ⑤ 変更後ファイル名の重複チェック
+    if file_exists(current_user, safe_new):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のファイルが既に存在します: {safe_new}"
+        )
+
+
+    # ⑥ リネーム実行
+    try:
+
+        old_path = get_file_path(current_user, safe_old)
+        new_path = get_file_path(current_user, safe_new)
+        os.rename(old_path, new_path)
+
+    except Exception as e:
+
+        log_error(f"リネーム失敗: {current_user}/{safe_old} → {safe_new} - {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="リネームに失敗しました"
+        )
+
+
+    log_success(current_user, f"RENAME: {safe_old} → {safe_new}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_old} を {safe_new} に変更しました"
+    )
 
 
 # =====================================
 # 内部関数：ファイル削除実行
-#
-# 引数:
-#   username : ユーザー名
-#   filename : 削除対象ファイル名（無害化済み）
-#
-# 戻り値:
-#   True  : 削除成功
-#   False : 削除失敗
 # =====================================
 def _delete_file_from_storage(username: str, filename: str) -> bool:
 
@@ -285,7 +400,6 @@ def _delete_file_from_storage(username: str, filename: str) -> bool:
 
     except Exception as e:
 
-        # 失敗理由をログに記録
         log_error(f"ファイル削除失敗: {username}/{filename} - {e}")
 
         return False

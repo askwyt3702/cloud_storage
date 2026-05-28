@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
+from backend.schemas import StorageResponse
+
 from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
     get_current_user       # ← ログイン中ユーザー取得
@@ -22,7 +24,7 @@ router = APIRouter()
 # エラー:
 #   401 : 未ログイン
 # =====================================
-@router.get("/storage")
+@router.get("/storage", response_model=StorageResponse)
 def storage():
 
     # ① 認証チェック
@@ -36,12 +38,11 @@ def storage():
 
     # ② 容量計算
     current_user = get_current_user()
-
     result = calculate_storage(current_user)
 
-    return {
-        "success": True,
-        "user": current_user,
-        "used": result["used"],
-        "max": result["max"]
-    }
+    return StorageResponse(
+        success=True,
+        user=current_user,
+        used=result["used"],
+        max=result["max"]
+    )
