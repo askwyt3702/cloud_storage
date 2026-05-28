@@ -8,7 +8,7 @@ def get_db_connection():
         host=os.getenv("DB_HOST", "localhost"),
         database=os.getenv("DB_NAME", "storage_management"),
         user=os.getenv("DB_USER", "postgres"),
-        password=os.getenv("DB_PASSWORD", "password"),
+        password=os.getenv("DB_PASSWORD", "secret_password123"),
         cursor_factory=DictCursor
     )
     return conn
