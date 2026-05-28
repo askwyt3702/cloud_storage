@@ -1,9 +1,9 @@
 -- ユーザー情報を管理するテーブル
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    username TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
     password_hash TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
