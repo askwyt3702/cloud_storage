@@ -1,8 +1,6 @@
 # FastAPI起動
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 # ログインAPI
 from backend.routes.login import (
@@ -32,11 +30,6 @@ from backend.routes.upload import (
 
 # アプリ作成
 app = FastAPI()
-
-# ==========================
-# CORS設定
-# フロントエンドからのアクセスを許可
-# ==========================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -47,11 +40,28 @@ app.add_middleware(
 
 
 # ==========================
-# トップ画面 → ログイン画面にリダイレクト
+# トップ画面
 # ==========================
 @app.get("/")
 def home():
-    return RedirectResponse(url="/static/login.html")
+
+    return """
+    <h1>クラウドストレージ</h1>
+
+    <input placeholder='ユーザー名'>
+
+    <br><br>
+
+    <input
+    type='password'
+    placeholder='パスワード'>
+
+    <br><br>
+
+    <button>
+    ログイン
+    </button>
+    """
 
 
 # ログイン機能追加
@@ -73,15 +83,4 @@ app.include_router(
 # アップロード機能追加
 app.include_router(
     upload_router
-)
-
-
-# ==========================
-# フロントエンドの配信
-# frontend/ フォルダを /static として公開
-# ==========================
-app.mount(
-    "/static",
-    StaticFiles(directory="frontend"),
-    name="static"
 )
