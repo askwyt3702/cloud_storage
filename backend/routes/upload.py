@@ -12,7 +12,12 @@ from backend.services.file_service import (
 
 from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
-    get_current_user       # ← ログイン中ユーザー取得
+    get_current_user,      # ← ログイン中ユーザー取得
+    get_current_role       # ← ログイン中ユーザーのロール取得
+)
+
+from security.permission import (
+    can_access             # ← 権限チェック
 )
 
 from security.logger import (
@@ -78,6 +83,17 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
     username = get_current_user()
+    role = get_current_role()
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(username, "UPLOAD", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをアップロードする権限がありません"
+        )
 
     # ② ファイル名の無害化
     #    例: "../../etc/passwd" → "passwd" に変換

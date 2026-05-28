@@ -48,10 +48,16 @@ async function login() {
 
     try {
 
-        const res = await fetch(
-            `${API_BASE}/login?username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-            { method: "POST" }
-        );
+        const res = await fetch(`${API_BASE}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username_or_email: email,
+                password: password
+            })
+        });
 
         if (res.ok) {
             const data = await res.json();
@@ -59,7 +65,8 @@ async function login() {
             location.href = "files.html";
 
         } else {
-            alert("ユーザー名またはパスワードが違います");
+            const err = await res.json();
+            alert(err.detail || "ユーザー名またはパスワードが違います");
         }
 
     } catch (e) {

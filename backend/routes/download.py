@@ -21,7 +21,8 @@ from backend.services.file_service import (
 
 from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
-    get_current_user       # ← ログイン中ユーザー取得
+    get_current_user,      # ← ログイン中ユーザー取得
+    get_current_role       # ← ログイン中ユーザーのロール取得
 )
 
 from security.permission import (
@@ -154,8 +155,9 @@ def download_file(filename: str):
 
     # ② 権限チェック
     current_user = get_current_user()
+    role = get_current_role()
 
-    if not can_access("user", "read"):
+    if not can_access(role, "read"):
 
         log_failed(current_user, "DOWNLOAD", "権限なし")
 
@@ -233,8 +235,9 @@ def delete_file(filename: str):
 
     # ② 権限チェック
     current_user = get_current_user()
+    role = get_current_role()
 
-    if not can_access("user", "write"):
+    if not can_access(role, "write"):
 
         log_failed(current_user, "DELETE", "権限なし")
 
@@ -319,6 +322,17 @@ def rename_file(filename: str, body: RenameRequest):
         )
 
     current_user = get_current_user()
+    role = get_current_role()
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "RENAME", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを変更する権限がありません"
+        )
 
 
     # ② 変更前ファイル名の無害化
