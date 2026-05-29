@@ -11,7 +11,9 @@ from backend.schemas import (
     BulkDeleteRequest,     # ← 一括削除リクエスト
     BulkActionResponse,    # ← 一括操作レスポンス
     TrashFileInfo,         # ← ゴミ箱内ファイル情報
-    TrashListResponse      # ← ゴミ箱一覧レスポンス
+    TrashListResponse,     # ← ゴミ箱一覧レスポンス
+    SharedFileInfo,        # ← 共有ファイル情報
+    SharedListResponse     # ← 共有ファイル一覧レスポンス
 )
 
 from backend.services.file_service import (
@@ -30,7 +32,15 @@ from backend.services.file_service import (
     get_trash_file_metadata,   # ← ゴミ箱内ファイルのメタデータ
     restore_from_trash,        # ← ゴミ箱から復元
     delete_from_trash,         # ← ゴミ箱から完全削除
-    empty_trash                # ← ゴミ箱を空にする
+    empty_trash,               # ← ゴミ箱を空にする
+    # --- 共有フォルダ関連 ---
+    share_file,                # ← 個人ファイルを共有
+    unshare_file,              # ← 共有を解除
+    list_shared,               # ← 共有ファイル一覧（全員分）
+    shared_file_exists,        # ← 共有に存在するか
+    get_shared_file_path,      # ← 共有ファイルのパス
+    get_shared_file_size,      # ← 共有ファイルのサイズ
+    get_shared_file_metadata   # ← 共有ファイルのメタデータ
 )
 
 from backend.services.auth_service import (
@@ -801,4 +811,325 @@ def empty_trash_all():
         success=True,
         user=current_user,
         message=f"ゴミ箱を空にしました（{count}件）"
+    )
+
+
+# =====================================================
+# ここから下：共有フォルダ（_shared）操作API
+# =====================================================
+
+
+# =====================================
+# 共有ファイル一覧取得API（全員分）
+#
+# URL:
+# GET /shared
+#
+# ログインしていれば、誰が共有したファイルでも一覧で見られる。
+#
+# エラー:
+#   401 : 未ログイン
+# =====================================
+@router.get("/shared", response_model=SharedListResponse)
+def get_shared():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARED_LIST", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 共有ファイルを取得
+    current_user = get_current_user()
+    shared_files = list_shared()
+
+
+    # ③ メタデータ付きで整形
+    files_info = [
+        SharedFileInfo(
+            owner=item["owner"],
+            name=item["name"],
+            size=_format_size(
+                get_shared_file_size(item["owner"], item["name"])
+            ),
+            **get_shared_file_metadata(item["owner"], item["name"])
+        )
+        for item in shared_files
+    ]
+
+    log_success(current_user, "SHARED_LIST")
+
+    return SharedListResponse(
+        success=True,
+        files=files_info,
+        total=len(files_info)
+    )
+
+
+# =====================================
+# 共有ファイルのダウンロードAPI
+#
+# URL:
+# GET /shared/download/{owner}/{filename}
+#
+# ログインしていれば、他人が共有したファイルもダウンロードできる。
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : 名前が不正
+#   404 : 共有ファイルが存在しない
+# =====================================
+@router.get("/shared/download/{owner}/{filename}")
+def download_shared_file(owner: str, filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARED_DOWNLOAD", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック（読み取り）
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "read"):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをダウンロードする権限がありません"
+        )
+
+
+    # ③ 名前の無害化（所有者名・ファイル名どちらも）
+    safe_owner = sanitize_filename(owner)
+    safe_name = sanitize_filename(filename)
+
+    if not safe_owner or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 共有ファイルの存在チェック
+    if not shared_file_exists(safe_owner, safe_name):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", f"共有ファイルなし: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"共有ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ ダウンロード実行
+    file_path = get_shared_file_path(safe_owner, safe_name)
+
+    log_success(current_user, f"SHARED_DOWNLOAD: {safe_owner}/{safe_name}")
+
+    return FileResponse(
+        path=file_path,
+        filename=safe_name,
+        media_type="application/octet-stream"
+    )
+
+
+# =====================================
+# ファイル共有API（自分の個人ファイルを共有フォルダへ）
+#
+# URL:
+# POST /share/{filename}
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : 個人ファイルが存在しない
+#   409 : 既に共有済み
+#   500 : 共有処理に失敗した場合
+# =====================================
+@router.post("/share/{filename}", response_model=MessageResponse)
+def share_my_file(filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "SHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを共有する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 自分の個人ファイルが存在するか
+    if not file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 既に共有済みでないか
+    if shared_file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"このファイルは既に共有されています: {safe_name}"
+        )
+
+
+    # ⑥ 共有実行
+    success = share_file(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="共有に失敗しました"
+        )
+
+
+    log_success(current_user, f"SHARE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を共有しました"
+    )
+
+
+# =====================================
+# 共有解除API（自分が共有したファイルのみ）
+#
+# URL:
+# DELETE /shared/{owner}/{filename}
+#
+# 他人が共有したファイルは解除できない（owner が自分のときだけ）。
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし / 他人の共有を解除しようとした
+#   400 : 名前が不正
+#   404 : 共有ファイルが存在しない
+#   500 : 解除処理に失敗した場合
+# =====================================
+@router.delete("/shared/{owner}/{filename}", response_model=MessageResponse)
+def unshare_my_file(owner: str, filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "UNSHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    current_user = get_current_user()
+    role = get_current_role()
+
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "UNSHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="共有を解除する権限がありません"
+        )
+
+
+    # ③ 名前の無害化
+    safe_owner = sanitize_filename(owner)
+    safe_name = sanitize_filename(filename)
+
+    if not safe_owner or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 自分が共有したファイルか（他人のものは解除不可）
+    if safe_owner != current_user:
+
+        log_failed(current_user, "UNSHARE", f"他人の共有を解除しようとした: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=403,
+            detail="他の人が共有したファイルは解除できません"
+        )
+
+
+    # ⑤ 共有ファイルの存在チェック
+    if not shared_file_exists(safe_owner, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"共有ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑥ 共有解除実行
+    success = unshare_file(safe_owner, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="共有の解除に失敗しました"
+        )
+
+
+    log_success(current_user, f"UNSHARE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} の共有を解除しました"
     )

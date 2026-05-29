@@ -72,6 +72,7 @@
         <div class="toolbar-right">
           <button onclick="toggleSelectAll(this)">☑ 全選択</button>
           <button class="delete-btn" onclick="deleteSelected()">🗑 選択削除</button>
+          <button onclick="showShared()">🔗 共有</button>
           <button onclick="showTrash()">🗑 ゴミ箱</button>
         </div>
 
@@ -93,6 +94,20 @@
 
       <div class="file-list" id="trashList">
         <!-- ゴミ箱の中身が動的に追加される -->
+      </div>
+
+    </div>
+
+    <!-- 共有ビュー（最初は非表示） -->
+    <div id="sharedView" style="display:none">
+
+      <div class="toolbar">
+        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <p class="storage-text">みんなが共有したファイル</p>
+      </div>
+
+      <div class="file-list" id="sharedList">
+        <!-- 共有ファイルが動的に追加される -->
       </div>
 
     </div>

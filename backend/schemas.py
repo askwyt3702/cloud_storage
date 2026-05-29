@@ -91,6 +91,26 @@ class TrashListResponse(BaseModel):
 
 
 # =====================================
+# 共有ファイル情報
+# =====================================
+class SharedFileInfo(BaseModel):
+    owner: str         # 共有した人のユーザー名
+    name: str          # ファイル名
+    size: str          # 例: "1.2MB"
+    file_type: str     # 例: ".pdf"
+    shared_at: str     # 共有した日時 例: "2026-05-29 12:00"
+
+
+# =====================================
+# 共有ファイル一覧レスポンス
+# =====================================
+class SharedListResponse(BaseModel):
+    success: bool
+    files: List[SharedFileInfo]
+    total: int
+
+
+# =====================================
 # ログインリクエスト
 # =====================================
 class LoginRequest(BaseModel):

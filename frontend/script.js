@@ -222,6 +222,7 @@ async function loadFiles() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ 取得</button>
+                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">🔗 共有</button>
                     <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))">🗑 削除</button>
                 </div>
             </div>`;
@@ -404,11 +405,21 @@ async function deleteFile(filename) {
 
 
 // =====================================
+// 表示するビューを切り替える内部関数
+// "main" / "trash" / "shared" のどれか1つだけ表示
+// =====================================
+function switchView(view) {
+    document.getElementById("mainView").style.display   = (view === "main")   ? "block" : "none";
+    document.getElementById("trashView").style.display  = (view === "trash")  ? "block" : "none";
+    document.getElementById("sharedView").style.display = (view === "shared") ? "block" : "none";
+}
+
+
+// =====================================
 // ゴミ箱ビューを表示
 // =====================================
 function showTrash() {
-    document.getElementById("mainView").style.display  = "none";
-    document.getElementById("trashView").style.display = "block";
+    switchView("trash");
     loadTrash();
 }
 
@@ -417,8 +428,7 @@ function showTrash() {
 // 通常のファイル一覧ビューに戻る
 // =====================================
 function showFiles() {
-    document.getElementById("trashView").style.display = "none";
-    document.getElementById("mainView").style.display  = "block";
+    switchView("main");
     loadFiles();
 }
 
@@ -538,6 +548,155 @@ async function emptyTrash() {
         }
     } catch (e) {
         alert("ゴミ箱を空にできませんでした");
+    }
+}
+
+
+// =====================================================
+// ここから下：共有フォルダ
+// =====================================================
+
+
+// =====================================
+// 自分のファイルを共有する
+// =====================================
+async function shareFile(filename) {
+    try {
+        const res = await fetch(
+            `${API_BASE}/share/${encodeURIComponent(filename)}`,
+            { method: "POST" }
+        );
+
+        if (res.ok) {
+            const data = await res.json();
+            alert(data.message);
+        } else {
+            const err = await res.json();
+            alert(`エラー: ${err.detail}`);
+        }
+    } catch (e) {
+        alert("共有に失敗しました");
+    }
+}
+
+
+// =====================================
+// 共有ビューを表示
+// =====================================
+function showShared() {
+    switchView("shared");
+    loadShared();
+}
+
+
+// =====================================
+// 共有ファイル一覧を取得して表示
+// =====================================
+async function loadShared() {
+    const sharedList = document.getElementById("sharedList");
+    sharedList.innerHTML = "<p style='color:#cbd5e1'>読み込み中...</p>";
+
+    // 自分のユーザー名（自分が共有したものだけ「解除」ボタンを出すため）
+    const me = sessionStorage.getItem("username");
+
+    try {
+        const res = await fetch(`${API_BASE}/shared`);
+
+        if (!res.ok) {
+            sharedList.innerHTML = "<p style='color:#f87171'>共有ファイルの取得に失敗しました</p>";
+            return;
+        }
+
+        const data = await res.json();
+
+        if (data.files.length === 0) {
+            sharedList.innerHTML = "<p style='color:#cbd5e1;text-align:center'>共有ファイルはありません</p>";
+            return;
+        }
+
+        sharedList.innerHTML = data.files.map(file => {
+            const { icon, bg } = getFileIcon(file.name);
+            const safeOwner = encodeURIComponent(file.owner);
+            const safeName  = encodeURIComponent(file.name);
+
+            // 自分が共有したファイルだけ「共有解除」ボタンを表示
+            const unshareBtn = (file.owner === me)
+                ? `<button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">✕ 共有解除</button>`
+                : "";
+
+            return `
+            <div class="file-card">
+                <div class="file-info">
+                    <div class="file-icon ${bg}">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                    <div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-detail">共有者: ${file.owner} ・ ${file.size} ・ ${file.shared_at}</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="download-btn" onclick="downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">↓ 取得</button>
+                    ${unshareBtn}
+                </div>
+            </div>`;
+        }).join("");
+
+    } catch (e) {
+        sharedList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+    }
+}
+
+
+// =====================================
+// 共有ファイルをダウンロード
+// =====================================
+async function downloadShared(owner, filename) {
+    try {
+        const res = await fetch(
+            `${API_BASE}/shared/download/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}`
+        );
+
+        if (!res.ok) {
+            alert("ダウンロードに失敗しました");
+            return;
+        }
+
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+
+        a.href     = url;
+        a.download = filename;
+        a.click();
+
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        alert("ダウンロードに失敗しました");
+    }
+}
+
+
+// =====================================
+// 共有を解除（自分が共有したものだけ）
+// =====================================
+async function unshareFile(owner, filename) {
+    if (!confirm(`「${filename}」の共有を解除しますか？\n（あなたの個人ファイルは残ります）`)) return;
+
+    try {
+        const res = await fetch(
+            `${API_BASE}/shared/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}`,
+            { method: "DELETE" }
+        );
+
+        if (res.ok) {
+            await loadShared();
+        } else {
+            const err = await res.json();
+            alert(`エラー: ${err.detail}`);
+        }
+    } catch (e) {
+        alert("共有の解除に失敗しました");
     }
 }
 

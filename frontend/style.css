@@ -603,3 +603,13 @@ input:-webkit-autofill:focus{
 
     flex-shrink:0;
 }
+
+/* 共有ボタン */
+.share-btn{
+    background:#10b981;
+}
+
+.share-btn:hover{
+    background:#059669;
+    box-shadow:0 8px 25px rgba(16,185,129,0.4);
+}

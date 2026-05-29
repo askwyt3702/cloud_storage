@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 
 from security.logger import (
@@ -16,6 +17,11 @@ UPLOAD_DIR = "uploads"
 # 各ユーザーのフォルダ内に作る: uploads/{username}/.trash/
 # 先頭がドットの隠しフォルダなので、通常のファイル一覧には出てこない
 TRASH_DIRNAME = ".trash"
+
+# 共有フォルダ名
+# uploads/_shared/{owner}/ に共有ファイルを置く
+# ※ この名前はユーザー名として使えない予約名
+SHARED_DIRNAME = "_shared"
 
 
 # =====================================
@@ -439,3 +445,176 @@ def empty_trash(username: str) -> int:
                 log_error(f"ゴミ箱を空にする処理で失敗: {username}/{f} - {e}")
 
     return count
+
+
+# =====================================================
+# ここから下：共有フォルダ（_shared）関連の関数
+#
+# 構成: uploads/_shared/{owner}/{filename}
+# 所有者ごとにフォルダを分けることで
+#   ・誰が共有したか分かる
+#   ・別の人が同名ファイルを共有しても衝突しない
+# =====================================================
+
+
+# =====================================
+# 共有フォルダのルートパス
+# 例: uploads/_shared
+# =====================================
+def get_shared_root() -> str:
+
+    return os.path.join(UPLOAD_DIR, SHARED_DIRNAME)
+
+
+# =====================================
+# 共有フォルダ内・所有者ごとのパス
+# 例: uploads/_shared/admin
+# =====================================
+def get_shared_user_dir(owner: str) -> str:
+
+    return os.path.join(get_shared_root(), owner)
+
+
+# =====================================
+# 共有ファイルのパス
+# 例: uploads/_shared/admin/test.txt
+# =====================================
+def get_shared_file_path(owner: str, filename: str) -> str:
+
+    return os.path.join(get_shared_user_dir(owner), filename)
+
+
+# =====================================
+# 共有フォルダにそのファイルがあるか
+# =====================================
+def shared_file_exists(owner: str, filename: str) -> bool:
+
+    return os.path.isfile(get_shared_file_path(owner, filename))
+
+
+# =====================================
+# 共有ファイル一覧取得（全ユーザー分）
+#
+# 戻り値:
+#   [{"owner": "admin", "name": "test.txt"}, ...]
+# =====================================
+def list_shared() -> list:
+
+    shared_root = get_shared_root()
+
+    if not os.path.exists(shared_root):
+
+        return []
+
+    result = []
+
+    # 所有者フォルダを順に見る
+    for owner in os.listdir(shared_root):
+
+        owner_dir = os.path.join(shared_root, owner)
+
+        if not os.path.isdir(owner_dir):
+            continue
+
+        for f in os.listdir(owner_dir):
+
+            if os.path.isfile(os.path.join(owner_dir, f)):
+
+                result.append({"owner": owner, "name": f})
+
+    return result
+
+
+# =====================================
+# 共有ファイルのサイズ取得（バイト）
+# =====================================
+def get_shared_file_size(owner: str, filename: str) -> int:
+
+    file_path = get_shared_file_path(owner, filename)
+
+    if not os.path.isfile(file_path):
+
+        return 0
+
+    return os.path.getsize(file_path)
+
+
+# =====================================
+# 共有ファイルのメタデータ取得
+#
+# 戻り値:
+#   shared_at : 共有した日時
+#   file_type : 拡張子
+# =====================================
+def get_shared_file_metadata(owner: str, filename: str) -> dict:
+
+    file_path = get_shared_file_path(owner, filename)
+
+    mtime = os.path.getmtime(file_path)
+    shared_at = datetime.fromtimestamp(mtime).strftime(
+        "%Y-%m-%d %H:%M"
+    )
+
+    ext = os.path.splitext(filename)[1].lower()
+    file_type = ext if ext else "不明"
+
+    return {
+        "shared_at": shared_at,
+        "file_type": file_type
+    }
+
+
+# =====================================
+# 自分の個人ファイルを共有フォルダにコピー（＝共有する）
+#
+# 個人側にもファイルは残る。
+#
+# 戻り値:
+#   True  : 成功
+#   False : 失敗
+# =====================================
+def share_file(username: str, filename: str) -> bool:
+
+    try:
+
+        src = get_file_path(username, filename)
+
+        dest_dir = get_shared_user_dir(username)
+        os.makedirs(dest_dir, exist_ok=True)
+
+        dest = os.path.join(dest_dir, filename)
+
+        # メタデータ（更新日時など）も含めてコピー
+        shutil.copy2(src, dest)
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"共有失敗: {username}/{filename} - {e}")
+
+        return False
+
+
+# =====================================
+# 共有を解除（共有フォルダ内の自分のファイルを削除）
+#
+# 個人側のファイルは消えない。
+#
+# 戻り値:
+#   True  : 成功
+#   False : 失敗
+# =====================================
+def unshare_file(owner: str, filename: str) -> bool:
+
+    try:
+
+        os.remove(get_shared_file_path(owner, filename))
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"共有解除失敗: {owner}/{filename} - {e}")
+
+        return False
