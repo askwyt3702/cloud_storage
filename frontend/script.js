@@ -95,11 +95,12 @@ async function verifyMFA() {
     }
 
     try {
-        // バックエンドの新設API（/login/mfa）にコードを送信
-        const res = await fetch(
-            `${API_BASE}/login/mfa?code=${encodeURIComponent(code)}`,
-            { method: "POST" }
-        );
+        // バックエンドの新設API（/login/mfa）にコードをJSONボディで送信
+        const res = await fetch(`${API_BASE}/login/mfa`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code })
+        });
 
         if (res.ok) {
             // 一時保存しておいたユーザー名を正式なセッションに引き継ぐ
@@ -111,7 +112,11 @@ async function verifyMFA() {
             location.href = "files.html"; // ログイン完了で一覧画面へ
         } else {
             const err = await res.json();
-            alert(err.detail || "認証コードが正しくありません");
+            // detail は文字列のときと配列(検証エラー)のときがあるので整形
+            const msg = typeof err.detail === "string"
+                ? err.detail
+                : "認証コードが正しくありません";
+            alert(msg);
         }
 
     } catch (e) {
