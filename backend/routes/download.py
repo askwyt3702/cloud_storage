@@ -1,25 +1,25 @@
 import os
-
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from backend.schemas import (
+from schemas import (
     FileInfo,
     FileListResponse,
     MessageResponse,
     RenameRequest
 )
 
-from backend.services.file_service import (
+from services.file_service import (
     get_file_path,
     file_exists,
-    sanitize_filename,     # ← ファイル名の無害化
-    list_files,            # ← ファイル一覧取得
-    get_file_size,         # ← ファイルサイズ取得
-    get_file_metadata      # ← メタデータ取得
-)
+    sanitize_filename,
+    list_files,      # ファイル名の無害化
+    get_file_size,    # ファイル一覧取得
+    get_file_metadata # ファイルサイズ取得
+)     # ← メタデータ取得
 
-from backend.services.auth_service import (
+
+from services.auth_service import (
     is_logged_in,          # ← 認証チェック
     get_current_user       # ← ログイン中ユーザー取得
 )

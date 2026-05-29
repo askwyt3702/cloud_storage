@@ -2,15 +2,18 @@ import os
 
 from fastapi import APIRouter, HTTPException, UploadFile, File
 
-from backend.schemas import MessageResponse
+from text
+fromschemas import MessageResponse
 
-from backend.services.file_service import (
+from text
+fromservices.file_service import (
     sanitize_filename,     # ← ファイル名の無害化
     save_file,             # ← ファイル保存
     file_exists            # ← 上書き防止チェック
 )
 
-from backend.services.auth_service import (
+from text
+fromservices.auth_service import (
     is_logged_in,          # ← 認証チェック
     get_current_user       # ← ログイン中ユーザー取得
 )
@@ -20,7 +23,8 @@ from security.logger import (
     log_failed,    # ← 失敗ログ
 )
 
-from backend.services.storage_service import (
+from text
+fromservices.storage_service import (
     get_used_bytes         # ← 使用量チェック
 )
 

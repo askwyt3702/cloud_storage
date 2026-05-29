@@ -1,6 +1,5 @@
 import pyotp
-from database.db import get_db_connection  # データベース接続用の関数をインポート
-
+from database.db import get_db_connection  # 元に戻す
 # セッション管理（ログイン中のユーザーを保持）
 # MFA用に状態を持てるように拡張します
 # { "username": str, "mfa_verified": bool }
@@ -79,7 +78,11 @@ def verify_mfa_login(code: str) -> bool:
     
     # テスト用（仮のキーでの検証ロジック）
     # 実際はここにユーザー固有の鍵が入ります
-    user_secret = pyotp.random_base32() 
+    # 【修正前】
+# user_secret = pyotp.random_base32() 
+
+# 【修正後】テスト用の固定キー（スマホのアプリに登録する用）
+    user_secret = "JBSWY3DPEHPK3PXP" 
 
     is_valid = MFAService.verify_code(user_secret, code)
     if is_valid:
