@@ -1,6 +1,10 @@
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# プロジェクトのルート（このファイルの2つ上 = cloud_storage）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 # FastAPI起動
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -77,9 +81,10 @@ app.include_router(
 # ==========================
 # フロントエンドの配信
 # frontend/ フォルダを /static として公開
+# ※ 絶対パスにして、どのフォルダから起動しても動くようにする
 # ==========================
 app.mount(
     "/static",
-    StaticFiles(directory="../frontend"),
+    StaticFiles(directory=os.path.join(BASE_DIR, "frontend")),
     name="static"
 )
