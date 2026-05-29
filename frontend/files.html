@@ -31,31 +31,70 @@
 
     </div>
 
-    <div class="upload-buttons">
+    <!-- 通常のファイル一覧ビュー -->
+    <div id="mainView">
 
-      <input type="file" id="fileInput" hidden>
+      <div class="upload-buttons">
 
-      <button onclick="document.getElementById('fileInput').click()">
-        📁 ファイル選択
-      </button>
+        <input type="file" id="fileInput" hidden>
 
-      <button onclick="uploadSelectedFile()">
-        ⬆ アップロード
-      </button>
+        <button onclick="document.getElementById('fileInput').click()">
+          📁 ファイル選択
+        </button>
+
+        <button onclick="uploadSelectedFile()">
+          ⬆ アップロード
+        </button>
+
+      </div>
+
+      <div class="drop-area">
+        <p class="drop-title">
+          ファイルをドラッグ＆ドロップ
+        </p>
+        <p class="drop-sub">
+          またはファイルを選択
+        </p>
+      </div>
+
+      <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
+      <div class="toolbar">
+
+        <select id="sortSelect" class="sort-select" onchange="loadFiles()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">新しい順</option>
+          <option value="date_asc">古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+        </select>
+
+        <div class="toolbar-right">
+          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
+          <button class="delete-btn" onclick="deleteSelected()">🗑 選択削除</button>
+          <button onclick="showTrash()">🗑 ゴミ箱</button>
+        </div>
+
+      </div>
+
+      <div class="file-list" id="fileList">
+        <!-- ここに動的に追加される -->
+      </div>
 
     </div>
 
-    <div class="drop-area">
-      <p class="drop-title">
-        ファイルをドラッグ＆ドロップ
-      </p>
-      <p class="drop-sub">
-        またはファイルを選択
-      </p>
-    </div>
+    <!-- ゴミ箱ビュー（最初は非表示） -->
+    <div id="trashView" style="display:none">
 
-    <div class="file-list" id="fileList">
-      <!-- ここに動的に追加される -->
+      <div class="toolbar">
+        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <button class="delete-btn" onclick="emptyTrash()">ゴミ箱を空にする</button>
+      </div>
+
+      <div class="file-list" id="trashList">
+        <!-- ゴミ箱の中身が動的に追加される -->
+      </div>
+
     </div>
 
   </div>
