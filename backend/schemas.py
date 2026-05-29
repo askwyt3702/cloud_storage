@@ -52,6 +52,45 @@ class StorageResponse(BaseModel):
 
 
 # =====================================
+# 一括削除リクエスト
+# =====================================
+class BulkDeleteRequest(BaseModel):
+    filenames: List[str]   # 削除するファイル名のリスト
+
+
+# =====================================
+# 一括操作レスポンス
+# （一括削除などで使用）
+# =====================================
+class BulkActionResponse(BaseModel):
+    success: bool
+    user: Optional[str] = None
+    succeeded: List[str]   # 成功したファイル名
+    failed: List[str]      # 失敗したファイル名
+    message: str
+
+
+# =====================================
+# ゴミ箱内ファイル情報
+# =====================================
+class TrashFileInfo(BaseModel):
+    name: str          # ファイル名
+    size: str          # 例: "1.2MB"
+    file_type: str     # 例: ".pdf"
+    deleted_at: str    # ゴミ箱に入れた日時 例: "2026-05-29 12:00"
+
+
+# =====================================
+# ゴミ箱一覧レスポンス
+# =====================================
+class TrashListResponse(BaseModel):
+    success: bool
+    user: str
+    files: List[TrashFileInfo]
+    total: int
+
+
+# =====================================
 # ログインリクエスト
 # =====================================
 class LoginRequest(BaseModel):

@@ -6,17 +6,39 @@ from schemas import (
     FileInfo,
     FileListResponse,
     MessageResponse,
-    RenameRequest
+    RenameRequest,
+    BulkDeleteRequest,     # ← 一括削除リクエスト
+    BulkActionResponse,    # ← 一括操作レスポンス
+    TrashFileInfo,         # ← ゴミ箱内ファイル情報
+    TrashListResponse      # ← ゴミ箱一覧レスポンス
 )
 
 from services.file_service import (
     get_file_path,
     file_exists,
+<<<<<<< HEAD
     sanitize_filename,
     list_files,      # ファイル名の無害化
     get_file_size,    # ファイル一覧取得
     get_file_metadata # ファイルサイズ取得
 )     # ← メタデータ取得
+=======
+    sanitize_filename,     # ← ファイル名の無害化
+    list_files,            # ← ファイル一覧取得
+    get_file_size,         # ← ファイルサイズ取得
+    get_file_mtime,        # ← 更新日時取得（並び替え用）
+    get_file_metadata,     # ← メタデータ取得
+    # --- ゴミ箱関連 ---
+    move_to_trash,             # ← ゴミ箱へ移動（論理削除）
+    list_trash,                # ← ゴミ箱一覧
+    trash_file_exists,         # ← ゴミ箱に存在するか
+    get_trash_file_size,       # ← ゴミ箱内ファイルのサイズ
+    get_trash_file_metadata,   # ← ゴミ箱内ファイルのメタデータ
+    restore_from_trash,        # ← ゴミ箱から復元
+    delete_from_trash,         # ← ゴミ箱から完全削除
+    empty_trash                # ← ゴミ箱を空にする
+)
+>>>>>>> 845d2b7251cdba2d8bb45f04815ef9e588c0a4de
 
 
 from services.auth_service import (
@@ -66,17 +88,24 @@ def _format_size(size_bytes: int) -> str:
 # ファイル一覧取得API
 #
 # URL:
-# GET /files?page=1&per_page=20
+# GET /files?page=1&per_page=20&sort_by=name&order=asc
 #
 # クエリパラメータ:
 #   page     : ページ番号（デフォルト: 1）
 #   per_page : 1ページの件数（デフォルト: 20）
+#   sort_by  : 並び替えの基準 name(名前) / date(日付) / size(サイズ)
+#   order    : 並び順 asc(昇順) / desc(降順)
 #
 # エラー:
 #   401 : 未ログイン
 # =====================================
 @router.get("/files", response_model=FileListResponse)
-def get_files(page: int = 1, per_page: int = 20):
+def get_files(
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: str = "name",
+    order: str = "asc"
+):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -95,14 +124,40 @@ def get_files(page: int = 1, per_page: int = 20):
     total = len(all_files)
 
 
-    # ③ ページネーション
+    # ③ 並び替え
+    #    desc（降順）かどうか
+    reverse = (order == "desc")
+
+    if sort_by == "size":
+        # サイズ順
+        all_files.sort(
+            key=lambda f: get_file_size(current_user, f),
+            reverse=reverse
+        )
+
+    elif sort_by == "date":
+        # 更新日時順
+        all_files.sort(
+            key=lambda f: get_file_mtime(current_user, f),
+            reverse=reverse
+        )
+
+    else:
+        # 名前順（大文字小文字を区別しない）
+        all_files.sort(
+            key=lambda f: f.lower(),
+            reverse=reverse
+        )
+
+
+    # ④ ページネーション
     #    例: page=2, per_page=20 → 21件目〜40件目
     start = (page - 1) * per_page
     end = start + per_page
     paged_files = all_files[start:end]
 
 
-    # ④ メタデータ付きで整形
+    # ⑤ メタデータ付きで整形
     files_info = [
         FileInfo(
             name=f,
@@ -204,7 +259,10 @@ def download_file(filename: str):
 
 
 # =====================================
-# ファイル削除API
+# ファイル削除API（ゴミ箱へ移動＝論理削除）
+#
+# 即座に消すのではなく、ゴミ箱（.trash）へ移動する。
+# 完全に消したい場合は DELETE /trash/{filename} を使う。
 #
 # URL:
 # DELETE /delete/{filename}
@@ -271,8 +329,8 @@ def delete_file(filename: str):
         )
 
 
-    # ⑤ 削除実行
-    success = _delete_file_from_storage(current_user, safe_name)
+    # ⑤ ゴミ箱へ移動
+    success = move_to_trash(current_user, safe_name)
 
     if not success:
 
@@ -282,12 +340,88 @@ def delete_file(filename: str):
         )
 
 
-    log_success(current_user, f"DELETE: {safe_name}")
+    log_success(current_user, f"TRASH: {safe_name}")
 
     return MessageResponse(
         success=True,
         user=current_user,
-        message=f"{safe_name} を削除しました"
+        message=f"{safe_name} をゴミ箱に移動しました"
+    )
+
+
+# =====================================
+# ファイル一括削除API（まとめてゴミ箱へ）
+#
+# URL:
+# POST /delete-multiple
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", "b.pdf", ...] }
+#
+# レスポンス:
+#   succeeded : ゴミ箱へ移動できたファイル
+#   failed    : 失敗したファイル（存在しない・不正な名前など）
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.post("/delete-multiple", response_model=BulkActionResponse)
+def delete_multiple(body: BulkDeleteRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "BULK_DELETE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "BULK_DELETE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを削除する権限がありません"
+        )
+
+
+    # ③ 1件ずつゴミ箱へ移動
+    succeeded = []
+    failed = []
+
+    for name in body.filenames:
+
+        safe_name = sanitize_filename(name)
+
+        # 名前が不正、または存在しないものは失敗扱い
+        if not safe_name or not file_exists(current_user, safe_name):
+
+            failed.append(name)
+            continue
+
+        if move_to_trash(current_user, safe_name):
+            succeeded.append(safe_name)
+        else:
+            failed.append(name)
+
+
+    log_success(current_user, f"BULK_DELETE: 成功{len(succeeded)}件 / 失敗{len(failed)}件")
+
+    return BulkActionResponse(
+        success=True,
+        user=current_user,
+        succeeded=succeeded,
+        failed=failed,
+        message=f"{len(succeeded)}件をゴミ箱に移動しました"
     )
 
 
@@ -401,19 +535,278 @@ def rename_file(filename: str, body: RenameRequest):
     )
 
 
+# =====================================================
+# ここから下：ゴミ箱（.trash）操作API
+# =====================================================
+
+
 # =====================================
-# 内部関数：ファイル削除実行
+# ゴミ箱一覧取得API
+#
+# URL:
+# GET /trash
+#
+# エラー:
+#   401 : 未ログイン
 # =====================================
-def _delete_file_from_storage(username: str, filename: str) -> bool:
+@router.get("/trash", response_model=TrashListResponse)
+def get_trash():
 
-    try:
+    # ① 認証チェック
+    if not is_logged_in():
 
-        file_path = get_file_path(username, filename)
-        os.remove(file_path)
-        return True
+        log_failed("不明", "TRASH_LIST", "未ログイン")
 
-    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
 
-        log_error(f"ファイル削除失敗: {username}/{filename} - {e}")
 
-        return False
+    # ② ゴミ箱の中身を取得
+    current_user = get_current_user()
+    trash_files = list_trash(current_user)
+
+
+    # ③ メタデータ付きで整形
+    files_info = [
+        TrashFileInfo(
+            name=f,
+            size=_format_size(get_trash_file_size(current_user, f)),
+            **get_trash_file_metadata(current_user, f)
+        )
+        for f in trash_files
+    ]
+
+    log_success(current_user, "TRASH_LIST")
+
+    return TrashListResponse(
+        success=True,
+        user=current_user,
+        files=files_info,
+        total=len(trash_files)
+    )
+
+
+# =====================================
+# ゴミ箱からの復元API
+#
+# URL:
+# POST /restore/{filename}
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : ゴミ箱に存在しない
+#   409 : 同名のファイルが既に存在する
+#   500 : 復元処理に失敗した場合
+# =====================================
+@router.post("/restore/{filename}", response_model=MessageResponse)
+def restore_file(filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "RESTORE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "RESTORE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを復元する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ ゴミ箱に存在するか
+    if not trash_file_exists(current_user, safe_name):
+
+        log_failed(current_user, "RESTORE", f"ゴミ箱にファイルなし: {safe_name}")
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ゴミ箱にファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 復元先に同名ファイルが無いか（あると上書きしてしまうので拒否）
+    if file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のファイルが既に存在するため復元できません: {safe_name}"
+        )
+
+
+    # ⑥ 復元実行
+    success = restore_from_trash(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="ファイルの復元に失敗しました"
+        )
+
+
+    log_success(current_user, f"RESTORE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を復元しました"
+    )
+
+
+# =====================================
+# ゴミ箱内ファイルの完全削除API（復元不可）
+#
+# URL:
+# DELETE /trash/{filename}
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : ゴミ箱に存在しない
+#   500 : 削除処理に失敗した場合
+# =====================================
+@router.delete("/trash/{filename}", response_model=MessageResponse)
+def delete_trash_file(filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "TRASH_DELETE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "TRASH_DELETE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを削除する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ ゴミ箱に存在するか
+    if not trash_file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ゴミ箱にファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 完全削除実行
+    success = delete_from_trash(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="ファイルの完全削除に失敗しました"
+        )
+
+
+    log_success(current_user, f"TRASH_DELETE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を完全に削除しました"
+    )
+
+
+# =====================================
+# ゴミ箱を空にするAPI（全件完全削除）
+#
+# URL:
+# DELETE /trash
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.delete("/trash", response_model=MessageResponse)
+def empty_trash_all():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "TRASH_EMPTY", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "TRASH_EMPTY", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ゴミ箱を空にする権限がありません"
+        )
+
+
+    # ③ 全件完全削除
+    count = empty_trash(current_user)
+
+    log_success(current_user, f"TRASH_EMPTY: {count}件")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"ゴミ箱を空にしました（{count}件）"
+    )

@@ -552,3 +552,54 @@ input:-webkit-autofill:focus{
 .video-bg   { background:#9333ea; }
 .audio-bg   { background:#ec4899; }
 .default-bg { background:#475569; }
+
+/* ===== 操作バー（並び替え・一括削除・ゴミ箱） ===== */
+.toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    flex-wrap:wrap;
+    gap:12px;
+
+    margin-bottom:20px;
+}
+
+.toolbar-right{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.toolbar button{
+    padding:10px 16px;
+    font-size:14px;
+}
+
+/* 並び替えドロップダウン */
+.sort-select{
+    padding:12px 14px;
+
+    border:none;
+    border-radius:10px;
+
+    background:#334155;
+    color:white;
+
+    font-size:14px;
+    cursor:pointer;
+}
+
+/* ファイル選択用チェックボックス */
+.file-check{
+    width:20px;
+    height:20px;
+
+    padding:0;
+    margin:0;
+
+    cursor:pointer;
+    accent-color:#2563eb;
+
+    flex-shrink:0;
+}
