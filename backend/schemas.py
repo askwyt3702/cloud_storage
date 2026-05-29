@@ -49,3 +49,20 @@ class StorageResponse(BaseModel):
     user: str
     used: str          # 例: "3.5GB"
     max: str           # 例: "10GB"
+
+
+# =====================================
+# ログインリクエスト
+# =====================================
+class LoginRequest(BaseModel):
+    username_or_email: str
+    password: str
+
+
+# =====================================
+# 新規登録リクエスト
+# =====================================
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    password: str

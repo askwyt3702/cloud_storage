@@ -3,8 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 
-# 仮想環境（各自のPCで作るもの）
+# 仮想環境（各自のPCで作るもの・requirements.txtから再生成する）
 .venv/
+venv/
+env/
 
 # データベースファイル
 *.db

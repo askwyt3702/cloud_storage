@@ -43,10 +43,16 @@ async function login() {
     }
 
     try {
-        const res = await fetch(
-            `${API_BASE}/login?username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
-            { method: "POST" }
-        );
+        const res = await fetch(`${API_BASE}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username_or_email: email,
+                password: password
+            })
+        });
 
         if (res.ok) {
             const data = await res.json();

@@ -30,9 +30,12 @@ UPLOAD_DIR = "uploads"
 # =====================================
 def sanitize_filename(filename: str) -> str | None:
 
+    # Windowsのパス区切り文字 '\' を '/' に変換して統一する（Linuxでの動作時にパストラバーサルを防ぐため）
+    normalized_name = filename.replace("\\", "/")
+
     # パス部分をすべて取り除く
     # "../../etc/passwd" → "passwd"
-    safe_name = os.path.basename(filename)
+    safe_name = os.path.basename(normalized_name)
 
     # 空文字・"." や ".." は拒否
     if not safe_name or safe_name in (".", ".."):

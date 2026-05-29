@@ -87,6 +87,24 @@ button:hover{
     box-shadow:
     0 8px 25px rgba(59,130,246,0.45);
 }
+/* ログイン欄・MFA欄を縦並び＋間隔をそろえる */
+#login-fields,
+#mfa-fields{
+    display:flex;
+    flex-direction:column;
+
+    gap:20px;
+}
+
+/* ブラウザの自動入力で背景が白くなるのを防ぐ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus{
+    -webkit-box-shadow:0 0 0 1000px #334155 inset;
+    -webkit-text-fill-color:white;
+    caret-color:white;
+}
+
 .register-text{
     color:white;
     text-align:center;
