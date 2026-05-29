@@ -18,13 +18,6 @@ from schemas import (
 from services.file_service import (
     get_file_path,
     file_exists,
-<<<<<<< HEAD
-    sanitize_filename,
-    list_files,      # ファイル名の無害化
-    get_file_size,    # ファイル一覧取得
-    get_file_metadata # ファイルサイズ取得
-)     # ← メタデータ取得
-=======
     sanitize_filename,     # ← ファイル名の無害化
     list_files,            # ← ファイル一覧取得
     get_file_size,         # ← ファイルサイズ取得
@@ -48,7 +41,6 @@ from services.file_service import (
     get_shared_file_size,      # ← 共有ファイルのサイズ
     get_shared_file_metadata   # ← 共有ファイルのメタデータ
 )
->>>>>>> 845d2b7251cdba2d8bb45f04815ef9e588c0a4de
 
 
 from services.auth_service import (

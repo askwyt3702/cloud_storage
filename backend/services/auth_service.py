@@ -1,8 +1,3 @@
-import pyotp
-from database.db import get_db_connection  # 元に戻す
-# セッション管理（ログイン中のユーザーを保持）
-# MFA用に状態を持てるように拡張します
-# { "username": str, "mfa_verified": bool }
 # =====================================
 # 認証サービス
 # ユーザー名とパスワードを確認（PostgreSQL & bcrypt対応 ＆ MFA対応）
