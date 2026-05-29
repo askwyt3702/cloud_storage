@@ -1,4 +1,4 @@
-from backend.services.file_service import (
+from services.file_service import (
     list_files,       # ← ファイル一覧
     get_file_size     # ← ファイルサイズ取得
 )
@@ -42,13 +42,8 @@ def get_used_bytes(username: str) -> int:
 def calculate_storage(username: str) -> dict:
 
     # ユーザーの全ファイルを取得
-    files = list_files(username)
-
-    # 全ファイルのバイト数を合計
-    total_bytes = sum(
-        get_file_size(username, f)
-        for f in files
-    )
+    # (※ 以前のコードの重複箇所を1つに綺麗にまとめています)
+    total_bytes = get_used_bytes(username)
 
     # バイト → GB に変換（小数点2桁）
     # 1GB = 1024 * 1024 * 1024 バイト

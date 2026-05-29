@@ -1,3 +1,6 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # FastAPI起動
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -5,27 +8,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # ログインAPI
-from backend.routes.login import (
+from routes.login import (
     router as login_router
 )
 
 # 容量API
-from backend.routes.storage import (
+from routes.storage import (
     router as storage_router
 )
 
 # ダウンロード・削除API  ← 担当B追加
-from backend.routes.download import (
+from routes.download import (
     router as download_router
 )
 
 # user.py はルートなし（現在未使用）
-# from backend.routes.user import (
-#     router as user_router
-# )
+# from text
+from routes.user import (
+    router as user_router
+)  # ← この閉じカッコがあるか確認し、無ければ追加します
 
 # アップロードAPI
-from backend.routes.upload import (
+from routes.user import (
     router as upload_router
 )
 
@@ -82,6 +86,6 @@ app.include_router(
 # ==========================
 app.mount(
     "/static",
-    StaticFiles(directory="frontend"),
+    StaticFiles(directory="../frontend"),
     name="static"
 )

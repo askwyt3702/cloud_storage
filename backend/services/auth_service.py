@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+import pyotp
+from database.db import get_db_connection  # 元に戻す
+# セッション管理（ログイン中のユーザーを保持）
+# MFA用に状態を持てるように拡張します
+# { "username": str, "mfa_verified": bool }
+=======
 # =====================================
 # 認証サービス
 # ユーザー名とパスワードを確認（PostgreSQL & bcrypt対応 ＆ MFA対応）
@@ -11,6 +18,7 @@ from security.logger import log_success, log_failed, log_error
 # セッション管理（ログイン中のユーザー情報を保持）
 # { "username": str, "role": str, "mfa_verified": bool } の形で保存
 # 本番環境ではRedisやDBに置き換えること
+>>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
 _active_session: dict = {}
 
 
@@ -105,6 +113,20 @@ def verify_mfa_login(code: str) -> bool:
     if not username:
         return False
 
+<<<<<<< HEAD
+    # 本来はここでデータベースから該当ユーザーの「mfa_secret」を取得します
+    # 例: conn = get_db_connection() ... 
+    # 今回はテスト用に仮のシークレットキーで検証する流れを想定します
+    # user_secret = "DBから取得したシークレットキー"
+    
+    # テスト用（仮のキーでの検証ロジック）
+    # 実際はここにユーザー固有の鍵が入ります
+    # 【修正前】
+# user_secret = pyotp.random_base32() 
+
+# 【修正後】テスト用の固定キー（スマホのアプリに登録する用）
+    user_secret = "JBSWY3DPEHPK3PXP" 
+=======
     conn = None
     try:
         conn = get_db_connection()
@@ -115,6 +137,7 @@ def verify_mfa_login(code: str) -> bool:
         if not row or not row['mfa_secret']:
             # MFAが有効なのに秘密鍵がない場合は安全のため弾く
             return False
+>>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
 
         user_secret = row['mfa_secret']
         is_valid = MFAService.verify_code(user_secret, code)

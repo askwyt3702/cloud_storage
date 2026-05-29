@@ -1,16 +1,8 @@
-from fastapi import APIRouter, HTTPException
-
-from backend.schemas import StorageResponse
-
-from backend.services.auth_service import (
-    is_logged_in,          # ← 認証チェック
-    get_current_user       # ← ログイン中ユーザー取得
-)
-
-from backend.services.storage_service import (
-    calculate_storage      # ← 容量計算
-)
-
+import os
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from schemas import StorageResponse, MessageResponse
+from services.auth_service import get_current_user
+from services.storage_service import calculate_storage
 
 router = APIRouter()
 
@@ -19,25 +11,15 @@ router = APIRouter()
 # 容量取得API
 #
 # URL:
-# GET /storage
+#   GET /storage
 #
 # エラー:
 #   401 : 未ログイン
 # =====================================
 @router.get("/storage", response_model=StorageResponse)
-def storage():
-
-    # ① 認証チェック
-    if not is_logged_in():
-
-        raise HTTPException(
-            status_code=401,
-            detail="ログインが必要です"
-        )
-
+def storage(current_user: str = Depends(get_current_user)):  # ← ①ここでログインユーザー（認証）を自動チェックします
 
     # ② 容量計算
-    current_user = get_current_user()
     result = calculate_storage(current_user)
 
     return StorageResponse(
