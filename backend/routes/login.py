@@ -1,20 +1,12 @@
-<<<<<<< HEAD
-from fastapi import APIRouter, HTTPException, Body  # ← 【修正】Body を追加インポート
-from services.auth_service import (
-    login_user,
-    logout_user,
-    get_current_user,
-=======
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 
-from backend.schemas import LoginRequest, RegisterRequest
-from backend.services.auth_service import (
+from schemas import LoginRequest, RegisterRequest
+from services.auth_service import (
     login_user,
     logout_user,
     get_current_user,
     get_current_role,
     register_user,
->>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
     verify_mfa_login
 )
 
@@ -36,30 +28,19 @@ router = APIRouter()
 #   401 : 認証失敗 (アカウントロック含む)
 # =====================================
 @router.post("/login")
-<<<<<<< HEAD
-def login(username: str, password: str):
-    if not username or not password:
-=======
 def login(body: LoginRequest):
 
     # 入力チェック
     if not body.username_or_email or not body.password:
->>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
         raise HTTPException(
             status_code=400,
             detail="ユーザー名（またはメール）とパスワードを入力してください"
         )
 
-<<<<<<< HEAD
-    result = login_user(username, password)
-
-    if result["success"]:
-=======
     result = login_user(body.username_or_email, body.password)
 
     if result["success"]:
         # MFA（2段階認証）が必要な場合
->>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
         if result["mfa_required"]:
             return {
                 "success": True,
@@ -67,16 +48,7 @@ def login(body: LoginRequest):
                 "user": result["username"],
                 "message": "ID・パスワード認証成功。MFAコードを入力してください"
             }
-        
-<<<<<<< HEAD
-        return {
-            "success": True,
-            "mfa_required": False,
-            "user": username,
-            "message": "ログイン成功"
-        }
 
-=======
         # MFA不要な場合はそのままログイン完了
         return {
             "success": True,
@@ -86,7 +58,6 @@ def login(body: LoginRequest):
         }
 
     # 認証失敗
->>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
     raise HTTPException(
         status_code=401,
         detail=result["detail"]
@@ -94,9 +65,6 @@ def login(body: LoginRequest):
 
 
 # =====================================
-<<<<<<< HEAD
-# 【修正】MFAコード検証API
-=======
 # 新規登録API
 #
 # URL:
@@ -135,13 +103,12 @@ def register(body: RegisterRequest):
 
 # =====================================
 # MFAコード検証API
->>>>>>> ad0d96bc64d345b84392828dcf93425a8d506b82
 #
 # URL:
 # POST /login/mfa
 # =====================================
 @router.post("/login/mfa")
-def login_mfa(code: str = Body(..., embed=True)):  # ← 【修正】Body(..., embed=True) を指定
+def login_mfa(code: str = Body(..., embed=True)):
     if not code:
         raise HTTPException(
             status_code=400,

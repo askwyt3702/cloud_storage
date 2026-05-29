@@ -22,14 +22,8 @@ from routes.download import (
     router as download_router
 )
 
-# user.py はルートなし（現在未使用）
-# from text
-from routes.user import (
-    router as user_router
-)  # ← この閉じカッコがあるか確認し、無ければ追加します
-
 # アップロードAPI
-from routes.user import (
+from routes.upload import (
     router as upload_router
 )
 

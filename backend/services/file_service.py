@@ -1,5 +1,7 @@
 import os
+import json
 import shutil
+import bcrypt
 from datetime import datetime
 
 from security.logger import (
@@ -22,6 +24,11 @@ TRASH_DIRNAME = ".trash"
 # uploads/_shared/{owner}/ に共有ファイルを置く
 # ※ この名前はユーザー名として使えない予約名
 SHARED_DIRNAME = "_shared"
+
+# 共有ファイルのパスワード情報を保存するファイル名
+# uploads/_shared/{owner}/.shared_meta.json に
+# { "ファイル名": {"password_hash": "..."} } の形で保存する
+SHARED_META_FILENAME = ".shared_meta.json"
 
 
 # =====================================
@@ -518,6 +525,10 @@ def list_shared() -> list:
 
         for f in os.listdir(owner_dir):
 
+            # パスワード情報ファイルは一覧に出さない
+            if f == SHARED_META_FILENAME:
+                continue
+
             if os.path.isfile(os.path.join(owner_dir, f)):
 
                 result.append({"owner": owner, "name": f})
@@ -611,10 +622,129 @@ def unshare_file(owner: str, filename: str) -> bool:
 
         os.remove(get_shared_file_path(owner, filename))
 
+        # パスワード情報も消しておく
+        remove_shared_password(owner, filename)
+
         return True
 
     except Exception as e:
 
         log_error(f"共有解除失敗: {owner}/{filename} - {e}")
 
+        return False
+
+
+# =====================================================
+# 共有ファイルのパスワード管理
+# uploads/_shared/{owner}/.shared_meta.json に保存
+# =====================================================
+
+
+# =====================================
+# メタファイルのパス
+# =====================================
+def _shared_meta_path(owner: str) -> str:
+
+    return os.path.join(get_shared_user_dir(owner), SHARED_META_FILENAME)
+
+
+# =====================================
+# メタ情報の読み込み（無ければ空辞書）
+# =====================================
+def _load_shared_meta(owner: str) -> dict:
+
+    path = _shared_meta_path(owner)
+
+    if not os.path.isfile(path):
+        return {}
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        log_error(f"共有メタ読み込み失敗: {owner} - {e}")
+        return {}
+
+
+# =====================================
+# メタ情報の保存
+# =====================================
+def _save_shared_meta(owner: str, meta: dict) -> None:
+
+    os.makedirs(get_shared_user_dir(owner), exist_ok=True)
+
+    path = _shared_meta_path(owner)
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+
+
+# =====================================
+# 共有ファイルにパスワードを設定
+#
+# password が空（None や ""）なら「保護なし」として扱い、
+# 既存のパスワード情報があれば削除する。
+# =====================================
+def set_shared_password(owner: str, filename: str, password: str | None) -> None:
+
+    meta = _load_shared_meta(owner)
+
+    if password:
+        # bcrypt でハッシュ化して保存（強度チェックはしない）
+        hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        meta[filename] = {"password_hash": hashed}
+    else:
+        # パスワードなし → 情報を消す
+        meta.pop(filename, None)
+
+    _save_shared_meta(owner, meta)
+
+
+# =====================================
+# 共有ファイルのパスワード情報を削除
+# =====================================
+def remove_shared_password(owner: str, filename: str) -> None:
+
+    meta = _load_shared_meta(owner)
+
+    if filename in meta:
+        meta.pop(filename, None)
+        _save_shared_meta(owner, meta)
+
+
+# =====================================
+# その共有ファイルがパスワード保護されているか
+# =====================================
+def is_shared_protected(owner: str, filename: str) -> bool:
+
+    meta = _load_shared_meta(owner)
+
+    return filename in meta and bool(meta[filename].get("password_hash"))
+
+
+# =====================================
+# 共有ファイルのパスワード照合
+#
+# 戻り値:
+#   True  : 保護なし、または パスワードが正しい
+#   False : 保護ありで パスワードが違う／未入力
+# =====================================
+def verify_shared_password(owner: str, filename: str, password: str | None) -> bool:
+
+    meta = _load_shared_meta(owner)
+    entry = meta.get(filename)
+
+    # 保護されていない → 常にOK
+    if not entry or not entry.get("password_hash"):
+        return True
+
+    if not password:
+        return False
+
+    try:
+        return bcrypt.checkpw(
+            password.encode(),
+            entry["password_hash"].encode()
+        )
+    except Exception:
         return False
