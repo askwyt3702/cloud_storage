@@ -99,6 +99,7 @@ class SharedFileInfo(BaseModel):
     size: str          # 例: "1.2MB"
     file_type: str     # 例: ".pdf"
     shared_at: str     # 共有した日時 例: "2026-05-29 12:00"
+    protected: bool    # パスワードで保護されているか
 
 
 # =====================================
@@ -108,6 +109,23 @@ class SharedListResponse(BaseModel):
     success: bool
     files: List[SharedFileInfo]
     total: int
+
+
+# =====================================
+# 共有リクエスト（単体）
+# password が空ならパスワードなしで共有
+# =====================================
+class ShareRequest(BaseModel):
+    password: Optional[str] = None
+
+
+# =====================================
+# 一括共有リクエスト
+# 選択した複数ファイルに、同じパスワードを付けて共有
+# =====================================
+class BulkShareRequest(BaseModel):
+    filenames: List[str]
+    password: Optional[str] = None
 
 
 # =====================================

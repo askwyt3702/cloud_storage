@@ -1,5 +1,7 @@
 import os
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Header, Body
 from fastapi.responses import FileResponse
 
 from schemas import (
@@ -12,7 +14,9 @@ from schemas import (
     TrashFileInfo,         # ← ゴミ箱内ファイル情報
     TrashListResponse,     # ← ゴミ箱一覧レスポンス
     SharedFileInfo,        # ← 共有ファイル情報
-    SharedListResponse     # ← 共有ファイル一覧レスポンス
+    SharedListResponse,    # ← 共有ファイル一覧レスポンス
+    ShareRequest,          # ← 共有リクエスト（パスワード任意）
+    BulkShareRequest       # ← 一括共有リクエスト
 )
 
 from services.file_service import (
@@ -39,7 +43,10 @@ from services.file_service import (
     shared_file_exists,        # ← 共有に存在するか
     get_shared_file_path,      # ← 共有ファイルのパス
     get_shared_file_size,      # ← 共有ファイルのサイズ
-    get_shared_file_metadata   # ← 共有ファイルのメタデータ
+    get_shared_file_metadata,  # ← 共有ファイルのメタデータ
+    set_shared_password,       # ← 共有パスワードの設定
+    is_shared_protected,       # ← パスワード保護されているか
+    verify_shared_password     # ← パスワード照合
 )
 
 
@@ -849,7 +856,7 @@ def get_shared():
     shared_files = list_shared()
 
 
-    # ③ メタデータ付きで整形
+    # ③ メタデータ付きで整形（パスワード保護の有無も付与）
     files_info = [
         SharedFileInfo(
             owner=item["owner"],
@@ -857,6 +864,7 @@ def get_shared():
             size=_format_size(
                 get_shared_file_size(item["owner"], item["name"])
             ),
+            protected=is_shared_protected(item["owner"], item["name"]),
             **get_shared_file_metadata(item["owner"], item["name"])
         )
         for item in shared_files
@@ -878,15 +886,21 @@ def get_shared():
 # GET /shared/download/{owner}/{filename}
 #
 # ログインしていれば、他人が共有したファイルもダウンロードできる。
+# パスワード保護されている場合は、ヘッダー「X-Share-Password」に
+# パスワードを入れて送る必要がある。
 #
 # エラー:
-#   401 : 未ログイン
+#   401 : 未ログイン / パスワード未入力・不一致
 #   403 : 権限なし
 #   400 : 名前が不正
 #   404 : 共有ファイルが存在しない
 # =====================================
 @router.get("/shared/download/{owner}/{filename}")
-def download_shared_file(owner: str, filename: str):
+def download_shared_file(
+    owner: str,
+    filename: str,
+    x_share_password: Optional[str] = Header(default=None)
+):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -936,7 +950,18 @@ def download_shared_file(owner: str, filename: str):
         )
 
 
-    # ⑤ ダウンロード実行
+    # ⑤ パスワード照合（保護されている場合のみチェック）
+    if not verify_shared_password(safe_owner, safe_name, x_share_password):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", f"パスワード不一致: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=401,
+            detail="パスワードが必要です（または間違っています）"
+        )
+
+
+    # ⑥ ダウンロード実行
     file_path = get_shared_file_path(safe_owner, safe_name)
 
     log_success(current_user, f"SHARED_DOWNLOAD: {safe_owner}/{safe_name}")
@@ -954,6 +979,9 @@ def download_shared_file(owner: str, filename: str):
 # URL:
 # POST /share/{filename}
 #
+# リクエストボディ（任意）:
+#   { "password": "ひみつ" }   ← 空 or 省略でパスワードなし
+#
 # エラー:
 #   401 : 未ログイン
 #   403 : 権限なし
@@ -963,7 +991,7 @@ def download_shared_file(owner: str, filename: str):
 #   500 : 共有処理に失敗した場合
 # =====================================
 @router.post("/share/{filename}", response_model=MessageResponse)
-def share_my_file(filename: str):
+def share_my_file(filename: str, body: Optional[ShareRequest] = Body(default=None)):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -1030,12 +1058,105 @@ def share_my_file(filename: str):
         )
 
 
+    # ⑦ パスワードの設定（任意）
+    password = body.password if body else None
+    set_shared_password(current_user, safe_name, password)
+
+    msg = f"{safe_name} を共有しました"
+    if password:
+        msg += "（パスワード付き）"
+
     log_success(current_user, f"SHARE: {safe_name}")
 
     return MessageResponse(
         success=True,
         user=current_user,
-        message=f"{safe_name} を共有しました"
+        message=msg
+    )
+
+
+# =====================================
+# ファイル一括共有API（選択した複数を同じパスワードで共有）
+#
+# URL:
+# POST /share-multiple
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", ...], "password": "ひみつ"（任意） }
+#
+# レスポンス:
+#   succeeded : 共有できたファイル
+#   failed    : 失敗したファイル（存在しない・既に共有済みなど）
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.post("/share-multiple", response_model=BulkActionResponse)
+def share_multiple(body: BulkShareRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "BULK_SHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "BULK_SHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを共有する権限がありません"
+        )
+
+
+    # ③ 1件ずつ共有
+    succeeded = []
+    failed = []
+
+    for name in body.filenames:
+
+        safe_name = sanitize_filename(name)
+
+        # 名前が不正／個人ファイルが無い／既に共有済み → 失敗扱い
+        if (
+            not safe_name
+            or not file_exists(current_user, safe_name)
+            or shared_file_exists(current_user, safe_name)
+        ):
+            failed.append(name)
+            continue
+
+        if share_file(current_user, safe_name):
+            # 同じパスワードを設定（任意）
+            set_shared_password(current_user, safe_name, body.password)
+            succeeded.append(safe_name)
+        else:
+            failed.append(name)
+
+
+    log_success(current_user, f"BULK_SHARE: 成功{len(succeeded)}件 / 失敗{len(failed)}件")
+
+    msg = f"{len(succeeded)}件を共有しました"
+    if body.password:
+        msg += "（パスワード付き）"
+
+    return BulkActionResponse(
+        success=True,
+        user=current_user,
+        succeeded=succeeded,
+        failed=failed,
+        message=msg
     )
 
 

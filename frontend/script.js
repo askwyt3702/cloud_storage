@@ -558,18 +558,74 @@ async function emptyTrash() {
 
 
 // =====================================
-// 自分のファイルを共有する
+// 自分のファイルを共有する（パスワード任意）
 // =====================================
 async function shareFile(filename) {
+    // パスワードを尋ねる（空欄ならパスワードなし）
+    const password = prompt(
+        `「${filename}」を共有します。\nパスワードを付ける場合は入力（不要なら空欄でOK）:`,
+        ""
+    );
+
+    // prompt でキャンセルした場合は中止
+    if (password === null) return;
+
     try {
         const res = await fetch(
             `${API_BASE}/share/${encodeURIComponent(filename)}`,
-            { method: "POST" }
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: password || null })
+            }
         );
 
         if (res.ok) {
             const data = await res.json();
             alert(data.message);
+        } else {
+            const err = await res.json();
+            alert(`エラー: ${err.detail}`);
+        }
+    } catch (e) {
+        alert("共有に失敗しました");
+    }
+}
+
+
+// =====================================
+// 選択したファイルをまとめて共有（同じパスワード）
+// =====================================
+async function shareSelected() {
+    const checks = document.querySelectorAll("#fileList .file-check:checked");
+    const filenames = Array.from(checks).map(c => c.value);
+
+    if (filenames.length === 0) {
+        alert("共有するファイルを選択してください");
+        return;
+    }
+
+    const password = prompt(
+        `選択した ${filenames.length} 件を共有します。\n共通のパスワードを付ける場合は入力（不要なら空欄でOK）:`,
+        ""
+    );
+
+    if (password === null) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/share-multiple`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filenames, password: password || null })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            let msg = data.message;
+            if (data.failed.length > 0) {
+                msg += `\n共有できなかったもの: ${data.failed.join(", ")}`;
+            }
+            alert(msg);
         } else {
             const err = await res.json();
             alert(`エラー: ${err.detail}`);
@@ -619,6 +675,9 @@ async function loadShared() {
             const safeOwner = encodeURIComponent(file.owner);
             const safeName  = encodeURIComponent(file.name);
 
+            // パスワード保護されているファイルには鍵マークを付ける
+            const lock = file.protected ? " 🔒" : "";
+
             // 自分が共有したファイルだけ「共有解除」ボタンを表示
             const unshareBtn = (file.owner === me)
                 ? `<button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">✕ 共有解除</button>`
@@ -631,12 +690,12 @@ async function loadShared() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name">${file.name}</div>
+                        <div class="file-name">${file.name}${lock}</div>
                         <div class="file-detail">共有者: ${file.owner} ・ ${file.size} ・ ${file.shared_at}</div>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">↓ 取得</button>
+                    <button class="download-btn" onclick="downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})">↓ 取得</button>
                     ${unshareBtn}
                 </div>
             </div>`;
@@ -650,15 +709,30 @@ async function loadShared() {
 
 // =====================================
 // 共有ファイルをダウンロード
+// 保護されている場合はパスワードを尋ねてヘッダーで送る
 // =====================================
-async function downloadShared(owner, filename) {
+async function downloadShared(owner, filename, isProtected) {
+    const headers = {};
+
+    // パスワード保護ありなら入力を求める
+    if (isProtected) {
+        const password = prompt(`「${filename}」はパスワードで保護されています。\nパスワードを入力:`);
+        if (password === null) return;  // キャンセル
+        headers["X-Share-Password"] = password;
+    }
+
     try {
         const res = await fetch(
-            `${API_BASE}/shared/download/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}`
+            `${API_BASE}/shared/download/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}`,
+            { headers }
         );
 
         if (!res.ok) {
-            alert("ダウンロードに失敗しました");
+            if (res.status === 401) {
+                alert("パスワードが違います（または必要です）");
+            } else {
+                alert("ダウンロードに失敗しました");
+            }
             return;
         }
 
