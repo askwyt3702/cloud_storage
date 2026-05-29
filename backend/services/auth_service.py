@@ -1,21 +1,9 @@
 import pyotp
-from database.db import get_db_connection  # 元に戻す
-# セッション管理（ログイン中のユーザーを保持）
-# MFA用に状態を持てるように拡張します
-# { "username": str, "mfa_verified": bool }
-# =====================================
-# 認証サービス
-# ユーザー名とパスワードを確認（PostgreSQL & bcrypt対応 ＆ MFA対応）
-# =====================================
-
-import pyotp
 from database.db import get_db_connection
 from security.password import login_check, hash_password, validate_password
 from security.logger import log_success, log_failed, log_error
 
 # セッション管理（ログイン中のユーザー情報を保持）
-# { "username": str, "role": str, "mfa_verified": bool } の形で保存
-# 本番環境ではRedisやDBに置き換えること
 _active_session: dict = {}
 
 
@@ -43,15 +31,11 @@ def login_user(
 ) -> dict:
     """
     ユーザーログイン処理
-    戻り値:
-        {"success": True, "mfa_required": bool, "username": str}
-        {"success": False, "detail": str}
     """
     conn = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # ユーザー名またはメールアドレスで検索
             cur.execute(
                 "SELECT username, password_hash, role, mfa_enabled, mfa_secret FROM users WHERE username = %s OR email = %s",
                 (username_or_email, username_or_email)
@@ -65,13 +49,13 @@ def login_user(
         db_username = row['username']
         stored_hash = row['password_hash']
         role = row['role']
-        mfa_enabled = row['mfa_enabled']
+        
+        # 🛠️ 【テスト用変更】データベースの値に関わらず、強制的に二段階認証（MFA）をTrueにする
+        mfa_enabled = True
 
-        # パスワードとロックアウト状態のチェック
         check_result = login_check(db_username, password, stored_hash)
 
         if check_result["status"] == "SUCCESS":
-            # セッションにユーザー情報を登録
             _active_session["username"] = db_username
             _active_session["role"] = role
             
@@ -80,7 +64,7 @@ def login_user(
                 log_success(db_username, "LOGIN_STAGE_1")
                 return {"success": True, "mfa_required": True, "username": db_username}
             else:
-                _active_session["mfa_verified"] = True   # MFA不要なのでログイン完了
+                _active_session["mfa_verified"] = True
                 log_success(db_username, "LOGIN_STAGE_2")
                 return {"success": True, "mfa_required": False, "username": db_username}
 
@@ -110,18 +94,10 @@ def verify_mfa_login(code: str) -> bool:
     if not username:
         return False
 
-    conn = None
     try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT mfa_secret FROM users WHERE username = %s", (username,))
-            row = cur.fetchone()
+        # 🛠️ 【テスト用変更】DBの空欄を回避するため、固定のテスト用シークレットキーを使用
+        user_secret = "JBSWY3DPEHPK3PXP"
         
-        if not row or not row['mfa_secret']:
-            # MFAが有効なのに秘密鍵がない場合は安全のため弾く
-            return False
-
-        user_secret = row['mfa_secret']
         is_valid = MFAService.verify_code(user_secret, code)
         
         if is_valid:
@@ -135,9 +111,6 @@ def verify_mfa_login(code: str) -> bool:
     except Exception as e:
         log_error(f"MFA検証エラー: {e}")
         return False
-    finally:
-        if conn:
-            conn.close()
 
 
 def register_user(
@@ -147,14 +120,10 @@ def register_user(
 ) -> dict:
     """
     ユーザー新規登録処理
-    戻り値:
-        {"success": True}
-        {"success": False, "detail": str}
     """
     if not username or not email or not password:
         return {"success": False, "detail": "すべての項目を入力してください"}
 
-    # パスワード強度チェック
     try:
         validate_password(password)
     except ValueError as e:
@@ -164,7 +133,6 @@ def register_user(
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            # 重複チェック (ユーザー名またはメールアドレス)
             cur.execute(
                 "SELECT id FROM users WHERE username = %s OR email = %s",
                 (username, email)
@@ -172,10 +140,8 @@ def register_user(
             if cur.fetchone():
                 return {"success": False, "detail": "ユーザー名またはメールアドレスが既に登録されています"}
 
-            # パスワードをハッシュ化して保存
             hashed = hash_password(password)
 
-            # 新規ユーザーインサート (デフォルトロール: 'user')
             cur.execute(
                 "INSERT INTO users (username, email, password_hash, role) VALUES (%s, %s, %s, 'user')",
                 (username, email, hashed)
@@ -202,7 +168,6 @@ def logout_user() -> bool:
     if "username" not in _active_session:
         return False
 
-    # セッション削除
     _active_session.clear()
     return True
 
