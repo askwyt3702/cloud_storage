@@ -483,6 +483,17 @@ input:-webkit-autofill:focus{
     align-items:center;
 
     gap:18px;
+
+    /* 残りスペースを取る・子要素を縮められるようにする */
+    flex:1;
+    min-width:0;
+}
+
+/* file-info の最後の子（ファイル名＋詳細を包むdiv）も縮められるように */
+.file-info > div:last-child{
+    flex:1;
+    min-width:0;
+    overflow:hidden;
 }
 
 .file-icon{
@@ -519,12 +530,22 @@ input:-webkit-autofill:focus{
     color:white;
 
     margin-bottom:6px;
+
+    /* 長い名前は ... で省略（横にボタンを押し出さない） */
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
 }
 
 .file-detail{
     color:#cbd5e1;
 
     font-size:14px;
+
+    /* 詳細行も1行で省略 */
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
 }
 
 /* ファイルカードのボタンエリア */

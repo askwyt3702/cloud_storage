@@ -501,7 +501,7 @@ async function loadFiles() {
                     <input type="checkbox" class="file-check" value="${file.name}">
                     ${thumb}
                     <div>
-                        <div class="file-name">${file.name}</div>
+                        <div class="file-name" title="${file.name}">${file.name}</div>
                         <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
                     </div>
                 </div>
@@ -790,17 +790,33 @@ async function deleteFile(filename) {
 
 // =====================================
 // ファイル名変更（リネーム）
+// 拡張子は維持し、ベース名だけを編集できるようにする
 // =====================================
 async function renameFile(filename) {
-    const newName = prompt(
-        `「${filename}」の新しい名前を入力してください\n（拡張子も忘れずに）`,
-        filename
-    );
+    // 元の拡張子（".pdf" など）とベース名を分離
+    const dotIdx = filename.lastIndexOf(".");
+    const ext  = dotIdx > 0 ? filename.slice(dotIdx) : "";
+    const base = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
 
-    // キャンセル or 同名 or 空欄
-    if (newName === null) return;
-    const trimmed = newName.trim();
-    if (!trimmed || trimmed === filename) return;
+    // 入力プロンプトはベース名だけを編集対象に
+    const message = ext
+        ? `新しい名前を入力してください\n（拡張子 ${ext} はそのままです）`
+        : `新しい名前を入力してください`;
+
+    const input = prompt(message, base);
+    if (input === null) return;
+
+    let newBase = input.trim();
+    if (!newBase) return;
+
+    // ユーザーが拡張子付きで入れてしまった場合は剥がす
+    // 例: 元 .pdf で「report.pdf」と入れた → "report" に直す
+    if (ext && newBase.toLowerCase().endsWith(ext.toLowerCase())) {
+        newBase = newBase.slice(0, -ext.length);
+    }
+
+    const newName = newBase + ext;
+    if (newName === filename) return;   // 同じ名前
 
     try {
         const res = await fetch(
@@ -808,7 +824,7 @@ async function renameFile(filename) {
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ new_name: trimmed })
+                body: JSON.stringify({ new_name: newName })
             }
         );
 
@@ -912,7 +928,7 @@ async function loadTrash() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name">${file.name}</div>
+                        <div class="file-name" title="${file.name}">${file.name}</div>
                         <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ 削除: ${file.deleted_at}</div>
                     </div>
                 </div>
@@ -1149,7 +1165,7 @@ async function loadShared() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name">${file.name}${lock}</div>
+                        <div class="file-name" title="${file.name}">${file.name}${lock}</div>
                         <div class="file-detail">共有者: ${file.owner} ・ ${file.size} ・ ${file.shared_at}</div>
                     </div>
                 </div>

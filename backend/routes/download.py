@@ -500,6 +500,22 @@ def rename_file(filename: str, body: RenameRequest):
         )
 
 
+    # ③-2 拡張子の保護：拡張子は変更不可
+    #      ファイル中身が変わらないのに拡張子だけ変えると、
+    #      開けない・誤解を招くので 400 で弾く。
+    old_ext = os.path.splitext(safe_old)[1].lower()
+    new_ext = os.path.splitext(safe_new)[1].lower()
+
+    if old_ext != new_ext:
+
+        log_failed(current_user, "RENAME", f"拡張子変更を拒否: {old_ext} → {new_ext}")
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"拡張子は変更できません（{old_ext or '(なし)'} のままにしてください）"
+        )
+
+
     # ④ 変更前ファイルの存在チェック
     if not file_exists(current_user, safe_old):
 
