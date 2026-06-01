@@ -1110,6 +1110,89 @@ button:disabled{
 }
 
 
+/* ====== 選択中のファイル表示チップ ====== */
+.selected-file{
+    display:flex;
+    align-items:center;
+    gap:16px;
+
+    padding:14px 18px;
+    margin-bottom:20px;
+
+    border-radius:18px;
+
+    background:rgba(59,130,246,0.10);
+    border:1px solid rgba(59,130,246,0.30);
+    backdrop-filter:blur(10px);
+
+    animation:selected-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.selected-file[hidden]{
+    display:none;
+}
+@keyframes selected-in{
+    from{ opacity:0; transform:translateY(-6px); }
+    to  { opacity:1; transform:translateY(0); }
+}
+
+.selected-thumb{
+    width:50px;
+    height:50px;
+
+    border-radius:14px;
+
+    object-fit:cover;
+
+    flex-shrink:0;
+
+    background:#1e293b;
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.selected-file-meta{
+    flex:1;
+    overflow:hidden;
+}
+.selected-file-name{
+    color:white;
+    font-weight:bold;
+    font-size:15px;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.selected-file-size{
+    color:#94a3b8;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.selected-file-clear{
+    width:32px;
+    height:32px;
+    padding:0;
+
+    border-radius:50%;
+    border:none;
+
+    background:rgba(255,255,255,0.10);
+    color:white;
+
+    cursor:pointer;
+    font-size:14px;
+
+    box-shadow:none;
+    transition:0.2s;
+
+    flex-shrink:0;
+}
+.selected-file-clear:hover{
+    background:#ef4444;
+    transform:scale(1.05);
+}
+
+
 /* ====== ローディングスケルトン ====== */
 .skeleton-card{
     display:flex;
@@ -1365,4 +1448,24 @@ button:disabled{
 /* MFAコメント */
 [data-theme="light"] #mfa-fields p{
     color:#475569 !important;
+}
+
+/* 選択中ファイルチップ（ライト時） */
+[data-theme="light"] .selected-file{
+    background:rgba(59,130,246,0.08);
+    border:1px solid rgba(59,130,246,0.30);
+}
+[data-theme="light"] .selected-file-name{
+    color:#0f172a;
+}
+[data-theme="light"] .selected-file-size{
+    color:#64748b;
+}
+[data-theme="light"] .selected-file-clear{
+    background:rgba(0,0,0,0.06);
+    color:#0f172a;
+}
+[data-theme="light"] .selected-file-clear:hover{
+    background:#ef4444;
+    color:white;
 }

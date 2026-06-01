@@ -115,6 +115,60 @@ function closeImagePreview() {
 
 
 // =====================================
+// バイト数を「1.2MB」などの読みやすい形式に変換
+// =====================================
+function _formatFileSize(bytes) {
+    if (bytes < 1024)              return bytes + "B";
+    if (bytes < 1024 ** 2)         return (bytes / 1024).toFixed(1) + "KB";
+    if (bytes < 1024 ** 3)         return (bytes / (1024 ** 2)).toFixed(1) + "MB";
+    return (bytes / (1024 ** 3)).toFixed(2) + "GB";
+}
+
+
+// =====================================
+// 「選択中のファイル」表示エリアを更新
+// ファイル選択直後に、ファイル名・サイズ・サムネを表示する
+// =====================================
+function _updateSelectedFileDisplay() {
+    const input = document.getElementById("fileInput");
+    const info  = document.getElementById("selectedFileInfo");
+    if (!info) return;
+
+    const file = input && input.files[0];
+    if (!file) {
+        info.hidden = true;
+        info.innerHTML = "";
+        return;
+    }
+
+    const { icon, bg } = getFileIcon(file.name);
+    const isImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+
+    // 画像なら実ファイルからプレビューを生成
+    const thumb = isImg
+        ? `<img class="selected-thumb" src="${URL.createObjectURL(file)}" alt="">`
+        : `<div class="file-icon ${bg}" style="width:50px;height:50px;border-radius:14px;font-size:22px;"><i class="fa-solid ${icon}"></i></div>`;
+
+    info.innerHTML = `
+        ${thumb}
+        <div class="selected-file-meta">
+            <div class="selected-file-name">${file.name}</div>
+            <div class="selected-file-size">${_formatFileSize(file.size)}</div>
+        </div>
+        <button class="selected-file-clear" onclick="clearSelectedFile()" aria-label="選択解除" title="選択解除">✕</button>
+    `;
+    info.hidden = false;
+}
+
+// ✕ボタン：ファイル選択をクリア
+function clearSelectedFile() {
+    const input = document.getElementById("fileInput");
+    if (input) input.value = "";
+    _updateSelectedFileDisplay();
+}
+
+
+// =====================================
 // アップロード進捗バーUI（必要なら自動で挿入）
 // =====================================
 function _ensureUploadProgressUI() {
@@ -618,6 +672,7 @@ async function uploadSelectedFile(e) {
     try {
         await uploadFileData(file);
         fileInput.value = "";
+        _updateSelectedFileDisplay();   // ← 選択中チップを消す
     } finally {
         setLoading(btn, false);
     }
@@ -1226,4 +1281,8 @@ window.addEventListener("load", () => {
     loadDashboardStats();
     setupDropArea();
     _ensureUploadProgressUI();
+
+    // ファイル選択直後にプレビュー表示を更新
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput) fileInput.addEventListener("change", _updateSelectedFileDisplay);
 });
