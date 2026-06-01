@@ -48,6 +48,44 @@ function notify(message, type, durationMs) {
 
 
 // =====================================
+// 画像フルプレビュー モーダル
+// =====================================
+function _ensureImageModal() {
+    if (document.getElementById("image-preview-modal")) return;
+
+    const m = document.createElement("div");
+    m.id = "image-preview-modal";
+    m.className = "image-modal";
+    m.hidden = true;
+    m.innerHTML = `
+        <div class="image-modal-backdrop" onclick="closeImagePreview()"></div>
+        <img id="image-modal-img" src="" alt="">
+        <button class="image-modal-close" onclick="closeImagePreview()" aria-label="閉じる">✕</button>
+    `;
+    document.body.appendChild(m);
+
+    // Escキーで閉じる
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeImagePreview();
+    });
+}
+
+function openImagePreview(src, alt) {
+    _ensureImageModal();
+    const m   = document.getElementById("image-preview-modal");
+    const img = document.getElementById("image-modal-img");
+    img.src = src;
+    img.alt = alt || "";
+    m.hidden = false;
+}
+
+function closeImagePreview() {
+    const m = document.getElementById("image-preview-modal");
+    if (m) m.hidden = true;
+}
+
+
+// =====================================
 // アップロード進捗バーUI（必要なら自動で挿入）
 // =====================================
 function _ensureUploadProgressUI() {
@@ -327,6 +365,10 @@ async function loadFiles() {
 
         const data = await res.json();
 
+        // ダッシュボードの「マイファイル件数」を更新
+        const fileCountEl = document.getElementById("heroFileCount");
+        if (fileCountEl) fileCountEl.textContent = data.total;
+
         if (data.files.length === 0) {
             fileList.innerHTML = _emptyStateHTML(
                 "fa-folder-open",
@@ -341,9 +383,13 @@ async function loadFiles() {
             const safeName = encodeURIComponent(file.name);
 
             // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
+            //   - クリックでフルサイズプレビュー（モーダル）が開く
+            //   - 画像が壊れていたら色付きアイコンにフォールバック
             const isImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+            const imgUrl = `${API_BASE}/download/${safeName}`;
             const thumb = isImg
-                ? `<img class="file-thumb" src="${API_BASE}/download/${safeName}" alt=""
+                ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+                        onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}'))"
                         onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
 
@@ -434,12 +480,74 @@ async function loadStorage() {
         const res  = await fetch(`${API_BASE}/storage`);
         const data = await res.json();
 
+        // 上部テキスト（ヒーロー内）
         const storageText = document.getElementById("storageText");
         if (storageText) {
             storageText.textContent = `使用容量：${data.used} / ${data.max}`;
         }
+
+        // ヒーローカードの数値・ゲージを反映
+        const heroVal = document.getElementById("heroStorageText");
+        if (heroVal) heroVal.textContent = data.used;
+
+        const usedNum = parseFloat(data.used);
+        const maxNum  = parseFloat(data.max);
+        let pct = 0;
+        if (maxNum > 0) pct = Math.min(100, Math.round((usedNum / maxNum) * 100));
+
+        const fill = document.getElementById("heroStorageFill");
+        if (fill) {
+            fill.style.width = pct + "%";
+            // 80%超えたら赤系にする
+            fill.classList.toggle("warning", pct >= 80);
+        }
+        const pctEl = document.getElementById("heroStoragePct");
+        if (pctEl) pctEl.textContent = `${pct}%（残り ${Math.max(0, maxNum - usedNum).toFixed(2)}GB）`;
+
     } catch (e) {
         // 取得失敗時は何もしない
+    }
+}
+
+
+// =====================================
+// ダッシュボードの統計（共有件数）を取得
+// =====================================
+async function loadDashboardStats() {
+    const me = sessionStorage.getItem("username");
+
+    try {
+        const res = await fetch(`${API_BASE}/shared`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // 自分が共有したものをカウント
+        const mineCount = data.files.filter(f => f.owner === me).length;
+        const el = document.getElementById("heroSharedCount");
+        if (el) el.textContent = mineCount;
+    } catch (e) {
+        // 失敗時は更新しない
+    }
+}
+
+
+// =====================================
+// ヘッダー（ユーザー名・アバター）を反映
+// =====================================
+function applyHeaderUser() {
+    const name = sessionStorage.getItem("username") || "ゲスト";
+
+    const nameEl = document.getElementById("userName");
+    if (nameEl) nameEl.textContent = name;
+
+    const heroEl = document.getElementById("heroUserName");
+    if (heroEl) heroEl.textContent = name;
+
+    // アバター：ユーザー名の頭文字（半角ASCII大文字）
+    const avatar = document.getElementById("userAvatar");
+    if (avatar) {
+        const ch = name.trim().charAt(0).toUpperCase();
+        avatar.textContent = ch || "?";
     }
 }
 
@@ -1006,8 +1114,10 @@ window.addEventListener("load", () => {
         return;
     }
 
+    applyHeaderUser();
     loadFiles();
     loadStorage();
+    loadDashboardStats();
     setupDropArea();
     _ensureUploadProgressUI();
 });

@@ -18,21 +18,61 @@
 
     <div class="top-area">
 
-      <div>
-        <h1>☁ Cloud Storage</h1>
-        <p class="storage-text" id="storageText">
-          使用容量：取得中...
-        </p>
+      <div class="brand">
+        <div class="brand-icon">☁</div>
+        <div>
+          <h1>Cloud Storage</h1>
+          <p class="brand-sub">あなたのファイルをいつでもどこでも</p>
+        </div>
       </div>
 
-      <button class="logout-btn" onclick="logout()">
-        ログアウト
-      </button>
+      <div class="user-pill">
+        <div class="avatar" id="userAvatar">?</div>
+        <div class="user-name" id="userName">ユーザー</div>
+        <button class="logout-btn" onclick="logout()">
+          ログアウト
+        </button>
+      </div>
 
     </div>
 
     <!-- 通常のファイル一覧ビュー -->
     <div id="mainView">
+
+      <!-- ダッシュボード（ようこそ＋容量＋統計） -->
+      <div class="hero-card" id="heroCard">
+
+        <div class="hero-welcome">
+          <h2>おかえりなさい、<span id="heroUserName">ゲスト</span> さん</h2>
+          <p id="storageText">使用容量を取得中...</p>
+        </div>
+
+        <div class="hero-stats">
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">使用容量</div>
+            <div class="hero-stat-value" id="heroStorageText">--</div>
+            <div class="storage-gauge">
+              <div class="storage-gauge-fill" id="heroStorageFill"></div>
+            </div>
+            <div class="hero-stat-sub" id="heroStoragePct">0%</div>
+          </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">マイファイル</div>
+            <div class="hero-stat-value" id="heroFileCount">--</div>
+            <div class="hero-stat-sub">件</div>
+          </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">あなたが共有中</div>
+            <div class="hero-stat-value" id="heroSharedCount">--</div>
+            <div class="hero-stat-sub">件</div>
+          </div>
+
+        </div>
+
+      </div>
 
       <div class="upload-buttons">
 
