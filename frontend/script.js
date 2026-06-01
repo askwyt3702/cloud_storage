@@ -85,6 +85,34 @@ function _emptyStateHTML(iconClass, title, sub) {
 
 
 // =====================================
+// ボタンのローディング状態（連打防止＋スピナー表示）
+// 使い方:
+//   setLoading(btn, true)  → 無効化＋スピナー
+//   setLoading(btn, false) → 元に戻す
+// =====================================
+function setLoading(btn, on) {
+    if (!btn) return;
+    if (on) {
+        btn.disabled = true;
+        btn.dataset.originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="btn-spinner"></span>';
+    } else {
+        btn.disabled = false;
+        if (btn.dataset.originalText !== undefined) {
+            btn.innerHTML = btn.dataset.originalText;
+            delete btn.dataset.originalText;
+        }
+    }
+}
+
+// イベントオブジェクトから「クリックされたボタン」を取り出す小道具
+function _btnFromEvent(e) {
+    if (!e) return null;
+    return e.currentTarget || e.target || null;
+}
+
+
+// =====================================
 // ファイルの拡張子 → アイコン変換
 // =====================================
 function getFileIcon(filename) {
@@ -113,7 +141,9 @@ function getFileIcon(filename) {
 // =====================================
 // ログインAPI呼び出し（MFA対応版に強化）
 // =====================================
-async function login() {
+async function login(e) {
+    const btn = _btnFromEvent(e);
+
     const email    = document.getElementById("email").value;
     const password = document.getElementById("password").value;
 
@@ -122,6 +152,7 @@ async function login() {
         return;
     }
 
+    setLoading(btn, true);
     try {
         const res = await fetch(`${API_BASE}/login`, {
             method: "POST",
@@ -136,12 +167,12 @@ async function login() {
 
         if (res.ok) {
             const data = await res.json();
-            
+
             // 💡 バックエンドからMFA（2段階認証）が必要と言われた場合
             if (data.mfa_required) {
                 // まずログイン完了後に使うユーザー名を一時保存しておく
                 sessionStorage.setItem("pending_username", data.user);
-                
+
                 // 通常の入力欄を隠し、MFA入力エリアを表示する
                 document.getElementById("login-fields").style.display = "none";
                 document.getElementById("mfa-fields").style.display = "block";
@@ -157,8 +188,10 @@ async function login() {
             notify(err.detail || "ユーザー名またはパスワードが違います");
         }
 
-    } catch (e) {
+    } catch (err) {
         notify("サーバーに接続できません");
+    } finally {
+        setLoading(btn, false);
     }
 }
 
@@ -166,7 +199,8 @@ async function login() {
 // =====================================
 // 【新設】MFA認証コードの検証
 // =====================================
-async function verifyMFA() {
+async function verifyMFA(e) {
+    const btn  = _btnFromEvent(e);
     const code = document.getElementById("mfa-code").value;
 
     if (!code || code.length !== 6) {
@@ -174,6 +208,7 @@ async function verifyMFA() {
         return;
     }
 
+    setLoading(btn, true);
     try {
         // バックエンドの新設API（/login/mfa）にコードをJSONボディで送信
         const res = await fetch(`${API_BASE}/login/mfa`, {
@@ -199,8 +234,10 @@ async function verifyMFA() {
             notify(msg);
         }
 
-    } catch (e) {
+    } catch (err) {
         notify("サーバーに接続できません");
+    } finally {
+        setLoading(btn, false);
     }
 }
 
@@ -208,7 +245,9 @@ async function verifyMFA() {
 // =====================================
 // 新規登録API呼び出し
 // =====================================
-async function register() {
+async function register(e) {
+    const btn = _btnFromEvent(e);
+
     const username        = document.getElementById("username").value;
     const email           = document.getElementById("register-email").value;
     const password        = document.getElementById("register-password").value;
@@ -224,6 +263,7 @@ async function register() {
         return;
     }
 
+    setLoading(btn, true);
     try {
         const res = await fetch(
             `${API_BASE}/register`,
@@ -242,8 +282,10 @@ async function register() {
             notify(`エラー: ${err.detail}`);
         }
 
-    } catch (e) {
+    } catch (err) {
         notify("サーバーに接続できません");
+    } finally {
+        setLoading(btn, false);
     }
 }
 
@@ -297,13 +339,19 @@ async function loadFiles() {
         fileList.innerHTML = data.files.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeName = encodeURIComponent(file.name);
+
+            // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
+            const isImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+            const thumb = isImg
+                ? `<img class="file-thumb" src="${API_BASE}/download/${safeName}" alt=""
+                        onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
+                : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
+
             return `
             <div class="file-card">
                 <div class="file-info">
                     <input type="checkbox" class="file-check" value="${file.name}">
-                    <div class="file-icon ${bg}">
-                        <i class="fa-solid ${icon}"></i>
-                    </div>
+                    ${thumb}
                     <div>
                         <div class="file-name">${file.name}</div>
                         <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
@@ -339,7 +387,8 @@ function toggleSelectAll(btn) {
 // =====================================
 // 選択したファイルをまとめて削除（ゴミ箱へ）
 // =====================================
-async function deleteSelected() {
+async function deleteSelected(e) {
+    const btn = _btnFromEvent(e);
     const checks = document.querySelectorAll("#fileList .file-check:checked");
     const filenames = Array.from(checks).map(c => c.value);
 
@@ -350,6 +399,7 @@ async function deleteSelected() {
 
     if (!confirm(`選択した ${filenames.length} 件をゴミ箱に移動しますか？`)) return;
 
+    setLoading(btn, true);
     try {
         const res = await fetch(`${API_BASE}/delete-multiple`, {
             method: "POST",
@@ -368,8 +418,10 @@ async function deleteSelected() {
             const err = await res.json();
             notify(`エラー: ${err.detail}`);
         }
-    } catch (e) {
+    } catch (err) {
         notify("削除に失敗しました");
+    } finally {
+        setLoading(btn, false);
     }
 }
 
@@ -395,7 +447,8 @@ async function loadStorage() {
 // =====================================
 // ファイル選択してアップロード
 // =====================================
-async function uploadSelectedFile() {
+async function uploadSelectedFile(e) {
+    const btn = _btnFromEvent(e);
     const fileInput = document.getElementById("fileInput");
     const file = fileInput.files[0];
 
@@ -404,8 +457,13 @@ async function uploadSelectedFile() {
         return;
     }
 
-    await uploadFileData(file);
-    fileInput.value = "";
+    setLoading(btn, true);
+    try {
+        await uploadFileData(file);
+        fileInput.value = "";
+    } finally {
+        setLoading(btn, false);
+    }
 }
 
 
@@ -655,9 +713,11 @@ async function permanentDelete(filename) {
 // =====================================
 // ゴミ箱を空にする（全件完全削除）
 // =====================================
-async function emptyTrash() {
+async function emptyTrash(e) {
+    const btn = _btnFromEvent(e);
     if (!confirm("ゴミ箱を空にしますか？\nすべてのファイルが完全に削除され、元に戻せません。")) return;
 
+    setLoading(btn, true);
     try {
         const res = await fetch(`${API_BASE}/trash`, { method: "DELETE" });
 
@@ -669,8 +729,10 @@ async function emptyTrash() {
             const err = await res.json();
             notify(`エラー: ${err.detail}`);
         }
-    } catch (e) {
+    } catch (err) {
         notify("ゴミ箱を空にできませんでした");
+    } finally {
+        setLoading(btn, false);
     }
 }
 
@@ -719,7 +781,8 @@ async function shareFile(filename) {
 // =====================================
 // 選択したファイルをまとめて共有（同じパスワード）
 // =====================================
-async function shareSelected() {
+async function shareSelected(e) {
+    const btn = _btnFromEvent(e);
     const checks = document.querySelectorAll("#fileList .file-check:checked");
     const filenames = Array.from(checks).map(c => c.value);
 
@@ -735,6 +798,7 @@ async function shareSelected() {
 
     if (password === null) return;
 
+    setLoading(btn, true);
     try {
         const res = await fetch(`${API_BASE}/share-multiple`, {
             method: "POST",
@@ -753,8 +817,10 @@ async function shareSelected() {
             const err = await res.json();
             notify(`エラー: ${err.detail}`);
         }
-    } catch (e) {
+    } catch (err) {
         notify("共有に失敗しました");
+    } finally {
+        setLoading(btn, false);
     }
 }
 

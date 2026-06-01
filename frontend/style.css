@@ -662,6 +662,32 @@ input:-webkit-autofill:focus{
 .toast-warning{ background:linear-gradient(135deg, #f59e0b, #d97706); }
 .toast-info   { background:linear-gradient(135deg, #3b82f6, #2563eb); }
 
+
+/* ====== ボタンのローディング状態 ====== */
+button:disabled{
+    opacity:0.65;
+    cursor:not-allowed;
+    transform:none !important;
+}
+
+.btn-spinner{
+    display:inline-block;
+
+    width:16px;
+    height:16px;
+
+    border:2px solid rgba(255,255,255,0.3);
+    border-top-color:white;
+    border-radius:50%;
+
+    animation:btn-spin 0.7s linear infinite;
+    vertical-align:middle;
+}
+
+@keyframes btn-spin{
+    to { transform:rotate(360deg); }
+}
+
 @media (max-width:700px){
     #toast-root{
         top:12px;
@@ -741,4 +767,21 @@ input:-webkit-autofill:focus{
     font-size:13px;
     color:#64748b;
     margin:6px 0 0;
+}
+
+
+/* ====== 画像ファイルのサムネ ====== */
+.file-thumb{
+    width:60px;
+    height:60px;
+
+    border-radius:18px;
+
+    object-fit:cover;
+
+    display:block;
+    flex-shrink:0;
+
+    background:#1e293b;
+    border:1px solid rgba(255,255,255,0.08);
 }

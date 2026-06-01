@@ -18,7 +18,7 @@
     <input type="email" id="email" placeholder="メールアドレス">
     <input type="password" id="password" placeholder="パスワード">
     
-    <button onclick="login()">
+    <button onclick="login(event)">
       ログイン
     </button>
   </div>
@@ -29,7 +29,7 @@
     </p>
     <input type="text" id="mfa-code" placeholder="6桁の認証コード（例: 123456）" maxlength="6" style="text-align: center; letter-spacing: 2px;">
     
-    <button onclick="verifyMFA()" style="background-color: #28a745;">
+    <button onclick="verifyMFA(event)" style="background-color: #28a745;">
       認証してログイン
     </button>
   </div>

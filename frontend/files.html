@@ -42,7 +42,7 @@
           📁 ファイル選択
         </button>
 
-        <button onclick="uploadSelectedFile()">
+        <button onclick="uploadSelectedFile(event)">
           ⬆ アップロード
         </button>
 
@@ -71,8 +71,8 @@
 
         <div class="toolbar-right">
           <button onclick="toggleSelectAll(this)">☑ 全選択</button>
-          <button class="share-btn" onclick="shareSelected()">🔗 選択を共有</button>
-          <button class="delete-btn" onclick="deleteSelected()">🗑 選択削除</button>
+          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
           <button onclick="showShared()">📂 共有一覧</button>
           <button onclick="showTrash()">🗑 ゴミ箱</button>
         </div>
@@ -90,7 +90,7 @@
 
       <div class="toolbar">
         <button onclick="showFiles()">← ファイル一覧に戻る</button>
-        <button class="delete-btn" onclick="emptyTrash()">ゴミ箱を空にする</button>
+        <button class="delete-btn" onclick="emptyTrash(event)">ゴミ箱を空にする</button>
       </div>
 
       <div class="file-list" id="trashList">
