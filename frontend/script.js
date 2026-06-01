@@ -692,11 +692,27 @@ async function deleteFile(filename) {
 // =====================================
 // 表示するビューを切り替える内部関数
 // "main" / "trash" / "shared" のどれか1つだけ表示
+//  + 表示するビューに入場アニメーションを毎回付け直す
 // =====================================
 function switchView(view) {
-    document.getElementById("mainView").style.display   = (view === "main")   ? "block" : "none";
-    document.getElementById("trashView").style.display  = (view === "trash")  ? "block" : "none";
-    document.getElementById("sharedView").style.display = (view === "shared") ? "block" : "none";
+    const main   = document.getElementById("mainView");
+    const trash  = document.getElementById("trashView");
+    const shared = document.getElementById("sharedView");
+
+    main.style.display   = (view === "main")   ? "block" : "none";
+    trash.style.display  = (view === "trash")  ? "block" : "none";
+    shared.style.display = (view === "shared") ? "block" : "none";
+
+    // 表示中の要素にアニメーションクラスを付け直す
+    // （リフロー強制で同じクラスでも再生される）
+    const visible =
+        view === "main"  ? main  :
+        view === "trash" ? trash :
+                           shared;
+
+    visible.classList.remove("view-enter");
+    void visible.offsetWidth;          // ← リフローを強制してアニメ再起動
+    visible.classList.add("view-enter");
 }
 
 

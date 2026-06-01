@@ -1015,21 +1015,22 @@ button:disabled{
 }
 
 
-/* ====== カード入場アニメーション ====== */
+/* ====== カード入場アニメーション（強化版） ====== */
 .file-card{
-    animation:card-in 0.35s ease both;
+    animation:card-in 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
-.file-card:nth-child(2){ animation-delay:0.04s; }
-.file-card:nth-child(3){ animation-delay:0.08s; }
-.file-card:nth-child(4){ animation-delay:0.12s; }
-.file-card:nth-child(5){ animation-delay:0.16s; }
-.file-card:nth-child(6){ animation-delay:0.20s; }
-.file-card:nth-child(n+7){ animation-delay:0.24s; }
+.file-card:nth-child(2){ animation-delay:0.06s; }
+.file-card:nth-child(3){ animation-delay:0.12s; }
+.file-card:nth-child(4){ animation-delay:0.18s; }
+.file-card:nth-child(5){ animation-delay:0.24s; }
+.file-card:nth-child(6){ animation-delay:0.30s; }
+.file-card:nth-child(7){ animation-delay:0.36s; }
+.file-card:nth-child(n+8){ animation-delay:0.42s; }
 
 @keyframes card-in{
     from{
         opacity:0;
-        transform:translateY(14px);
+        transform:translateY(24px);
     }
     to{
         opacity:1;
@@ -1037,14 +1038,30 @@ button:disabled{
     }
 }
 
-/* ヒーローカードもふわっと出す */
+/* ヒーローカードもふわっと出す（強化版） */
 .hero-card{
-    animation:hero-in 0.5s ease both;
+    animation:hero-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 @keyframes hero-in{
     from{
         opacity:0;
-        transform:translateY(-10px);
+        transform:translateY(-20px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+
+/* ====== ビュー切替アニメ（main / trash / shared 共通） ====== */
+.view-enter{
+    animation:view-fade-in 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes view-fade-in{
+    from{
+        opacity:0;
+        transform:translateY(12px);
     }
     to{
         opacity:1;
