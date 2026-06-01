@@ -5,6 +5,35 @@ const API_BASE = "http://127.0.0.1:8000";
 
 
 // =====================================
+// テーマ（ライト / ダーク）の即時復元
+// ※ 画面が出る前に適用してチラつきを防ぐ
+// =====================================
+(function _restoreThemeImmediately() {
+    try {
+        const saved = localStorage.getItem("theme");
+        if (saved === "light") {
+            document.documentElement.setAttribute("data-theme", "light");
+        }
+    } catch (_) { /* localStorage 不可な環境では何もしない */ }
+})();
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("theme", theme); } catch (_) {}
+
+    // ボタンのアイコンを「今のテーマ」に応じて切り替え
+    const btn = document.querySelector(".theme-toggle");
+    if (btn) btn.textContent = theme === "light" ? "🌙" : "☀";
+}
+
+function toggleTheme() {
+    const cur = document.documentElement.getAttribute("data-theme") === "light"
+        ? "light" : "dark";
+    applyTheme(cur === "dark" ? "light" : "dark");
+}
+
+
+// =====================================
 // トースト通知システム（alertの置き換え）
 // 画面右上にスッと出て、自動で消える通知
 // =====================================
@@ -105,6 +134,25 @@ function _ensureUploadProgressUI() {
         </div>
     `;
     drop.parentElement.insertBefore(bar, drop.nextSibling);
+}
+
+
+// =====================================
+// ローディングスケルトン（読み込み中のグレーのプレースホルダー）
+// =====================================
+function _skeletonHTML(count) {
+    let out = "";
+    for (let i = 0; i < count; i++) {
+        out += `
+            <div class="skeleton-card">
+                <div class="skeleton-icon"></div>
+                <div class="skeleton-lines">
+                    <div class="skeleton-line skeleton-line-name"></div>
+                    <div class="skeleton-line skeleton-line-detail"></div>
+                </div>
+            </div>`;
+    }
+    return out;
 }
 
 
@@ -348,7 +396,7 @@ async function logout() {
 // =====================================
 async function loadFiles() {
     const fileList = document.getElementById("fileList");
-    fileList.innerHTML = "<p style='color:#cbd5e1'>読み込み中...</p>";
+    fileList.innerHTML = _skeletonHTML(4);
 
     // 並び替えの値を取得（例: "date_desc" → sort_by=date, order=desc）
     const sortSelect = document.getElementById("sortSelect");
@@ -405,6 +453,7 @@ async function loadFiles() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ 取得</button>
+                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))">✏️ 名前変更</button>
                     <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">🔗 共有</button>
                     <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))">🗑 削除</button>
                 </div>
@@ -684,6 +733,44 @@ async function deleteFile(filename) {
 }
 
 
+// =====================================
+// ファイル名変更（リネーム）
+// =====================================
+async function renameFile(filename) {
+    const newName = prompt(
+        `「${filename}」の新しい名前を入力してください\n（拡張子も忘れずに）`,
+        filename
+    );
+
+    // キャンセル or 同名 or 空欄
+    if (newName === null) return;
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === filename) return;
+
+    try {
+        const res = await fetch(
+            `${API_BASE}/rename/${encodeURIComponent(filename)}`,
+            {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ new_name: trimmed })
+            }
+        );
+
+        if (res.ok) {
+            const data = await res.json();
+            notify(data.message || "名前を変更しました");
+            await loadFiles();
+        } else {
+            const err = await res.json();
+            notify(`エラー: ${err.detail}`);
+        }
+    } catch (e) {
+        notify("名前の変更に失敗しました");
+    }
+}
+
+
 // =====================================================
 // ここから下：ゴミ箱ビュー
 // =====================================================
@@ -739,7 +826,7 @@ function showFiles() {
 // =====================================
 async function loadTrash() {
     const trashList = document.getElementById("trashList");
-    trashList.innerHTML = "<p style='color:#cbd5e1'>読み込み中...</p>";
+    trashList.innerHTML = _skeletonHTML(3);
 
     try {
         const res = await fetch(`${API_BASE}/trash`);
@@ -963,7 +1050,7 @@ function showShared() {
 // =====================================
 async function loadShared() {
     const sharedList = document.getElementById("sharedList");
-    sharedList.innerHTML = "<p style='color:#cbd5e1'>読み込み中...</p>";
+    sharedList.innerHTML = _skeletonHTML(3);
 
     // 自分のユーザー名（自分が共有したものだけ「解除」ボタンを出すため）
     const me = sessionStorage.getItem("username");
@@ -1131,6 +1218,9 @@ window.addEventListener("load", () => {
     }
 
     applyHeaderUser();
+    // 現在のテーマアイコンに合わせて切替ボタンを更新
+    applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
     loadFiles();
     loadStorage();
     loadDashboardStats();

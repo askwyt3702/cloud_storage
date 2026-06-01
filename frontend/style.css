@@ -614,6 +614,16 @@ input:-webkit-autofill:focus{
     box-shadow:0 8px 25px rgba(16,185,129,0.4);
 }
 
+/* 名前変更ボタン */
+.rename-btn{
+    background:#f59e0b;
+}
+
+.rename-btn:hover{
+    background:#d97706;
+    box-shadow:0 8px 25px rgba(245,158,11,0.4);
+}
+
 
 /* ====== トースト通知 ====== */
 #toast-root{
@@ -1038,6 +1048,36 @@ button:disabled{
     }
 }
 
+/* テーマ切替ボタン */
+.theme-toggle{
+    width:42px;
+    height:42px;
+
+    border-radius:50%;
+    padding:0;
+
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+
+    color:white;
+    font-size:18px;
+
+    cursor:pointer;
+    transition:0.2s;
+
+    box-shadow:none;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+.theme-toggle:hover{
+    background:rgba(255,255,255,0.14);
+    transform:translateY(-1px);
+    box-shadow:0 4px 12px rgba(0,0,0,0.2);
+}
+
+
 /* ヒーローカードもふわっと出す（強化版） */
 .hero-card{
     animation:hero-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -1067,4 +1107,262 @@ button:disabled{
         opacity:1;
         transform:translateY(0);
     }
+}
+
+
+/* ====== ローディングスケルトン ====== */
+.skeleton-card{
+    display:flex;
+    align-items:center;
+    gap:18px;
+
+    padding:22px;
+    margin-bottom:18px;
+
+    border-radius:24px;
+
+    background:linear-gradient(135deg, rgba(51,65,85,0.6), rgba(30,41,59,0.5));
+    border:1px solid rgba(255,255,255,0.05);
+}
+
+.skeleton-icon{
+    width:60px;
+    height:60px;
+
+    border-radius:18px;
+
+    background:rgba(255,255,255,0.06);
+
+    position:relative;
+    overflow:hidden;
+
+    flex-shrink:0;
+}
+
+.skeleton-lines{
+    flex:1;
+
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.skeleton-line{
+    height:14px;
+
+    border-radius:8px;
+
+    background:rgba(255,255,255,0.06);
+
+    position:relative;
+    overflow:hidden;
+}
+.skeleton-line-name   { width:60%; }
+.skeleton-line-detail { width:40%; height:10px; }
+
+/* シマー（光が流れる）アニメーション */
+.skeleton-icon::after,
+.skeleton-line::after{
+    content:"";
+
+    position:absolute;
+    inset:0;
+
+    background:linear-gradient(90deg,
+        transparent,
+        rgba(255,255,255,0.10),
+        transparent);
+
+    animation:skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes skeleton-shimmer{
+    from { transform:translateX(-100%); }
+    to   { transform:translateX(100%); }
+}
+
+
+/* ============================================================
+   ライトテーマ（data-theme="light" がついたときに上書き）
+   ※ ボタンの基本色（青・赤・緑・黄）は両テーマで共通でOK
+============================================================ */
+
+[data-theme="light"] body{
+    background:
+        radial-gradient(circle at top left, #dbeafe, #f8fafc 45%),
+        radial-gradient(circle at bottom right, #e0e7ff, #f8fafc 40%);
+}
+
+[data-theme="light"] .cloud-box{
+    background:rgba(255,255,255,0.85);
+    border:1px solid rgba(0,0,0,0.08);
+    color:#0f172a;
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.10),
+        0 0 30px rgba(59,130,246,0.10);
+}
+
+[data-theme="light"] .login-box{
+    background:white;
+    box-shadow:0 10px 40px rgba(0,0,0,0.15);
+}
+
+[data-theme="light"] h1{
+    color:#0f172a;
+}
+
+[data-theme="light"] input{
+    background:#f1f5f9;
+    color:#0f172a;
+}
+[data-theme="light"] input::placeholder{
+    color:#94a3b8;
+}
+/* ライトテーマでは自動入力（オートフィル）の上書きも明るく */
+[data-theme="light"] input:-webkit-autofill,
+[data-theme="light"] input:-webkit-autofill:hover,
+[data-theme="light"] input:-webkit-autofill:focus{
+    -webkit-box-shadow:0 0 0 1000px #f1f5f9 inset;
+    -webkit-text-fill-color:#0f172a;
+    caret-color:#0f172a;
+}
+
+[data-theme="light"] .storage-text,
+[data-theme="light"] .register-text{
+    color:#475569;
+}
+[data-theme="light"] .register-text a{
+    color:#2563eb;
+}
+
+[data-theme="light"] .drop-area{
+    background:rgba(0,0,0,0.03);
+    border-color:#3b82f6;
+}
+[data-theme="light"] .drop-area:hover{
+    background:rgba(59,130,246,0.08);
+}
+[data-theme="light"] .drop-title{
+    color:#0f172a;
+}
+[data-theme="light"] .drop-sub{
+    color:#64748b;
+}
+
+[data-theme="light"] .file-card,
+[data-theme="light"] .file-item{
+    background:linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95));
+    border:1px solid rgba(0,0,0,0.08);
+    color:#0f172a;
+}
+[data-theme="light"] .file-card:hover{
+    background:linear-gradient(135deg, rgba(241,245,249,0.98), rgba(226,232,240,0.98));
+    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+}
+[data-theme="light"] .file-name{
+    color:#0f172a;
+}
+[data-theme="light"] .file-detail{
+    color:#64748b;
+}
+
+/* ヒーローカード（ダッシュボード） */
+[data-theme="light"] .hero-card{
+    background:
+        linear-gradient(135deg, rgba(59,130,246,0.10), rgba(99,102,241,0.10)),
+        rgba(255,255,255,0.85);
+    border:1px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .hero-welcome h2{
+    color:#0f172a;
+}
+[data-theme="light"] .hero-welcome p{
+    color:#475569;
+}
+[data-theme="light"] .hero-stat{
+    background:rgba(241,245,249,0.85);
+    border:1px solid rgba(0,0,0,0.06);
+}
+[data-theme="light"] .hero-stat-label{
+    color:#64748b;
+}
+[data-theme="light"] .hero-stat-value{
+    color:#0f172a;
+}
+[data-theme="light"] .hero-stat-sub{
+    color:#94a3b8;
+}
+[data-theme="light"] .storage-gauge{
+    background:#e2e8f0;
+}
+
+/* ヘッダー（ブランド・ユーザーピル） */
+[data-theme="light"] .brand h1{
+    color:#0f172a;
+}
+[data-theme="light"] .brand-sub{
+    color:#64748b;
+}
+[data-theme="light"] .user-name{
+    color:#0f172a;
+}
+
+/* テーマ切替ボタン（ライト時） */
+[data-theme="light"] .theme-toggle{
+    background:rgba(0,0,0,0.05);
+    border:1px solid rgba(0,0,0,0.10);
+    color:#0f172a;
+}
+[data-theme="light"] .theme-toggle:hover{
+    background:rgba(0,0,0,0.10);
+}
+
+/* ツールバー：並び替えセレクト */
+[data-theme="light"] .sort-select{
+    background:#f1f5f9;
+    color:#0f172a;
+    border:1px solid rgba(0,0,0,0.08);
+}
+
+/* アップロード進捗 */
+[data-theme="light"] .upload-progress{
+    background:rgba(241,245,249,0.85);
+    border:1px solid rgba(0,0,0,0.06);
+}
+[data-theme="light"] .upload-progress-label{
+    color:#475569;
+}
+[data-theme="light"] .upload-progress-bar{
+    background:#e2e8f0;
+}
+
+/* 空状態 */
+[data-theme="light"] .empty-state{
+    color:#64748b;
+}
+[data-theme="light"] .empty-state .empty-sub{
+    color:#94a3b8;
+}
+
+/* ローディングスケルトン（ライト時は明るいグレー） */
+[data-theme="light"] .skeleton-card{
+    background:linear-gradient(135deg, rgba(241,245,249,0.8), rgba(226,232,240,0.7));
+    border:1px solid rgba(0,0,0,0.05);
+}
+[data-theme="light"] .skeleton-icon,
+[data-theme="light"] .skeleton-line{
+    background:rgba(0,0,0,0.06);
+}
+[data-theme="light"] .skeleton-icon::after,
+[data-theme="light"] .skeleton-line::after{
+    background:linear-gradient(90deg,
+        transparent,
+        rgba(0,0,0,0.05),
+        transparent);
+}
+
+/* MFAコメント */
+[data-theme="light"] #mfa-fields p{
+    color:#475569 !important;
 }
