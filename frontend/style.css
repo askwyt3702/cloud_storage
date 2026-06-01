@@ -613,3 +613,132 @@ input:-webkit-autofill:focus{
     background:#059669;
     box-shadow:0 8px 25px rgba(16,185,129,0.4);
 }
+
+
+/* ====== トースト通知 ====== */
+#toast-root{
+    position:fixed;
+    top:24px;
+    right:24px;
+    z-index:9999;
+
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+
+    pointer-events:none;
+}
+
+.toast{
+    min-width:260px;
+    max-width:380px;
+
+    padding:14px 18px;
+
+    border-radius:12px;
+
+    color:white;
+    font-size:14px;
+    line-height:1.5;
+
+    box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter:blur(8px);
+
+    opacity:0;
+    transform:translateX(40px);
+    transition:opacity 0.25s, transform 0.25s;
+
+    pointer-events:auto;
+}
+
+.toast-show{
+    opacity:1;
+    transform:translateX(0);
+}
+
+.toast-success{ background:linear-gradient(135deg, #16a34a, #15803d); }
+.toast-error  { background:linear-gradient(135deg, #ef4444, #dc2626); }
+.toast-warning{ background:linear-gradient(135deg, #f59e0b, #d97706); }
+.toast-info   { background:linear-gradient(135deg, #3b82f6, #2563eb); }
+
+@media (max-width:700px){
+    #toast-root{
+        top:12px;
+        right:12px;
+        left:12px;
+    }
+    .toast{
+        max-width:none;
+        min-width:0;
+    }
+}
+
+
+/* ====== アップロード進捗バー ====== */
+.upload-progress{
+    background:rgba(51,65,85,0.7);
+
+    padding:14px 18px;
+
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,0.08);
+
+    margin-bottom:20px;
+}
+
+.upload-progress-label{
+    color:#cbd5e1;
+    font-size:13px;
+
+    margin-bottom:10px;
+
+    word-break:break-all;
+}
+
+.upload-progress-bar{
+    width:100%;
+    height:8px;
+
+    background:#0f172a;
+    border-radius:6px;
+
+    overflow:hidden;
+}
+
+.upload-progress-fill{
+    width:0%;
+    height:100%;
+
+    background:linear-gradient(90deg, #2563eb, #60a5fa);
+    transition:width 0.2s ease;
+}
+
+
+/* ====== 空っぽ状態（ファイル無し・ゴミ箱空 等） ====== */
+.empty-state{
+    text-align:center;
+    padding:60px 20px;
+
+    color:#94a3b8;
+}
+
+.empty-state i{
+    font-size:64px;
+    opacity:0.35;
+
+    margin-bottom:20px;
+
+    display:block;
+}
+
+.empty-state .empty-title{
+    font-size:18px;
+    margin:6px 0;
+}
+
+.empty-state .empty-sub{
+    font-size:13px;
+    color:#64748b;
+    margin:6px 0 0;
+}

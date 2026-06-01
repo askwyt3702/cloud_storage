@@ -5,6 +5,86 @@ const API_BASE = "http://127.0.0.1:8000";
 
 
 // =====================================
+// トースト通知システム（alertの置き換え）
+// 画面右上にスッと出て、自動で消える通知
+// =====================================
+function _ensureToastRoot() {
+    let root = document.getElementById("toast-root");
+    if (!root) {
+        root = document.createElement("div");
+        root.id = "toast-root";
+        document.body.appendChild(root);
+    }
+    return root;
+}
+
+function notify(message, type, durationMs) {
+    const s = String(message);
+
+    // type が指定されない場合は、メッセージ内容から色を自動判定
+    if (!type) {
+        if (/失敗|エラー|違|接続できません|正しくありません|不正/.test(s)) type = "error";
+        else if (/成功|完了|しました|アカウントを作成/.test(s))         type = "success";
+        else if (/選択してください|入力してください|一致しません/.test(s)) type = "warning";
+        else                                                            type = "info";
+    }
+
+    const root  = _ensureToastRoot();
+    const toast = document.createElement("div");
+    toast.className   = "toast toast-" + type;
+    toast.textContent = s;
+    root.appendChild(toast);
+
+    // 入場アニメ（次フレームで .toast-show を付ける）
+    requestAnimationFrame(() => toast.classList.add("toast-show"));
+
+    // 自動で消える
+    const ms = durationMs || 3500;
+    setTimeout(() => {
+        toast.classList.remove("toast-show");
+        setTimeout(() => toast.remove(), 250);
+    }, ms);
+}
+
+
+// =====================================
+// アップロード進捗バーUI（必要なら自動で挿入）
+// =====================================
+function _ensureUploadProgressUI() {
+    if (document.getElementById("uploadProgress")) return;
+
+    const drop = document.querySelector(".drop-area");
+    if (!drop) return;
+
+    const bar = document.createElement("div");
+    bar.id        = "uploadProgress";
+    bar.className = "upload-progress";
+    bar.style.display = "none";
+    bar.innerHTML = `
+        <div class="upload-progress-label" id="uploadProgressLabel">アップロード中...</div>
+        <div class="upload-progress-bar">
+            <div class="upload-progress-fill" id="uploadProgressFill"></div>
+        </div>
+    `;
+    drop.parentElement.insertBefore(bar, drop.nextSibling);
+}
+
+
+// =====================================
+// 空っぽ状態のHTMLを返す（一覧が0件のとき表示）
+// =====================================
+function _emptyStateHTML(iconClass, title, sub) {
+    return `
+        <div class="empty-state">
+            <i class="fa-solid ${iconClass}"></i>
+            <p class="empty-title">${title}</p>
+            ${sub ? `<p class="empty-sub">${sub}</p>` : ""}
+        </div>
+    `;
+}
+
+
+// =====================================
 // ファイルの拡張子 → アイコン変換
 // =====================================
 function getFileIcon(filename) {
@@ -38,7 +118,7 @@ async function login() {
     const password = document.getElementById("password").value;
 
     if (!email || !password) {
-        alert("入力してください");
+        notify("入力してください");
         return;
     }
 
@@ -74,11 +154,11 @@ async function login() {
 
         } else {
             const err = await res.json();
-            alert(err.detail || "ユーザー名またはパスワードが違います");
+            notify(err.detail || "ユーザー名またはパスワードが違います");
         }
 
     } catch (e) {
-        alert("サーバーに接続できません");
+        notify("サーバーに接続できません");
     }
 }
 
@@ -90,7 +170,7 @@ async function verifyMFA() {
     const code = document.getElementById("mfa-code").value;
 
     if (!code || code.length !== 6) {
-        alert("6桁の認証コードを入力してください");
+        notify("6桁の認証コードを入力してください");
         return;
     }
 
@@ -108,7 +188,7 @@ async function verifyMFA() {
             sessionStorage.setItem("username", username);
             sessionStorage.removeItem("pending_username");
 
-            alert("2段階認証に成功しました！");
+            notify("2段階認証に成功しました！");
             location.href = "files.html"; // ログイン完了で一覧画面へ
         } else {
             const err = await res.json();
@@ -116,11 +196,11 @@ async function verifyMFA() {
             const msg = typeof err.detail === "string"
                 ? err.detail
                 : "認証コードが正しくありません";
-            alert(msg);
+            notify(msg);
         }
 
     } catch (e) {
-        alert("サーバーに接続できません");
+        notify("サーバーに接続できません");
     }
 }
 
@@ -135,12 +215,12 @@ async function register() {
     const confirmPassword = document.getElementById("confirm-password").value;
 
     if (!username || !email || !password || !confirmPassword) {
-        alert("全て入力してください");
+        notify("全て入力してください");
         return;
     }
 
     if (password !== confirmPassword) {
-        alert("パスワードが一致しません");
+        notify("パスワードが一致しません");
         return;
     }
 
@@ -155,15 +235,15 @@ async function register() {
         );
 
         if (res.ok) {
-            alert("アカウントを作成しました！");
+            notify("アカウントを作成しました！");
             location.href = "login.html";
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
 
     } catch (e) {
-        alert("サーバーに接続できません");
+        notify("サーバーに接続できません");
     }
 }
 
@@ -206,7 +286,11 @@ async function loadFiles() {
         const data = await res.json();
 
         if (data.files.length === 0) {
-            fileList.innerHTML = "<p style='color:#cbd5e1;text-align:center'>ファイルがありません</p>";
+            fileList.innerHTML = _emptyStateHTML(
+                "fa-folder-open",
+                "ファイルがありません",
+                "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう"
+            );
             return;
         }
 
@@ -260,7 +344,7 @@ async function deleteSelected() {
     const filenames = Array.from(checks).map(c => c.value);
 
     if (filenames.length === 0) {
-        alert("削除するファイルを選択してください");
+        notify("削除するファイルを選択してください");
         return;
     }
 
@@ -276,16 +360,16 @@ async function deleteSelected() {
         if (res.ok) {
             const data = await res.json();
             if (data.failed.length > 0) {
-                alert(`${data.succeeded.length}件をゴミ箱に移動しました。\n失敗: ${data.failed.join(", ")}`);
+                notify(`${data.succeeded.length}件をゴミ箱に移動しました。\n失敗: ${data.failed.join(", ")}`);
             }
             await loadFiles();
             await loadStorage();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("削除に失敗しました");
+        notify("削除に失敗しました");
     }
 }
 
@@ -316,7 +400,7 @@ async function uploadSelectedFile() {
     const file = fileInput.files[0];
 
     if (!file) {
-        alert("ファイルを選択してください");
+        notify("ファイルを選択してください");
         return;
     }
 
@@ -328,27 +412,57 @@ async function uploadSelectedFile() {
 // =====================================
 // ファイルアップロード処理
 // =====================================
-async function uploadFileData(file) {
+function uploadFileData(file) {
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
-        const res = await fetch(`${API_BASE}/upload`, {
-            method: "POST",
-            body: formData
+    _ensureUploadProgressUI();
+    const bar   = document.getElementById("uploadProgress");
+    const fill  = document.getElementById("uploadProgressFill");
+    const label = document.getElementById("uploadProgressLabel");
+
+    return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_BASE}/upload`);
+
+        // アップロード進捗イベント
+        xhr.upload.addEventListener("progress", (e) => {
+            if (!e.lengthComputable) return;
+            const pct = Math.round((e.loaded / e.total) * 100);
+            if (bar)   bar.style.display = "block";
+            if (fill)  fill.style.width  = pct + "%";
+            if (label) label.textContent = `${file.name}  ${pct}%`;
         });
 
-        if (res.ok) {
-            alert(`${file.name} をアップロードしました！`);
-            await loadFiles();
-            await loadStorage();
-        } else {
-            const err = await res.json();
-            alert(`エラー: ${err.detail}`);
-        }
-    } catch (e) {
-        alert("アップロードに失敗しました");
-    }
+        // 完了
+        xhr.addEventListener("load", async () => {
+            if (bar)  bar.style.display = "none";
+            if (fill) fill.style.width  = "0%";
+
+            if (xhr.status >= 200 && xhr.status < 300) {
+                notify(`${file.name} をアップロードしました`);
+                await loadFiles();
+                await loadStorage();
+            } else {
+                let msg = "アップロードに失敗しました";
+                try {
+                    const err = JSON.parse(xhr.responseText);
+                    if (err && err.detail) msg = `エラー: ${err.detail}`;
+                } catch (_) {}
+                notify(msg);
+            }
+            resolve();
+        });
+
+        // ネットワークエラー
+        xhr.addEventListener("error", () => {
+            if (bar) bar.style.display = "none";
+            notify("アップロードに失敗しました");
+            resolve();
+        });
+
+        xhr.send(formData);
+    });
 }
 
 
@@ -360,7 +474,7 @@ async function downloadFile(filename) {
         const res = await fetch(`${API_BASE}/download/${encodeURIComponent(filename)}`);
 
         if (!res.ok) {
-            alert("ダウンロードに失敗しました");
+            notify("ダウンロードに失敗しました");
             return;
         }
 
@@ -374,7 +488,7 @@ async function downloadFile(filename) {
 
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert("ダウンロードに失敗しました");
+        notify("ダウンロードに失敗しました");
     }
 }
 
@@ -396,10 +510,10 @@ async function deleteFile(filename) {
             await loadStorage();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("削除に失敗しました");
+        notify("削除に失敗しました");
     }
 }
 
@@ -456,7 +570,11 @@ async function loadTrash() {
         const data = await res.json();
 
         if (data.files.length === 0) {
-            trashList.innerHTML = "<p style='color:#cbd5e1;text-align:center'>ゴミ箱は空です</p>";
+            trashList.innerHTML = _emptyStateHTML(
+                "fa-trash-can",
+                "ゴミ箱は空です",
+                "ここから削除したファイルを復元できます"
+            );
             return;
         }
 
@@ -502,10 +620,10 @@ async function restoreFile(filename) {
             await loadStorage();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("復元に失敗しました");
+        notify("復元に失敗しました");
     }
 }
 
@@ -526,10 +644,10 @@ async function permanentDelete(filename) {
             await loadTrash();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("完全削除に失敗しました");
+        notify("完全削除に失敗しました");
     }
 }
 
@@ -545,14 +663,14 @@ async function emptyTrash() {
 
         if (res.ok) {
             const data = await res.json();
-            alert(data.message);
+            notify(data.message);
             await loadTrash();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("ゴミ箱を空にできませんでした");
+        notify("ゴミ箱を空にできませんでした");
     }
 }
 
@@ -587,13 +705,13 @@ async function shareFile(filename) {
 
         if (res.ok) {
             const data = await res.json();
-            alert(data.message);
+            notify(data.message);
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("共有に失敗しました");
+        notify("共有に失敗しました");
     }
 }
 
@@ -606,7 +724,7 @@ async function shareSelected() {
     const filenames = Array.from(checks).map(c => c.value);
 
     if (filenames.length === 0) {
-        alert("共有するファイルを選択してください");
+        notify("共有するファイルを選択してください");
         return;
     }
 
@@ -630,13 +748,13 @@ async function shareSelected() {
             if (data.failed.length > 0) {
                 msg += `\n共有できなかったもの: ${data.failed.join(", ")}`;
             }
-            alert(msg);
+            notify(msg);
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("共有に失敗しました");
+        notify("共有に失敗しました");
     }
 }
 
@@ -671,7 +789,11 @@ async function loadShared() {
         const data = await res.json();
 
         if (data.files.length === 0) {
-            sharedList.innerHTML = "<p style='color:#cbd5e1;text-align:center'>共有ファイルはありません</p>";
+            sharedList.innerHTML = _emptyStateHTML(
+                "fa-share-nodes",
+                "共有ファイルはありません",
+                "ファイル一覧の「🔗 共有」ボタンから共有できます"
+            );
             return;
         }
 
@@ -734,9 +856,9 @@ async function downloadShared(owner, filename, isProtected) {
 
         if (!res.ok) {
             if (res.status === 401) {
-                alert("パスワードが違います（または必要です）");
+                notify("パスワードが違います（または必要です）");
             } else {
-                alert("ダウンロードに失敗しました");
+                notify("ダウンロードに失敗しました");
             }
             return;
         }
@@ -751,7 +873,7 @@ async function downloadShared(owner, filename, isProtected) {
 
         URL.revokeObjectURL(url);
     } catch (e) {
-        alert("ダウンロードに失敗しました");
+        notify("ダウンロードに失敗しました");
     }
 }
 
@@ -772,10 +894,10 @@ async function unshareFile(owner, filename) {
             await loadShared();
         } else {
             const err = await res.json();
-            alert(`エラー: ${err.detail}`);
+            notify(`エラー: ${err.detail}`);
         }
     } catch (e) {
-        alert("共有の解除に失敗しました");
+        notify("共有の解除に失敗しました");
     }
 }
 
@@ -821,4 +943,5 @@ window.addEventListener("load", () => {
     loadFiles();
     loadStorage();
     setupDropArea();
+    _ensureUploadProgressUI();
 });
