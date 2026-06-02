@@ -1,8 +1,11 @@
 import os
+import io
+import zipfile
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Header, Body
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from schemas import (
     FileInfo,
@@ -16,7 +19,8 @@ from schemas import (
     SharedFileInfo,        # ← 共有ファイル情報
     SharedListResponse,    # ← 共有ファイル一覧レスポンス
     ShareRequest,          # ← 共有リクエスト（パスワード任意）
-    BulkShareRequest       # ← 一括共有リクエスト
+    BulkShareRequest,      # ← 一括共有リクエスト
+    BulkDownloadRequest    # ← 一括ダウンロード（ZIP）リクエスト
 )
 
 from services.file_service import (
@@ -264,6 +268,104 @@ def download_file(filename: str):
         path=file_path,
         filename=safe_name,
         media_type="application/octet-stream"
+    )
+
+
+# =====================================
+# 一括ダウンロードAPI（複数ファイルをZIPにまとめる）
+#
+# URL:
+# POST /download-zip
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", "b.pdf", ...] }
+#
+# 選択した自分のファイルを1つのZIPにまとめて返す。
+# ZIPはメモリ上で作るので一時ファイルは残さない。
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイルが1つも指定されていない
+#   404 : 有効なファイルが1つも無い
+# =====================================
+@router.post("/download-zip")
+def download_zip(body: BulkDownloadRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "DOWNLOAD_ZIP", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック（読み取り）
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "read"):
+
+        log_failed(current_user, "DOWNLOAD_ZIP", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをダウンロードする権限がありません"
+        )
+
+
+    # ③ ファイルが指定されているか
+    if not body.filenames:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ダウンロードするファイルを選択してください"
+        )
+
+
+    # ④ メモリ上でZIPを構築
+    buffer = io.BytesIO()
+    added = 0
+
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        for name in body.filenames:
+
+            safe_name = sanitize_filename(name)
+
+            # 不正な名前・存在しないファイルはスキップ
+            if not safe_name or not file_exists(current_user, safe_name):
+                continue
+
+            file_path = get_file_path(current_user, safe_name)
+            zf.write(file_path, arcname=safe_name)
+            added += 1
+
+
+    # ⑤ 有効なファイルが1つも無ければエラー
+    if added == 0:
+
+        raise HTTPException(
+            status_code=404,
+            detail="有効なファイルがありませんでした"
+        )
+
+
+    buffer.seek(0)
+
+    # ダウンロードされるZIPの名前（日時入り）
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_name = f"cloudstorage_{stamp}.zip"
+
+    log_success(current_user, f"DOWNLOAD_ZIP: {added}件")
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_name}"'}
     )
 
 

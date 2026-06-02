@@ -34,6 +34,33 @@ function toggleTheme() {
 
 
 // =====================================
+// ログイン成功演出（緑のチェックマークを出してから遷移）
+//   onDone: アニメ後に実行するコールバック（画面遷移など）
+// =====================================
+function showSuccessAnimation(message, onDone) {
+    const overlay = document.createElement("div");
+    overlay.className = "success-overlay";
+    overlay.innerHTML = `
+        <div class="success-box">
+            <div class="success-check">
+                <svg viewBox="0 0 52 52">
+                    <circle class="success-check-circle" cx="26" cy="26" r="24" fill="none"/>
+                    <path class="success-check-mark" fill="none" d="M14 27 l8 8 l16 -18"/>
+                </svg>
+            </div>
+            <p class="success-message">${message || "成功しました"}</p>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // アニメ後にコールバック
+    setTimeout(() => {
+        if (typeof onDone === "function") onDone();
+    }, 1100);
+}
+
+
+// =====================================
 // トースト通知システム（alertの置き換え）
 // 画面右上にスッと出て、自動で消える通知
 // =====================================
@@ -127,24 +154,45 @@ function _formatFileSize(bytes) {
 
 // =====================================
 // 「選択中のファイル」表示エリアを更新
-// ファイル選択直後に、ファイル名・サイズ・サムネを表示する
+// ・1ファイル：サムネ＋名前＋サイズ
+// ・複数ファイル：件数と合計サイズのサマリ
 // =====================================
 function _updateSelectedFileDisplay() {
     const input = document.getElementById("fileInput");
     const info  = document.getElementById("selectedFileInfo");
     if (!info) return;
 
-    const file = input && input.files[0];
-    if (!file) {
+    const files = input ? input.files : null;
+    if (!files || files.length === 0) {
         info.hidden = true;
         info.innerHTML = "";
         return;
     }
 
+    // ---- 複数選択 ----
+    if (files.length > 1) {
+        let total = 0;
+        for (const f of files) total += f.size;
+
+        info.innerHTML = `
+            <div class="file-icon default-bg" style="width:50px;height:50px;border-radius:14px;font-size:22px;">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <div class="selected-file-meta">
+                <div class="selected-file-name">${files.length} 個のファイルを選択中</div>
+                <div class="selected-file-size">合計 ${_formatFileSize(total)}</div>
+            </div>
+            <button class="selected-file-clear" onclick="clearSelectedFile()" aria-label="選択解除" title="選択解除">✕</button>
+        `;
+        info.hidden = false;
+        return;
+    }
+
+    // ---- 1ファイル ----
+    const file = files[0];
     const { icon, bg } = getFileIcon(file.name);
     const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
 
-    // 画像なら実ファイルからプレビューを生成
     const thumb = isImg
         ? `<img class="selected-thumb" src="${URL.createObjectURL(file)}" alt="">`
         : `<div class="file-icon ${bg}" style="width:50px;height:50px;border-radius:14px;font-size:22px;"><i class="fa-solid ${icon}"></i></div>`;
@@ -338,7 +386,10 @@ async function login(e) {
 
             // 💡 MFAが不要な場合は、そのままメイン画面（files.html）へ進む
             sessionStorage.setItem("username", data.user);
-            location.href = "files.html";
+            showSuccessAnimation("ログインしました", () => {
+                location.href = "files.html";
+            });
+            return;
 
         } else {
             const err = await res.json();
@@ -380,8 +431,10 @@ async function verifyMFA(e) {
             sessionStorage.setItem("username", username);
             sessionStorage.removeItem("pending_username");
 
-            notify("2段階認証に成功しました！");
-            location.href = "files.html"; // ログイン完了で一覧画面へ
+            showSuccessAnimation("2段階認証に成功しました", () => {
+                location.href = "files.html"; // ログイン完了で一覧画面へ
+            });
+            return;
         } else {
             const err = await res.json();
             // detail は文字列のときと配列(検証エラー)のときがあるので整形
@@ -551,6 +604,56 @@ function toggleSelectAll(btn) {
 
 
 // =====================================
+// 選択したファイルをZIPでまとめてダウンロード
+// =====================================
+async function downloadSelectedZip(e) {
+    const btn = _btnFromEvent(e);
+    const checks = document.querySelectorAll("#fileList .file-check:checked");
+    const filenames = Array.from(checks).map(c => c.value);
+
+    if (filenames.length === 0) {
+        notify("ダウンロードするファイルを選択してください");
+        return;
+    }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/download-zip`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filenames })
+        });
+
+        if (!res.ok) {
+            let msg = "ZIPの作成に失敗しました";
+            try { const err = await res.json(); if (err.detail) msg = `エラー: ${err.detail}`; } catch (_) {}
+            notify(msg);
+            return;
+        }
+
+        // レスポンス（ZIP）をBlobとして受け取りダウンロード
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+
+        // サーバーが付けたファイル名を取り出す（無ければ既定名）
+        const disp = res.headers.get("Content-Disposition") || "";
+        const m = disp.match(/filename="?([^"]+)"?/);
+        a.href = url;
+        a.download = m ? m[1] : "download.zip";
+        a.click();
+
+        URL.revokeObjectURL(url);
+        notify(`${filenames.length}件をZIPでダウンロードしました`);
+    } catch (err) {
+        notify("ZIPのダウンロードに失敗しました");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+
+// =====================================
 // 選択したファイルをまとめて削除（ゴミ箱へ）
 // =====================================
 async function deleteSelected(e) {
@@ -678,16 +781,26 @@ function applyHeaderUser() {
 async function uploadSelectedFile(e) {
     const btn = _btnFromEvent(e);
     const fileInput = document.getElementById("fileInput");
-    const file = fileInput.files[0];
+    const files = Array.from(fileInput.files);
 
-    if (!file) {
+    if (files.length === 0) {
         notify("ファイルを選択してください");
         return;
     }
 
     setLoading(btn, true);
     try {
-        await uploadFileData(file);
+        // 複数ファイルを順番にアップロード
+        let ok = 0;
+        for (let i = 0; i < files.length; i++) {
+            const done = await uploadFileData(files[i], i + 1, files.length);
+            if (done) ok++;
+        }
+
+        if (files.length > 1) {
+            notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
+        }
+
         fileInput.value = "";
         _updateSelectedFileDisplay();   // ← 選択中チップを消す
     } finally {
@@ -699,7 +812,9 @@ async function uploadSelectedFile(e) {
 // =====================================
 // ファイルアップロード処理
 // =====================================
-function uploadFileData(file) {
+// index / total を渡すと「(2/5) ファイル名 30%」のように表示する（複数アップロード用）
+// 戻り値: アップロード成功なら true
+function uploadFileData(file, index, total) {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -707,6 +822,9 @@ function uploadFileData(file) {
     const bar   = document.getElementById("uploadProgress");
     const fill  = document.getElementById("uploadProgressFill");
     const label = document.getElementById("uploadProgressLabel");
+
+    // 複数のときだけ "(2/5)" の接頭辞を付ける
+    const prefix = (total && total > 1) ? `(${index}/${total}) ` : "";
 
     return new Promise((resolve) => {
         const xhr = new XMLHttpRequest();
@@ -718,7 +836,7 @@ function uploadFileData(file) {
             const pct = Math.round((e.loaded / e.total) * 100);
             if (bar)   bar.style.display = "block";
             if (fill)  fill.style.width  = pct + "%";
-            if (label) label.textContent = `${file.name}  ${pct}%`;
+            if (label) label.textContent = `${prefix}${file.name}  ${pct}%`;
         });
 
         // 完了
@@ -727,25 +845,29 @@ function uploadFileData(file) {
             if (fill) fill.style.width  = "0%";
 
             if (xhr.status >= 200 && xhr.status < 300) {
-                notify(`${file.name} をアップロードしました`);
+                // 単体アップロード時のみ個別トースト（複数時はまとめて出す）
+                if (!total || total === 1) {
+                    notify(`${file.name} をアップロードしました`);
+                }
                 await loadFiles();
                 await loadStorage();
+                resolve(true);
             } else {
-                let msg = "アップロードに失敗しました";
+                let msg = `${file.name}: アップロードに失敗しました`;
                 try {
                     const err = JSON.parse(xhr.responseText);
-                    if (err && err.detail) msg = `エラー: ${err.detail}`;
+                    if (err && err.detail) msg = `${file.name}: ${err.detail}`;
                 } catch (_) {}
                 notify(msg);
+                resolve(false);
             }
-            resolve();
         });
 
         // ネットワークエラー
         xhr.addEventListener("error", () => {
             if (bar) bar.style.display = "none";
-            notify("アップロードに失敗しました");
-            resolve();
+            notify(`${file.name}: アップロードに失敗しました`);
+            resolve(false);
         });
 
         xhr.send(formData);
@@ -1271,25 +1393,71 @@ async function unshareFile(owner, filename) {
 // ドラッグ＆ドロップ設定
 // =====================================
 function setupDropArea() {
-    const dropArea = document.querySelector(".drop-area");
-    if (!dropArea) return;
+    // ドロップされたファイル群を順にアップロードする共通処理
+    async function handleDroppedFiles(fileList) {
+        const files = Array.from(fileList || []);
+        if (files.length === 0) return;
 
-    dropArea.addEventListener("dragover", (e) => {
+        let ok = 0;
+        for (let i = 0; i < files.length; i++) {
+            const done = await uploadFileData(files[i], i + 1, files.length);
+            if (done) ok++;
+        }
+        if (files.length > 1) {
+            notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
+        }
+    }
+
+    // --- 画面全体のドラッグ&ドロップ（どこに落としてもOK） ---
+    const overlay = _ensureDropOverlay();
+    let dragDepth = 0;   // dragenter/leave のネスト対策カウンタ
+
+    window.addEventListener("dragenter", (e) => {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes("Files")) return;
         e.preventDefault();
-        dropArea.style.background = "rgba(96,165,250,0.15)";
+        dragDepth++;
+        overlay.classList.add("show");
     });
 
-    dropArea.addEventListener("dragleave", () => {
-        dropArea.style.background = "";
+    window.addEventListener("dragover", (e) => {
+        if (e.dataTransfer && Array.from(e.dataTransfer.types).includes("Files")) {
+            e.preventDefault();
+        }
     });
 
-    dropArea.addEventListener("drop", async (e) => {
+    window.addEventListener("dragleave", (e) => {
         e.preventDefault();
-        dropArea.style.background = "";
-
-        const file = e.dataTransfer.files[0];
-        if (file) await uploadFileData(file);
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) overlay.classList.remove("show");
     });
+
+    window.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        dragDepth = 0;
+        overlay.classList.remove("show");
+
+        // ファイル一覧ページでのみ受け付ける
+        if (!document.getElementById("fileList")) return;
+        await handleDroppedFiles(e.dataTransfer.files);
+    });
+}
+
+// 全画面ドロップ用のオーバーレイを用意
+function _ensureDropOverlay() {
+    let ov = document.getElementById("drop-overlay");
+    if (!ov) {
+        ov = document.createElement("div");
+        ov.id = "drop-overlay";
+        ov.className = "drop-overlay";
+        ov.innerHTML = `
+            <div class="drop-overlay-inner">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <p>ここにドロップしてアップロード</p>
+            </div>
+        `;
+        document.body.appendChild(ov);
+    }
+    return ov;
 }
 
 

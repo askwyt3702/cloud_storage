@@ -78,7 +78,7 @@
 
       <div class="upload-buttons">
 
-        <input type="file" id="fileInput" hidden>
+        <input type="file" id="fileInput" hidden multiple>
 
         <button onclick="document.getElementById('fileInput').click()">
           📁 ファイル選択
@@ -116,6 +116,7 @@
 
         <div class="toolbar-right">
           <button onclick="toggleSelectAll(this)">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
           <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
           <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
           <button onclick="showShared()">📂 共有一覧</button>

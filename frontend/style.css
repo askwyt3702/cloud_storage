@@ -1471,6 +1471,120 @@ button:disabled{
     color:#475569 !important;
 }
 
+
+/* ====== 全画面ドラッグ&ドロップ オーバーレイ ====== */
+.drop-overlay{
+    position:fixed;
+    inset:0;
+    z-index:9000;
+
+    display:none;
+
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(15,23,42,0.80);
+    backdrop-filter:blur(6px);
+
+    pointer-events:none;
+}
+.drop-overlay.show{
+    display:flex;
+    animation:drop-overlay-in 0.2s ease;
+}
+.drop-overlay-inner{
+    border:3px dashed #60a5fa;
+    border-radius:28px;
+
+    padding:60px 80px;
+
+    text-align:center;
+    color:#e2e8f0;
+
+    background:rgba(59,130,246,0.08);
+}
+.drop-overlay-inner i{
+    font-size:64px;
+    color:#60a5fa;
+    margin-bottom:18px;
+    display:block;
+
+    animation:drop-bounce 1s ease-in-out infinite;
+}
+.drop-overlay-inner p{
+    font-size:20px;
+    font-weight:bold;
+    margin:0;
+}
+@keyframes drop-overlay-in{
+    from{ opacity:0; }
+    to  { opacity:1; }
+}
+@keyframes drop-bounce{
+    0%, 100%{ transform:translateY(0); }
+    50%     { transform:translateY(-10px); }
+}
+
+
+/* ====== ログイン成功演出（チェックマーク） ====== */
+.success-overlay{
+    position:fixed;
+    inset:0;
+    z-index:10001;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(15,23,42,0.92);
+    backdrop-filter:blur(8px);
+
+    animation:drop-overlay-in 0.25s ease;
+}
+.success-box{
+    text-align:center;
+}
+.success-check svg{
+    width:110px;
+    height:110px;
+}
+.success-check-circle{
+    stroke:#22c55e;
+    stroke-width:3;
+    stroke-dasharray:151;
+    stroke-dashoffset:151;
+    animation:success-circle 0.5s ease-out forwards;
+}
+.success-check-mark{
+    stroke:#22c55e;
+    stroke-width:4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    stroke-dasharray:48;
+    stroke-dashoffset:48;
+    animation:success-mark 0.35s 0.45s ease-out forwards;
+}
+.success-message{
+    color:white;
+    font-size:20px;
+    font-weight:bold;
+
+    margin-top:22px;
+
+    opacity:0;
+    animation:success-text 0.4s 0.7s ease forwards;
+}
+@keyframes success-circle{
+    to{ stroke-dashoffset:0; }
+}
+@keyframes success-mark{
+    to{ stroke-dashoffset:0; }
+}
+@keyframes success-text{
+    from{ opacity:0; transform:translateY(8px); }
+    to  { opacity:1; transform:translateY(0); }
+}
+
 /* 選択中ファイルチップ（ライト時） */
 [data-theme="light"] .selected-file{
     background:rgba(59,130,246,0.08);
