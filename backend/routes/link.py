@@ -21,10 +21,13 @@ from schemas import (
 
 from services.file_service import (
     sanitize_filename,
-    file_exists,
-    get_file_path,
-    get_file_size,
-    get_file_metadata
+    # --- 共有フォルダ関連（リンクは共有ファイルを対象にする）---
+    shared_file_exists,
+    get_shared_file_path,
+    get_shared_file_size,
+    get_shared_file_metadata,
+    is_shared_protected,
+    verify_shared_password
 )
 
 from services.auth_service import (
@@ -36,7 +39,6 @@ from services.auth_service import (
 from services.link_service import (
     create_link,
     get_link,
-    verify_link_password,
     list_links_by_owner,
     delete_link
 )
@@ -70,17 +72,21 @@ def _build_share_url(request: Request, token: str) -> str:
 # =====================================
 # 共有リンクを発行
 #
+# 対象は「共有フォルダにある自分のファイル」。
+# パスワード保護は共有時に設定したものをそのまま使う
+# （リンク側では新たにパスワードを設定しない）。
+#
 # URL:
 # POST /create-link/{filename}
 #
 # ボディ（任意）:
-#   { "expire_days": 7, "password": "ひみつ" }
+#   { "expire_days": 7 }
 #
 # エラー:
 #   401 : 未ログイン
 #   403 : 権限なし
 #   400 : ファイル名が不正
-#   404 : ファイルが存在しない
+#   404 : 共有ファイルが存在しない（先に共有が必要）
 # =====================================
 @router.post("/create-link/{filename}", response_model=CreateLinkResponse)
 def create_share_link(
@@ -106,15 +112,17 @@ def create_share_link(
     if not safe_name:
         raise HTTPException(status_code=400, detail="ファイル名が不正です")
 
-    # ④ ファイルの存在チェック
-    if not file_exists(current_user, safe_name):
-        raise HTTPException(status_code=404, detail=f"ファイルが見つかりません: {safe_name}")
+    # ④ 共有ファイルの存在チェック（先に共有しておく必要がある）
+    if not shared_file_exists(current_user, safe_name):
+        raise HTTPException(
+            status_code=404,
+            detail="このファイルはまだ共有されていません。先に「共有」してからリンクを作成してください。"
+        )
 
     # ⑤ リンク発行
     expire_days = body.expire_days if body else None
-    password = body.password if body else None
 
-    token = create_link(current_user, safe_name, expire_days, password)
+    token = create_link(current_user, safe_name, expire_days)
     link = get_link(token)["info"]
 
     log_success(current_user, f"CREATE_LINK: {safe_name}")
@@ -124,7 +132,8 @@ def create_share_link(
         token=token,
         url=_build_share_url(request, token),
         expires_at=link.get("expires_at"),
-        protected=bool(link.get("password_hash"))
+        # パスワード保護されているかは「共有時の設定」に従う
+        protected=is_shared_protected(current_user, safe_name)
     )
 
 
@@ -152,19 +161,20 @@ def link_info(token: str):
     owner = info["owner"]
     fname = info["filename"]
 
-    # 元ファイルが消えている場合
-    if not file_exists(owner, fname):
-        raise HTTPException(status_code=404, detail="ファイルが削除されています")
+    # 共有が解除されている場合
+    if not shared_file_exists(owner, fname):
+        raise HTTPException(status_code=404, detail="ファイルの共有が解除されています")
 
-    meta = get_file_metadata(owner, fname)
+    meta = get_shared_file_metadata(owner, fname)
 
     return LinkInfoResponse(
         success=True,
         filename=fname,
-        size=_format_size(get_file_size(owner, fname)),
+        size=_format_size(get_shared_file_size(owner, fname)),
         file_type=meta["file_type"],
         owner=owner,
-        protected=bool(info.get("password_hash")),
+        # パスワード保護されているかは共有時の設定に従う
+        protected=is_shared_protected(owner, fname),
         expires_at=info.get("expires_at")
     )
 
@@ -195,22 +205,22 @@ def link_download(
         raise HTTPException(status_code=410, detail="このリンクは有効期限が切れています")
 
     info = result["info"]
-
-    # パスワード照合
-    if not verify_link_password(info, x_link_password):
-        log_failed(info.get("owner", "不明"), "LINK_DOWNLOAD", "パスワード不一致")
-        raise HTTPException(status_code=401, detail="パスワードが必要です（または間違っています）")
-
     owner = info["owner"]
     fname = info["filename"]
 
-    if not file_exists(owner, fname):
-        raise HTTPException(status_code=404, detail="ファイルが削除されています")
+    # 共有が解除されていないか
+    if not shared_file_exists(owner, fname):
+        raise HTTPException(status_code=404, detail="ファイルの共有が解除されています")
+
+    # パスワード照合（共有時に設定したパスワードを使う）
+    if not verify_shared_password(owner, fname, x_link_password):
+        log_failed(owner, "LINK_DOWNLOAD", "パスワード不一致")
+        raise HTTPException(status_code=401, detail="パスワードが必要です（または間違っています）")
 
     log_success(owner, f"LINK_DOWNLOAD: {fname}")
 
     return FileResponse(
-        path=get_file_path(owner, fname),
+        path=get_shared_file_path(owner, fname),
         filename=fname,
         media_type="application/octet-stream"
     )

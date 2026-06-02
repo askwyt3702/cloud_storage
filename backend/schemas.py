@@ -137,10 +137,10 @@ class BulkShareRequest(BaseModel):
 
 # =====================================
 # 共有リンク発行リクエスト
+# （パスワードは共有時の設定を使うので、ここには持たない）
 # =====================================
 class CreateLinkRequest(BaseModel):
     expire_days: Optional[int] = None    # 有効日数（未指定で無期限）
-    password: Optional[str] = None       # パスワード（未指定で無し）
 
 
 # =====================================

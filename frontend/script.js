@@ -623,8 +623,7 @@ async function loadFiles() {
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ 取得</button>
                     <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))">✏️ 名前変更</button>
-                    <button class="link-btn"     onclick="createShareLink(decodeURIComponent('${safeName}'))">🔗 リンク作成</button>
-                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">📂 共有</button>
+                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">🔗 共有</button>
                     <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))">🗑 削除</button>
                 </div>
             </div>`;
@@ -1084,9 +1083,9 @@ function closeLinkModal() {
     if (m) m.hidden = true;
 }
 
-// リンク作成ボタン：設定を聞いてリンク発行
+// リンク作成ボタン：有効期限だけ聞いてリンク発行
+// （パスワードは共有時に設定したものをそのまま使う）
 async function createShareLink(filename) {
-    // 有効期限を選ぶ（簡易：プロンプト）
     const daysInput = prompt(
         `「${filename}」の共有リンクを作成します。\n\n有効期限（日数）を入力してください。\n空欄なら無期限です。`,
         "7"
@@ -1099,21 +1098,11 @@ async function createShareLink(filename) {
         return;
     }
 
-    // パスワード（任意）
-    const password = prompt(
-        "リンクにパスワードを付けますか？\n付ける場合は入力（不要なら空欄）",
-        ""
-    );
-    if (password === null) return;    // キャンセル
-
     try {
         const res = await fetch(`${API_BASE}/create-link/${encodeURIComponent(filename)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                expire_days: expire_days,
-                password: password || null
-            })
+            body: JSON.stringify({ expire_days: expire_days })
         });
 
         if (!res.ok) {
@@ -1538,8 +1527,10 @@ async function loadShared() {
             const lock = file.protected ? " 🔒" : "";
 
             // 自分が共有したファイルだけ「共有解除」ボタンを表示
-            const unshareBtn = (file.owner === me)
-                ? `<button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">✕ 共有解除</button>`
+            // 自分が共有したファイルだけ「リンク作成」「共有解除」を表示
+            const ownerBtns = (file.owner === me)
+                ? `<button class="link-btn" onclick="createShareLink(decodeURIComponent('${safeName}'))">🔗 リンク作成</button>
+                   <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">✕ 共有解除</button>`
                 : "";
 
             return `
@@ -1555,7 +1546,7 @@ async function loadShared() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})">↓ 取得</button>
-                    ${unshareBtn}
+                    ${ownerBtns}
                 </div>
             </div>`;
         }).join("");

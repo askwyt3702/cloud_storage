@@ -1,9 +1,13 @@
 # =====================================
 # 共有リンク管理サービス
 #
-# ファイルごとに推測不可能なトークンを発行し、
+# 「共有フォルダ(_shared)にある自分のファイル」に対して
+# 推測不可能なトークンを発行し、
 # 「URLを知っている人だけ」がダウンロードできる仕組み。
 # （ギガファイル便のような共有リンク）
+#
+# パスワード保護は、共有時に設定したパスワードをそのまま使う
+# （リンク側ではパスワードを持たない）。
 #
 # トークンと対応情報は uploads/_links.json に保存する。
 #   {
@@ -11,8 +15,7 @@
 #         "owner": "admin",
 #         "filename": "report.pdf",
 #         "created_at": "2026-06-02T15:00:00",
-#         "expires_at": "2026-06-09T15:00:00" or null,
-#         "password_hash": "..." or null
+#         "expires_at": "2026-06-09T15:00:00" or null
 #     }, ...
 #   }
 # =====================================
@@ -20,7 +23,6 @@
 import os
 import json
 import secrets
-import bcrypt
 from datetime import datetime, timedelta
 
 from security.logger import log_error
@@ -61,14 +63,13 @@ def _save_links(data: dict) -> None:
 #
 # 引数:
 #   owner       : 所有者のユーザー名
-#   filename    : 対象ファイル名（sanitize済み）
+#   filename    : 対象ファイル名（sanitize済み・共有フォルダ内）
 #   expire_days : 有効日数（None なら無期限）
-#   password    : パスワード（None/空 なら無し）
 #
 # 戻り値:
 #   発行したトークン（str）
 # =====================================
-def create_link(owner: str, filename: str, expire_days=None, password=None) -> str:
+def create_link(owner: str, filename: str, expire_days=None) -> str:
 
     links = _load_links()
 
@@ -80,17 +81,11 @@ def create_link(owner: str, filename: str, expire_days=None, password=None) -> s
     if expire_days:
         expires_at = (datetime.now() + timedelta(days=int(expire_days))).isoformat()
 
-    # パスワード（あればハッシュ化）
-    password_hash = None
-    if password:
-        password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-
     links[token] = {
         "owner": owner,
         "filename": filename,
         "created_at": datetime.now().isoformat(),
         "expires_at": expires_at,
-        "password_hash": password_hash,
     }
 
     _save_links(links)
@@ -126,35 +121,11 @@ def get_link(token: str) -> dict:
 
 
 # =====================================
-# リンクのパスワードを照合
-#
-# 戻り値:
-#   True  : 保護なし or パスワード正しい
-#   False : 保護ありでパスワードが違う／未入力
-# =====================================
-def verify_link_password(info: dict, password) -> bool:
-
-    ph = info.get("password_hash")
-
-    # 保護なし → 常にOK
-    if not ph:
-        return True
-
-    if not password:
-        return False
-
-    try:
-        return bcrypt.checkpw(password.encode(), ph.encode())
-    except Exception:
-        return False
-
-
-# =====================================
 # あるユーザーが発行したリンク一覧
 #
 # 戻り値:
 #   [{"token": "...", "filename": "...", "created_at": "...",
-#     "expires_at": ..., "protected": bool}, ...]
+#     "expires_at": ...}, ...]
 # =====================================
 def list_links_by_owner(owner: str) -> list:
 
@@ -170,7 +141,6 @@ def list_links_by_owner(owner: str) -> list:
             "filename": info.get("filename"),
             "created_at": info.get("created_at"),
             "expires_at": info.get("expires_at"),
-            "protected": bool(info.get("password_hash")),
         })
 
     return result
