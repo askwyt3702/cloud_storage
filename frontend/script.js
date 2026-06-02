@@ -606,14 +606,16 @@ async function loadFiles() {
             const imgUrl = `${API_BASE}/download/${safeName}`;
             const thumb = isImg
                 ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
-                        onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}'))"
+                        onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}')); event.stopPropagation();"
                         onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
 
+            const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
+
             return `
             <div class="file-card">
-                <div class="file-info">
-                    <input type="checkbox" class="file-check" value="${file.name}">
+                <input type="checkbox" class="file-check" value="${file.name}" style="margin-right: 12px;">
+                <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
                         <div class="file-name" title="${file.name}">${file.name}</div>
@@ -621,10 +623,10 @@ async function loadFiles() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ 取得</button>
-                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))">✏️ 名前変更</button>
-                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">🔗 共有</button>
-                    <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))">🗑 削除</button>
+                    <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
+                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
+                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
+                    <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>`;
         }).join("");
@@ -1307,7 +1309,7 @@ async function loadTrash() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="restoreFile(decodeURIComponent('${safeName}'))">↩ 復元</button>
-                    <button class="delete-btn"   onclick="permanentDelete(decodeURIComponent('${safeName}'))">✕ 完全削除</button>
+                    <button class="delete-btn"   onclick="permanentDelete(decodeURIComponent('${safeName}'))" title="完全削除"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>`;
         }).join("");
@@ -1529,13 +1531,15 @@ async function loadShared() {
             // 自分が共有したファイルだけ「共有解除」ボタンを表示
             // 自分が共有したファイルだけ「リンク作成」「共有解除」を表示
             const ownerBtns = (file.owner === me)
-                ? `<button class="link-btn" onclick="createShareLink(decodeURIComponent('${safeName}'))">🔗 リンク作成</button>
-                   <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))">✕ 共有解除</button>`
+                ? `<button class="link-btn" onclick="createShareLink(decodeURIComponent('${safeName}'))" title="リンク作成"><i class="fa-solid fa-link"></i></button>
+                   <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))" title="共有解除"><i class="fa-solid fa-link-slash"></i></button>`
                 : "";
+
+            const clickHandler = `downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
 
             return `
             <div class="file-card">
-                <div class="file-info">
+                <div class="file-info-clickable" onclick="${clickHandler}">
                     <div class="file-icon ${bg}">
                         <i class="fa-solid ${icon}"></i>
                     </div>
@@ -1545,7 +1549,7 @@ async function loadShared() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})">↓ 取得</button>
+                    <button class="download-btn" onclick="${clickHandler}">↓ ダウンロード</button>
                     ${ownerBtns}
                 </div>
             </div>`;

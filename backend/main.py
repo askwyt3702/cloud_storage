@@ -12,27 +12,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 # ログインAPI
-from routes.login import (
+from backend.routes.login import (
     router as login_router
 )
 
 # 容量API
-from routes.storage import (
+from backend.routes.storage import (
     router as storage_router
 )
 
 # ダウンロード・削除API  ← 担当B追加
-from routes.download import (
+from backend.routes.download import (
     router as download_router
 )
 
 # アップロードAPI
-from routes.upload import (
+from backend.routes.upload import (
     router as upload_router
 )
 
 # 共有リンクAPI（ギガファイル便方式）
-from routes.link import (
+from backend.routes.link import (
     router as link_router
 )
 
