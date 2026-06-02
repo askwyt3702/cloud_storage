@@ -788,23 +788,100 @@ async function uploadSelectedFile(e) {
         return;
     }
 
+    // 複数ファイルのときは「ZIPにまとめるか / 個別か」を確認
+    //   OK   → ZIP1個にまとめてアップロード
+    //   キャンセル → 個別アップロード（従来通り）
+    let asZip = false;
+    if (files.length > 1) {
+        asZip = confirm(
+            `${files.length} 個のファイルを選択しています。\n\n` +
+            `「OK」… 1つのZIPにまとめてアップロード\n` +
+            `「キャンセル」… 個別にアップロード`
+        );
+    }
+
     setLoading(btn, true);
     try {
-        // 複数ファイルを順番にアップロード
-        let ok = 0;
-        for (let i = 0; i < files.length; i++) {
-            const done = await uploadFileData(files[i], i + 1, files.length);
-            if (done) ok++;
-        }
-
-        if (files.length > 1) {
-            notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
+        if (asZip) {
+            await _uploadAsZip(files);
+        } else {
+            // 個別アップロード
+            let ok = 0;
+            for (let i = 0; i < files.length; i++) {
+                const done = await uploadFileData(files[i], i + 1, files.length);
+                if (done) ok++;
+            }
+            if (files.length > 1) {
+                notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
+            }
         }
 
         fileInput.value = "";
         _updateSelectedFileDisplay();   // ← 選択中チップを消す
     } finally {
         setLoading(btn, false);
+    }
+}
+
+
+// =====================================
+// 複数ファイルを1つのZIPにまとめてアップロード
+// （ブラウザ上で JSZip を使って zip を生成）
+// =====================================
+async function _uploadAsZip(files) {
+    // JSZip が読み込まれているか確認
+    if (typeof JSZip === "undefined") {
+        notify("ZIP機能の読み込みに失敗しました（個別アップロードをお使いください）");
+        return;
+    }
+
+    // ZIPファイル名を入力（既定は日時入り）
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "").replace(/-/g, "");
+    const input = prompt("ZIPファイルの名前を入力してください（.zip は不要）", `upload_${stamp}`);
+    if (input === null) return;          // キャンセル
+    let base = input.trim() || `upload_${stamp}`;
+    if (base.toLowerCase().endsWith(".zip")) base = base.slice(0, -4);
+    const zipName = base + ".zip";
+
+    // 進捗バーの準備
+    _ensureUploadProgressUI();
+    const bar   = document.getElementById("uploadProgress");
+    const fill  = document.getElementById("uploadProgressFill");
+    const label = document.getElementById("uploadProgressLabel");
+
+    // --- ZIPを生成 ---
+    if (bar)   bar.style.display = "block";
+    if (label) label.textContent = "ZIPを作成中...";
+    if (fill)  fill.style.width  = "0%";
+
+    const zip = new JSZip();
+    for (const f of files) {
+        zip.file(f.name, f);
+    }
+
+    let blob;
+    try {
+        blob = await zip.generateAsync(
+            { type: "blob", compression: "DEFLATE" },
+            (meta) => {
+                // zip生成の進捗（0〜100）
+                if (fill)  fill.style.width  = Math.round(meta.percent) + "%";
+                if (label) label.textContent = `ZIPを作成中... ${Math.round(meta.percent)}%`;
+            }
+        );
+    } catch (err) {
+        if (bar) bar.style.display = "none";
+        notify("ZIPの作成に失敗しました");
+        return;
+    }
+
+    // --- 生成したZIPをファイルとしてアップロード ---
+    const zipFile = new File([blob], zipName, { type: "application/zip" });
+    if (label) label.textContent = `${zipName} をアップロード中...`;
+
+    const done = await uploadFileData(zipFile);
+    if (done) {
+        notify(`${files.length}個のファイルを ${zipName} にまとめてアップロードしました`);
     }
 }
 
@@ -1393,11 +1470,25 @@ async function unshareFile(owner, filename) {
 // ドラッグ＆ドロップ設定
 // =====================================
 function setupDropArea() {
-    // ドロップされたファイル群を順にアップロードする共通処理
+    // ドロップされたファイル群をアップロードする共通処理
+    // 複数なら「ZIPにまとめるか / 個別か」を確認
     async function handleDroppedFiles(fileList) {
         const files = Array.from(fileList || []);
         if (files.length === 0) return;
 
+        if (files.length > 1) {
+            const asZip = confirm(
+                `${files.length} 個のファイルをドロップしました。\n\n` +
+                `「OK」… 1つのZIPにまとめてアップロード\n` +
+                `「キャンセル」… 個別にアップロード`
+            );
+            if (asZip) {
+                await _uploadAsZip(files);
+                return;
+            }
+        }
+
+        // 個別アップロード
         let ok = 0;
         for (let i = 0; i < files.length; i++) {
             const done = await uploadFileData(files[i], i + 1, files.length);
