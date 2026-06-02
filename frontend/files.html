@@ -81,7 +81,7 @@
         <input type="file" id="fileInput" hidden multiple>
 
         <button onclick="document.getElementById('fileInput').click()">
-          📁 ファイル選択
+          📁 ファイルを追加
         </button>
 
         <button onclick="uploadSelectedFile(event)">
@@ -90,8 +90,27 @@
 
       </div>
 
-      <!-- 選択中のファイル表示（選ぶまでは非表示） -->
-      <div id="selectedFileInfo" class="selected-file" hidden></div>
+      <!-- 選択中のファイルリスト（選ぶまでは非表示） -->
+      <div id="uploadTray" class="upload-tray" hidden>
+
+        <div class="upload-tray-head">
+          <span id="uploadTraySummary">選択中のファイル</span>
+          <button class="tray-clear-all" onclick="clearAllSelected()">すべてクリア</button>
+        </div>
+
+        <div id="uploadTrayList" class="upload-tray-list">
+          <!-- ファイル行が動的に追加される -->
+        </div>
+
+        <div class="upload-tray-foot">
+          <label class="zip-toggle">
+            <input type="checkbox" id="zipModeToggle" onchange="renderUploadTray()">
+            チェックしたファイルを <b>1つのZIP</b> にまとめる
+          </label>
+          <span class="zip-hint" id="zipHint"></span>
+        </div>
+
+      </div>
 
       <div class="drop-area">
         <p class="drop-title">

@@ -152,67 +152,112 @@ function _formatFileSize(bytes) {
 }
 
 
-// =====================================
-// 「選択中のファイル」表示エリアを更新
-// ・1ファイル：サムネ＋名前＋サイズ
-// ・複数ファイル：件数と合計サイズのサマリ
-// =====================================
-function _updateSelectedFileDisplay() {
-    const input = document.getElementById("fileInput");
-    const info  = document.getElementById("selectedFileInfo");
-    if (!info) return;
+// =====================================================
+// アップロードトレイ（選択中ファイルのリスト管理）
+//   _uploadQueue: 選択されたファイルを溜める配列
+//   各要素: { file: File, zip: bool }  zip=ZIP化対象か
+// =====================================================
+let _uploadQueue = [];
 
-    const files = input ? input.files : null;
-    if (!files || files.length === 0) {
-        info.hidden = true;
-        info.innerHTML = "";
-        return;
+// input から選ばれたファイルをキューに追加（重複は名前＋サイズで除外）
+function addFilesToQueue(fileList) {
+    const files = Array.from(fileList || []);
+    for (const f of files) {
+        const dup = _uploadQueue.some(
+            item => item.file.name === f.name && item.file.size === f.size
+        );
+        if (!dup) {
+            _uploadQueue.push({ file: f, zip: false });
+        }
     }
-
-    // ---- 複数選択 ----
-    if (files.length > 1) {
-        let total = 0;
-        for (const f of files) total += f.size;
-
-        info.innerHTML = `
-            <div class="file-icon default-bg" style="width:50px;height:50px;border-radius:14px;font-size:22px;">
-                <i class="fa-solid fa-layer-group"></i>
-            </div>
-            <div class="selected-file-meta">
-                <div class="selected-file-name">${files.length} 個のファイルを選択中</div>
-                <div class="selected-file-size">合計 ${_formatFileSize(total)}</div>
-            </div>
-            <button class="selected-file-clear" onclick="clearSelectedFile()" aria-label="選択解除" title="選択解除">✕</button>
-        `;
-        info.hidden = false;
-        return;
-    }
-
-    // ---- 1ファイル ----
-    const file = files[0];
-    const { icon, bg } = getFileIcon(file.name);
-    const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
-
-    const thumb = isImg
-        ? `<img class="selected-thumb" src="${URL.createObjectURL(file)}" alt="">`
-        : `<div class="file-icon ${bg}" style="width:50px;height:50px;border-radius:14px;font-size:22px;"><i class="fa-solid ${icon}"></i></div>`;
-
-    info.innerHTML = `
-        ${thumb}
-        <div class="selected-file-meta">
-            <div class="selected-file-name">${file.name}</div>
-            <div class="selected-file-size">${_formatFileSize(file.size)}</div>
-        </div>
-        <button class="selected-file-clear" onclick="clearSelectedFile()" aria-label="選択解除" title="選択解除">✕</button>
-    `;
-    info.hidden = false;
+    renderUploadTray();
 }
 
-// ✕ボタン：ファイル選択をクリア
-function clearSelectedFile() {
+// キューから1件削除
+function removeFromQueue(index) {
+    _uploadQueue.splice(index, 1);
+    renderUploadTray();
+}
+
+// 1件のZIP対象チェックを切り替え
+function toggleQueueZip(index, checked) {
+    if (_uploadQueue[index]) _uploadQueue[index].zip = checked;
+    renderUploadTray();
+}
+
+// すべてクリア
+function clearAllSelected() {
+    _uploadQueue = [];
     const input = document.getElementById("fileInput");
     if (input) input.value = "";
-    _updateSelectedFileDisplay();
+    renderUploadTray();
+}
+
+// トレイを描画
+function renderUploadTray() {
+    const tray    = document.getElementById("uploadTray");
+    const list    = document.getElementById("uploadTrayList");
+    const summary = document.getElementById("uploadTraySummary");
+    const hint    = document.getElementById("zipHint");
+    const zipMode = document.getElementById("zipModeToggle");
+    if (!tray || !list) return;
+
+    // 空ならトレイを隠す
+    if (_uploadQueue.length === 0) {
+        tray.hidden = true;
+        list.innerHTML = "";
+        if (zipMode) zipMode.checked = false;
+        return;
+    }
+    tray.hidden = false;
+
+    // ZIPモードかどうかで、チェックボックス列の出し方が変わる
+    const zipOn = zipMode && zipMode.checked;
+
+    // 合計サイズ
+    let total = 0;
+    for (const item of _uploadQueue) total += item.file.size;
+    if (summary) {
+        summary.textContent = `選択中のファイル（${_uploadQueue.length}件・合計 ${_formatFileSize(total)}）`;
+    }
+
+    // 各行を描画
+    list.innerHTML = _uploadQueue.map((item, i) => {
+        const f = item.file;
+        const { icon, bg } = getFileIcon(f.name);
+
+        // ZIPモードのときだけ、各行に「ZIPに入れる」チェックを出す
+        const zipCheck = zipOn
+            ? `<input type="checkbox" class="tray-zip-check" ${item.zip ? "checked" : ""}
+                      onchange="toggleQueueZip(${i}, this.checked)" title="このファイルをZIPに入れる">`
+            : "";
+
+        return `
+            <div class="tray-row">
+                ${zipCheck}
+                <div class="file-icon ${bg}" style="width:42px;height:42px;border-radius:12px;font-size:18px;">
+                    <i class="fa-solid ${icon}"></i>
+                </div>
+                <div class="tray-row-meta">
+                    <div class="tray-row-name" title="${f.name}">${f.name}</div>
+                    <div class="tray-row-size">${_formatFileSize(f.size)}</div>
+                </div>
+                <button class="tray-row-remove" onclick="removeFromQueue(${i})" title="この行を削除">✕</button>
+            </div>
+        `;
+    }).join("");
+
+    // ヒント文
+    if (hint) {
+        if (zipOn) {
+            const zipCount = _uploadQueue.filter(it => it.zip).length;
+            hint.textContent = zipCount > 0
+                ? `→ チェックした ${zipCount}件をZIPに、残りは個別にアップロード`
+                : `→ 上のリストでZIPに入れるファイルにチェックしてください`;
+        } else {
+            hint.textContent = "";
+        }
+    }
 }
 
 
@@ -780,44 +825,49 @@ function applyHeaderUser() {
 // =====================================
 async function uploadSelectedFile(e) {
     const btn = _btnFromEvent(e);
-    const fileInput = document.getElementById("fileInput");
-    const files = Array.from(fileInput.files);
 
-    if (files.length === 0) {
+    if (_uploadQueue.length === 0) {
         notify("ファイルを選択してください");
         return;
     }
 
-    // 複数ファイルのときは「ZIPにまとめるか / 個別か」を確認
-    //   OK   → ZIP1個にまとめてアップロード
-    //   キャンセル → 個別アップロード（従来通り）
-    let asZip = false;
-    if (files.length > 1) {
-        asZip = confirm(
-            `${files.length} 個のファイルを選択しています。\n\n` +
-            `「OK」… 1つのZIPにまとめてアップロード\n` +
-            `「キャンセル」… 個別にアップロード`
-        );
+    const zipMode = document.getElementById("zipModeToggle");
+    const zipOn   = zipMode && zipMode.checked;
+
+    // ZIP対象 / 個別対象 に振り分け
+    const zipFiles = zipOn ? _uploadQueue.filter(it => it.zip).map(it => it.file) : [];
+    const soloFiles = zipOn
+        ? _uploadQueue.filter(it => !it.zip).map(it => it.file)
+        : _uploadQueue.map(it => it.file);
+
+    // ZIPモードなのにチェックが1つも無い → 警告
+    if (zipOn && zipFiles.length === 0) {
+        notify("ZIPに入れるファイルにチェックを付けてください");
+        return;
     }
 
     setLoading(btn, true);
     try {
-        if (asZip) {
-            await _uploadAsZip(files);
-        } else {
-            // 個別アップロード
-            let ok = 0;
-            for (let i = 0; i < files.length; i++) {
-                const done = await uploadFileData(files[i], i + 1, files.length);
-                if (done) ok++;
-            }
-            if (files.length > 1) {
-                notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
-            }
+        let okCount = 0;
+        let totalCount = soloFiles.length + (zipFiles.length > 0 ? 1 : 0);
+
+        // ① ZIPにまとめる分（1ファイルでもZIP化する）
+        if (zipFiles.length > 0) {
+            const done = await _uploadAsZip(zipFiles);
+            if (done) okCount++;
         }
 
-        fileInput.value = "";
-        _updateSelectedFileDisplay();   // ← 選択中チップを消す
+        // ② 個別アップロード分
+        for (let i = 0; i < soloFiles.length; i++) {
+            const done = await uploadFileData(soloFiles[i], i + 1, soloFiles.length);
+            if (done) okCount++;
+        }
+
+        if (totalCount > 1) {
+            notify(`${okCount} / ${totalCount} 件のアップロードが完了しました`);
+        }
+
+        clearAllSelected();   // キューを空にしてトレイを閉じる
     } finally {
         setLoading(btn, false);
     }
@@ -827,21 +877,18 @@ async function uploadSelectedFile(e) {
 // =====================================
 // 複数ファイルを1つのZIPにまとめてアップロード
 // （ブラウザ上で JSZip を使って zip を生成）
+// 戻り値: 成功なら true
 // =====================================
 async function _uploadAsZip(files) {
     // JSZip が読み込まれているか確認
     if (typeof JSZip === "undefined") {
         notify("ZIP機能の読み込みに失敗しました（個別アップロードをお使いください）");
-        return;
+        return false;
     }
 
-    // ZIPファイル名を入力（既定は日時入り）
+    // ZIPファイル名は日時から自動生成
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "").replace(/-/g, "");
-    const input = prompt("ZIPファイルの名前を入力してください（.zip は不要）", `upload_${stamp}`);
-    if (input === null) return;          // キャンセル
-    let base = input.trim() || `upload_${stamp}`;
-    if (base.toLowerCase().endsWith(".zip")) base = base.slice(0, -4);
-    const zipName = base + ".zip";
+    const zipName = `upload_${stamp}.zip`;
 
     // 進捗バーの準備
     _ensureUploadProgressUI();
@@ -872,7 +919,7 @@ async function _uploadAsZip(files) {
     } catch (err) {
         if (bar) bar.style.display = "none";
         notify("ZIPの作成に失敗しました");
-        return;
+        return false;
     }
 
     // --- 生成したZIPをファイルとしてアップロード ---
@@ -881,8 +928,9 @@ async function _uploadAsZip(files) {
 
     const done = await uploadFileData(zipFile);
     if (done) {
-        notify(`${files.length}個のファイルを ${zipName} にまとめてアップロードしました`);
+        notify(`${files.length}個のファイルを ${zipName} にまとめました`);
     }
+    return done;
 }
 
 
@@ -1470,33 +1518,13 @@ async function unshareFile(owner, filename) {
 // ドラッグ＆ドロップ設定
 // =====================================
 function setupDropArea() {
-    // ドロップされたファイル群をアップロードする共通処理
-    // 複数なら「ZIPにまとめるか / 個別か」を確認
-    async function handleDroppedFiles(fileList) {
+    // ドロップされたファイルは選択トレイに追加するだけ
+    // （実際のアップロードは「アップロード」ボタンで実行）
+    function handleDroppedFiles(fileList) {
         const files = Array.from(fileList || []);
         if (files.length === 0) return;
-
-        if (files.length > 1) {
-            const asZip = confirm(
-                `${files.length} 個のファイルをドロップしました。\n\n` +
-                `「OK」… 1つのZIPにまとめてアップロード\n` +
-                `「キャンセル」… 個別にアップロード`
-            );
-            if (asZip) {
-                await _uploadAsZip(files);
-                return;
-            }
-        }
-
-        // 個別アップロード
-        let ok = 0;
-        for (let i = 0; i < files.length; i++) {
-            const done = await uploadFileData(files[i], i + 1, files.length);
-            if (done) ok++;
-        }
-        if (files.length > 1) {
-            notify(`${ok} / ${files.length} 件のアップロードが完了しました`);
-        }
+        addFilesToQueue(files);
+        notify(`${files.length}件を選択に追加しました`);
     }
 
     // --- 画面全体のドラッグ&ドロップ（どこに落としてもOK） ---
@@ -1574,7 +1602,12 @@ window.addEventListener("load", () => {
     setupDropArea();
     _ensureUploadProgressUI();
 
-    // ファイル選択直後にプレビュー表示を更新
+    // ファイル選択直後にトレイへ追加（複数回の選択も累積できる）
     const fileInput = document.getElementById("fileInput");
-    if (fileInput) fileInput.addEventListener("change", _updateSelectedFileDisplay);
+    if (fileInput) {
+        fileInput.addEventListener("change", () => {
+            addFilesToQueue(fileInput.files);
+            fileInput.value = "";   // 同じファイルを再選択できるようにクリア
+        });
+    }
 });

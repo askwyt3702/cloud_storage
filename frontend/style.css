@@ -1214,6 +1214,161 @@ button:disabled{
 }
 
 
+/* ====== アップロードトレイ（選択中ファイルリスト） ====== */
+.upload-tray{
+    background:rgba(30,41,59,0.6);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:18px;
+
+    padding:16px 18px;
+    margin-bottom:20px;
+
+    animation:selected-in 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.upload-tray[hidden]{ display:none; }
+
+.upload-tray-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    margin-bottom:12px;
+}
+.upload-tray-head span{
+    color:white;
+    font-weight:bold;
+    font-size:15px;
+}
+.tray-clear-all{
+    background:rgba(255,255,255,0.08);
+    color:#cbd5e1;
+
+    padding:6px 12px;
+    font-size:12px;
+    border-radius:8px;
+    box-shadow:none;
+}
+.tray-clear-all:hover{
+    background:rgba(239,68,68,0.8);
+    color:white;
+}
+
+.upload-tray-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+
+    max-height:280px;
+    overflow-y:auto;
+}
+
+.tray-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+
+    background:rgba(51,65,85,0.5);
+    border:1px solid rgba(255,255,255,0.05);
+    border-radius:12px;
+
+    padding:8px 12px;
+}
+.tray-zip-check{
+    width:18px;
+    height:18px;
+    accent-color:#3b82f6;
+    cursor:pointer;
+    flex-shrink:0;
+    margin:0;
+}
+.tray-row-meta{
+    flex:1;
+    min-width:0;
+}
+.tray-row-name{
+    color:white;
+    font-size:14px;
+
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.tray-row-size{
+    color:#94a3b8;
+    font-size:12px;
+    margin-top:2px;
+}
+.tray-row-remove{
+    width:28px;
+    height:28px;
+    padding:0;
+
+    border-radius:50%;
+    background:rgba(255,255,255,0.08);
+    color:#cbd5e1;
+
+    font-size:12px;
+    box-shadow:none;
+    flex-shrink:0;
+}
+.tray-row-remove:hover{
+    background:#ef4444;
+    color:white;
+}
+
+.upload-tray-foot{
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid rgba(255,255,255,0.08);
+}
+.zip-toggle{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    color:#e2e8f0;
+    font-size:14px;
+    cursor:pointer;
+}
+.zip-toggle input{
+    width:18px;
+    height:18px;
+    accent-color:#10b981;
+    cursor:pointer;
+    margin:0;
+}
+.zip-hint{
+    display:block;
+    margin-top:8px;
+
+    color:#60a5fa;
+    font-size:12px;
+}
+
+/* ライトテーマ */
+[data-theme="light"] .upload-tray{
+    background:rgba(241,245,249,0.85);
+    border:1px solid rgba(0,0,0,0.06);
+}
+[data-theme="light"] .upload-tray-head span{ color:#0f172a; }
+[data-theme="light"] .tray-clear-all{
+    background:rgba(0,0,0,0.06);
+    color:#475569;
+}
+[data-theme="light"] .tray-row{
+    background:rgba(255,255,255,0.9);
+    border:1px solid rgba(0,0,0,0.06);
+}
+[data-theme="light"] .tray-row-name{ color:#0f172a; }
+[data-theme="light"] .tray-row-size{ color:#64748b; }
+[data-theme="light"] .tray-row-remove{
+    background:rgba(0,0,0,0.06);
+    color:#475569;
+}
+[data-theme="light"] .zip-toggle{ color:#0f172a; }
+[data-theme="light"] .upload-tray-foot{ border-top:1px solid rgba(0,0,0,0.08); }
+
+
 /* ====== ローディングスケルトン ====== */
 .skeleton-card{
     display:flex;
