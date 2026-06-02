@@ -41,11 +41,22 @@ MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 
 # アップロード許可する拡張子
+# 方針：中身が「素直なデータファイル」で安全なものだけを許可（ホワイトリスト）。
+#       スクリプトを埋め込める .svg や、実行ファイル系（.exe/.bat等）は意図的に除外。
 ALLOWED_EXTENSIONS = {
+    # --- 文書 ---
     ".pdf", ".txt", ".csv",
-    ".jpg", ".jpeg", ".png", ".gif",
+    # --- 画像 ---
+    ".jpg", ".jpeg", ".jfif", ".png", ".gif",
+    ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif",
+    # --- Office ---
     ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-    ".zip", ".mp4", ".mp3"
+    # --- 音声 ---
+    ".mp3", ".wav", ".m4a", ".aac",
+    # --- 動画 ---
+    ".mp4", ".mov", ".webm",
+    # --- 圧縮 ---
+    ".zip"
 }
 
 

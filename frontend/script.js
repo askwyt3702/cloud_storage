@@ -142,7 +142,7 @@ function _updateSelectedFileDisplay() {
     }
 
     const { icon, bg } = getFileIcon(file.name);
-    const isImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+    const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
 
     // 画像なら実ファイルからプレビューを生成
     const thumb = isImg
@@ -259,10 +259,19 @@ function getFileIcon(filename) {
     const ext = filename.split(".").pop().toLowerCase();
     const iconMap = {
         "pdf":  { icon: "fa-file-pdf",        bg: "pdf-bg"   },
+        // 画像
         "jpg":  { icon: "fa-file-image",       bg: "image-bg" },
         "jpeg": { icon: "fa-file-image",       bg: "image-bg" },
+        "jfif": { icon: "fa-file-image",       bg: "image-bg" },
         "png":  { icon: "fa-file-image",       bg: "image-bg" },
         "gif":  { icon: "fa-file-image",       bg: "image-bg" },
+        "webp": { icon: "fa-file-image",       bg: "image-bg" },
+        "bmp":  { icon: "fa-file-image",       bg: "image-bg" },
+        "tif":  { icon: "fa-file-image",       bg: "image-bg" },
+        "tiff": { icon: "fa-file-image",       bg: "image-bg" },
+        "heic": { icon: "fa-file-image",       bg: "image-bg" },
+        "heif": { icon: "fa-file-image",       bg: "image-bg" },
+        // 文書
         "doc":  { icon: "fa-file-word",        bg: "word-bg"  },
         "docx": { icon: "fa-file-word",        bg: "word-bg"  },
         "xls":  { icon: "fa-file-excel",       bg: "excel-bg" },
@@ -270,9 +279,17 @@ function getFileIcon(filename) {
         "ppt":  { icon: "fa-file-powerpoint",  bg: "ppt-bg"   },
         "pptx": { icon: "fa-file-powerpoint",  bg: "ppt-bg"   },
         "txt":  { icon: "fa-file-lines",       bg: "text-bg"  },
+        "csv":  { icon: "fa-file-csv",         bg: "excel-bg" },
         "zip":  { icon: "fa-file-zipper",      bg: "zip-bg"   },
+        // 動画
         "mp4":  { icon: "fa-file-video",       bg: "video-bg" },
+        "mov":  { icon: "fa-file-video",       bg: "video-bg" },
+        "webm": { icon: "fa-file-video",       bg: "video-bg" },
+        // 音声
         "mp3":  { icon: "fa-file-audio",       bg: "audio-bg" },
+        "wav":  { icon: "fa-file-audio",       bg: "audio-bg" },
+        "m4a":  { icon: "fa-file-audio",       bg: "audio-bg" },
+        "aac":  { icon: "fa-file-audio",       bg: "audio-bg" },
     };
     return iconMap[ext] || { icon: "fa-file", bg: "default-bg" };
 }
@@ -487,7 +504,7 @@ async function loadFiles() {
             // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
             //   - クリックでフルサイズプレビュー（モーダル）が開く
             //   - 画像が壊れていたら色付きアイコンにフォールバック
-            const isImg = /\.(jpe?g|png|gif|webp|bmp)$/i.test(file.name);
+            const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
             const imgUrl = `${API_BASE}/download/${safeName}`;
             const thumb = isImg
                 ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
