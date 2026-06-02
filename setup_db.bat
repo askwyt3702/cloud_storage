@@ -39,6 +39,11 @@ REM   If your postgres password is NOT "secret_password123",
 REM   change the line below to your actual password.
 set "PGPASSWORD=secret_password123"
 
+REM ---- Tell psql that the input files are UTF-8 ----
+REM   schema.sql contains Japanese comments saved as UTF-8.
+REM   Without this, Japanese Windows defaults to SJIS and breaks.
+set "PGCLIENTENCODING=UTF8"
+
 echo === [1/3] Creating database "storage_management" ===
 "!PSQL!" -U postgres -h localhost -c "CREATE DATABASE storage_management WITH ENCODING 'UTF8' TEMPLATE template0;"
 echo   ("already exists" error is OK - the DB was already created.)
