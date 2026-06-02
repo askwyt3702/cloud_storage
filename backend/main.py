@@ -31,6 +31,11 @@ from routes.upload import (
     router as upload_router
 )
 
+# 共有リンクAPI（ギガファイル便方式）
+from routes.link import (
+    router as link_router
+)
+
 
 # アプリ作成
 app = FastAPI()
@@ -75,6 +80,11 @@ app.include_router(
 # アップロード機能追加
 app.include_router(
     upload_router
+)
+
+# 共有リンク機能追加
+app.include_router(
+    link_router
 )
 
 

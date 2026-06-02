@@ -136,6 +136,59 @@ class BulkShareRequest(BaseModel):
 
 
 # =====================================
+# 共有リンク発行リクエスト
+# =====================================
+class CreateLinkRequest(BaseModel):
+    expire_days: Optional[int] = None    # 有効日数（未指定で無期限）
+    password: Optional[str] = None       # パスワード（未指定で無し）
+
+
+# =====================================
+# 共有リンク発行レスポンス
+# =====================================
+class CreateLinkResponse(BaseModel):
+    success: bool
+    token: str
+    url: str                             # 完成した共有URL
+    expires_at: Optional[str] = None
+    protected: bool
+
+
+# =====================================
+# 共有リンク情報（受け取り側のプレビュー用）
+# =====================================
+class LinkInfoResponse(BaseModel):
+    success: bool
+    filename: str
+    size: str
+    file_type: str
+    owner: str
+    protected: bool                      # パスワード保護されているか
+    expires_at: Optional[str] = None
+
+
+# =====================================
+# 共有リンク一覧の1件
+# =====================================
+class LinkItem(BaseModel):
+    token: str
+    filename: str
+    url: str
+    created_at: str
+    expires_at: Optional[str] = None
+    protected: bool
+
+
+# =====================================
+# 共有リンク一覧レスポンス
+# =====================================
+class LinkListResponse(BaseModel):
+    success: bool
+    links: List[LinkItem]
+    total: int
+
+
+# =====================================
 # ログインリクエスト
 # =====================================
 class LoginRequest(BaseModel):

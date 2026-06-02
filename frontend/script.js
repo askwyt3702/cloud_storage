@@ -623,7 +623,8 @@ async function loadFiles() {
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ 取得</button>
                     <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))">✏️ 名前変更</button>
-                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">🔗 共有</button>
+                    <button class="link-btn"     onclick="createShareLink(decodeURIComponent('${safeName}'))">🔗 リンク作成</button>
+                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))">📂 共有</button>
                     <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))">🗑 削除</button>
                 </div>
             </div>`;
@@ -1056,6 +1057,125 @@ async function deleteFile(filename) {
 // ファイル名変更（リネーム）
 // 拡張子は維持し、ベース名だけを編集できるようにする
 // =====================================
+// =====================================================
+// 共有リンク（ギガファイル便方式）
+// =====================================================
+
+// リンク発行のモーダルを用意
+function _ensureLinkModal() {
+    if (document.getElementById("link-modal")) return;
+
+    const m = document.createElement("div");
+    m.id = "link-modal";
+    m.className = "image-modal";   // 既存のモーダル背景スタイルを流用
+    m.hidden = true;
+    m.innerHTML = `
+        <div class="image-modal-backdrop" onclick="closeLinkModal()"></div>
+        <div class="link-modal-box">
+            <button class="image-modal-close" onclick="closeLinkModal()" aria-label="閉じる">✕</button>
+            <div id="link-modal-body"></div>
+        </div>
+    `;
+    document.body.appendChild(m);
+}
+
+function closeLinkModal() {
+    const m = document.getElementById("link-modal");
+    if (m) m.hidden = true;
+}
+
+// リンク作成ボタン：設定を聞いてリンク発行
+async function createShareLink(filename) {
+    // 有効期限を選ぶ（簡易：プロンプト）
+    const daysInput = prompt(
+        `「${filename}」の共有リンクを作成します。\n\n有効期限（日数）を入力してください。\n空欄なら無期限です。`,
+        "7"
+    );
+    if (daysInput === null) return;   // キャンセル
+
+    const expire_days = daysInput.trim() ? parseInt(daysInput.trim(), 10) : null;
+    if (daysInput.trim() && (isNaN(expire_days) || expire_days <= 0)) {
+        notify("有効期限は正の数で入力してください");
+        return;
+    }
+
+    // パスワード（任意）
+    const password = prompt(
+        "リンクにパスワードを付けますか？\n付ける場合は入力（不要なら空欄）",
+        ""
+    );
+    if (password === null) return;    // キャンセル
+
+    try {
+        const res = await fetch(`${API_BASE}/create-link/${encodeURIComponent(filename)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                expire_days: expire_days,
+                password: password || null
+            })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            notify(`エラー: ${err.detail}`);
+            return;
+        }
+
+        const data = await res.json();
+        showLinkModal(filename, data);
+
+    } catch (e) {
+        notify("リンクの作成に失敗しました");
+    }
+}
+
+// 発行されたリンクをモーダルで表示
+function showLinkModal(filename, data) {
+    _ensureLinkModal();
+
+    const expireText = data.expires_at
+        ? `有効期限: ${new Date(data.expires_at).toLocaleString()}`
+        : "有効期限: なし（無期限）";
+    const pwText = data.protected ? "🔒 パスワード保護あり" : "パスワード: なし";
+
+    document.getElementById("link-modal-body").innerHTML = `
+        <h2 class="link-modal-title">🔗 共有リンクを作成しました</h2>
+        <p class="link-modal-file">${filename}</p>
+
+        <div class="link-url-row">
+            <input type="text" id="link-url-input" class="link-url-input" value="${data.url}" readonly>
+            <button class="link-copy-btn" onclick="copyShareLink()">コピー</button>
+        </div>
+
+        <p class="link-modal-meta">${expireText}</p>
+        <p class="link-modal-meta">${pwText}</p>
+
+        <p class="link-modal-hint">
+            このURLを知っている人なら、ログインなしでダウンロードできます。
+        </p>
+    `;
+
+    document.getElementById("link-modal").hidden = false;
+}
+
+// URLをクリップボードにコピー
+async function copyShareLink() {
+    const input = document.getElementById("link-url-input");
+    if (!input) return;
+
+    try {
+        await navigator.clipboard.writeText(input.value);
+        notify("リンクをコピーしました");
+    } catch (e) {
+        // フォールバック：選択してコピー
+        input.select();
+        document.execCommand("copy");
+        notify("リンクをコピーしました");
+    }
+}
+
+
 async function renameFile(filename) {
     // 元の拡張子（".pdf" など）とベース名を分離
     const dotIdx = filename.lastIndexOf(".");
