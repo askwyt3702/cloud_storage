@@ -1,23 +1,20 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 REM ============================================================
-REM  クラウドストレージ DB セットアップ
-REM   - storage_management データベースを作成
-REM   - schema.sql でテーブルとテストユーザーを作成
-REM  使い方: このファイルをダブルクリックするだけ
+REM   Cloud Storage - Database setup script
+REM   Creates "storage_management" DB and runs schema.sql
+REM   Usage: just double-click this file
 REM ============================================================
 
-REM このバッチがある場所（＝プロジェクト直下）へ移動
 cd /d "%~dp0"
 
 echo ============================================================
-echo   クラウドストレージ データベース セットアップ
+echo   Cloud Storage - Database Setup
 echo ============================================================
 echo.
 
-REM ===== psql.exe を探す（PostgreSQL 15〜18 と PATH を確認）=====
+REM ---- Locate psql.exe (try PostgreSQL 15..18, then PATH) ----
 set "PSQL="
 for %%V in (15 16 17 18) do (
     if exist "C:\Program Files\PostgreSQL\%%V\bin\psql.exe" (
@@ -28,40 +25,39 @@ if "!PSQL!"=="" (
     where psql >nul 2>&1 && set "PSQL=psql"
 )
 if "!PSQL!"=="" (
-    echo [エラー] psql.exe が見つかりませんでした。
-    echo   PostgreSQL がインストールされているか確認してください。
-    echo   見つからない場合は、psql.exe のフルパスを直接指定してください。
+    echo [ERROR] psql.exe was not found.
+    echo   Please install PostgreSQL or set its bin folder in PATH.
     echo.
     pause
     exit /b 1
 )
-echo 使用する psql : !PSQL!
+echo Using psql: !PSQL!
 echo.
 
-REM ===== 接続情報（db.py の既定値と合わせる）=====
-REM  ※ PostgreSQL インストール時のパスワードを secret_password123 に
-REM     していない場合は、下の行を自分のパスワードに書き換えてください。
+REM ---- Connection password (must match db.py defaults) ----
+REM   If your postgres password is NOT "secret_password123",
+REM   change the line below to your actual password.
 set "PGPASSWORD=secret_password123"
 
-echo === [1/3] データベース storage_management を作成 ===
+echo === [1/3] Creating database "storage_management" ===
 "!PSQL!" -U postgres -h localhost -c "CREATE DATABASE storage_management WITH ENCODING 'UTF8' TEMPLATE template0;"
-echo   （"already exists" のエラーは「既に作成済み」という意味なので無視でOK）
+echo   ("already exists" error is OK - the DB was already created.)
 echo.
 
-echo === [2/3] テーブルとテストユーザーを作成 (database\schema.sql) ===
+echo === [2/3] Creating tables and test user (database\schema.sql) ===
 "!PSQL!" -U postgres -h localhost -d storage_management -f "database\schema.sql"
 echo.
 
-echo === [3/3] 確認（テストユーザーが表示されれば成功）===
+echo === [3/3] Verifying (the test user should appear) ===
 "!PSQL!" -U postgres -h localhost -d storage_management -c "SELECT id, username, email, role FROM users;"
 echo.
 
 echo ============================================================
-echo  完了です。
-echo   - 上に tarou_tanaka / tanaka@example.com が出ていれば成功。
-echo   - もし password 認証エラーが出た場合は、PostgreSQL の
-echo     パスワードが secret_password123 ではありません。
-echo     このファイルの PGPASSWORD の行を自分のパスワードに直してください。
+echo  Done!
+echo   - If you see "tarou_tanaka / tanaka@example.com" above, success.
+echo   - If you got an authentication error, your postgres password
+echo     is not "secret_password123". Edit the PGPASSWORD line above
+echo     and change it to your actual password.
 echo ============================================================
 echo.
 pause
