@@ -132,6 +132,13 @@
         </p>
       </div>
 
+      <!-- 検索バー -->
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="fileSearch" placeholder="ファイル名で絞り込み..." oninput="filterFiles()">
+        <button class="search-clear" id="searchClear" onclick="clearFileSearch()" style="display:none">✕</button>
+      </div>
+
       <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
       <div class="toolbar">
 
@@ -237,6 +244,7 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="script.js"></script>
 
 </body>
