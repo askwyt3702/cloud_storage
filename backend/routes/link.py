@@ -248,7 +248,8 @@ def my_links(request: Request):
             url=_build_share_url(request, r["token"]),
             created_at=r["created_at"],
             expires_at=r["expires_at"],
-            protected=r["protected"]
+            # パスワード保護の有無は共有ファイルの設定から取得
+            protected=is_shared_protected(current_user, r["filename"])
         )
         for r in raw
     ]
