@@ -1928,6 +1928,16 @@ async function initSettingsPage() {
             const role = data.role || "user";
             document.getElementById("settingsRole").textContent = `権限: ${role}`;
             document.getElementById("infoRole").textContent = role;
+
+            // 管理者の場合はバックアップ設定を表示
+            if (role === "admin") {
+                const bSec = document.getElementById("backupSettingsSection");
+                if (bSec) {
+                    bSec.style.display = "block";
+                    loadBackupSettings();
+                    loadBackupHistory();
+                }
+            }
         }
     } catch (_) {}
 
@@ -2136,4 +2146,159 @@ function selectCategory(category) {
     _currentCategory = category;
     renderCategoryGrid();
     renderCategoryFileList();
+}
+
+
+// =====================================================
+// バックアップ管理処理（設定、手動実行、履歴取得、削除）
+// =====================================================
+async function loadBackupSettings() {
+    try {
+        const res = await fetch(`${API_BASE}/backup/settings`);
+        if (res.ok) {
+            const data = await res.json();
+            const toggle = document.getElementById("backupToggle");
+            const timeInput = document.getElementById("backupTime");
+            if (toggle) toggle.checked = !!data.enabled;
+            if (timeInput) timeInput.value = data.time || "00:00";
+        }
+    } catch (e) {
+        notify("バックアップ設定の取得に失敗しました");
+    }
+}
+
+async function saveBackupSettings(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById("saveBackupBtn");
+    const toggle = document.getElementById("backupToggle");
+    const timeInput = document.getElementById("backupTime");
+
+    const enabled = toggle ? toggle.checked : false;
+    const timeVal = timeInput ? timeInput.value.trim() : "00:00";
+
+    // 簡単な時刻バリデーション (HH:MM)
+    if (!/^\d{2}:\d{2}$/.test(timeVal)) {
+        notify("実行時刻は '00:00' のような半角の形式で入力してください");
+        return;
+    }
+    const [h, m] = timeVal.split(":").map(Number);
+    if (h < 0 || h > 23 || m < 0 || m > 59) {
+        notify("実行時刻が正しくありません (00:00 〜 23:59)");
+        return;
+    }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/backup/settings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled, time: timeVal })
+        });
+        if (res.ok) {
+            notify("バックアップ設定を保存しました");
+        } else {
+            const err = await res.json();
+            notify(`保存失敗: ${err.detail}`);
+        }
+    } catch (err) {
+        notify("サーバー通信に失敗しました");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+async function runManualBackup(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById("runBackupBtn");
+    if (!confirm("手動バックアップを作成しますか？\n（ファイル数によっては数十秒かかる場合があります）")) return;
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/backup/run`, {
+            method: "POST"
+        });
+        if (res.ok) {
+            const data = await res.json();
+            notify(`バックアップを作成しました: ${data.filename}`);
+            await loadBackupHistory();
+        } else {
+            const err = await res.json();
+            notify(`作成失敗: ${err.detail}`);
+        }
+    } catch (err) {
+        notify("サーバー通信に失敗しました");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+async function loadBackupHistory() {
+    const list = document.getElementById("backupList");
+    if (!list) return;
+
+    list.innerHTML = _skeletonHTML(2);
+
+    try {
+        const res = await fetch(`${API_BASE}/backup/list`);
+        if (!res.ok) {
+            list.innerHTML = "<p style='color:#f87171'>バックアップ履歴の取得に失敗しました</p>";
+            return;
+        }
+
+        const backups = await res.json();
+
+        if (backups.length === 0) {
+            list.innerHTML = _emptyStateHTML(
+                "fa-file-zipper",
+                "バックアップ履歴はありません",
+                "設定時刻になるか、「今すぐバックアップ」で作成できます"
+            );
+            return;
+        }
+
+        list.innerHTML = backups.map(file => {
+            const safeName = encodeURIComponent(file.filename);
+            const downloadUrl = `${API_BASE}/backup/download/${safeName}`;
+
+            return `
+            <div class="file-card">
+                <div class="file-info">
+                    <div class="file-icon zip-bg">
+                        <i class="fa-solid fa-file-zipper"></i>
+                    </div>
+                    <div>
+                        <div class="file-name" title="${file.filename}">${file.filename}</div>
+                        <div class="file-detail">ZIP圧縮形式 ・ ${file.size} ・ 作成: ${file.created_at}</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="download-btn" onclick="window.open('${downloadUrl}', '_blank')" title="ダウンロード">↓ ダウンロード</button>
+                    <button class="delete-btn"   onclick="deleteBackup('${file.filename}')" title="削除"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+        }).join("");
+
+    } catch (e) {
+        list.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+    }
+}
+
+async function deleteBackup(filename) {
+    if (!confirm(`バックアップ「${filename}」を削除しますか？\nこの操作は元に戻せません。`)) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/backup/${encodeURIComponent(filename)}`, {
+            method: "DELETE"
+        });
+
+        if (res.ok) {
+            notify("バックアップを削除しました");
+            await loadBackupHistory();
+        } else {
+            const err = await res.json();
+            notify(`削除失敗: ${err.detail}`);
+        }
+    } catch (e) {
+        notify("削除に失敗しました");
+    }
 }

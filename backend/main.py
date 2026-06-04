@@ -36,6 +36,12 @@ from backend.routes.link import (
     router as link_router
 )
 
+# バックアップ管理API & スケジューラー
+from backend.routes.backup import (
+    router as backup_router
+)
+from backend.services.backup_service import start_backup_scheduler
+
 
 # アプリ作成
 app = FastAPI()
@@ -86,6 +92,16 @@ app.include_router(
 app.include_router(
     link_router
 )
+
+# バックアップ機能追加
+app.include_router(
+    backup_router
+)
+
+# 起動時に自動バックアップ監視スレッドを開始
+@app.on_event("startup")
+def startup_event():
+    start_backup_scheduler()
 
 
 # ==========================

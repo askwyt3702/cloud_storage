@@ -2285,3 +2285,87 @@ button:disabled{
     color: #64748b;
 }
 
+
+/* ============================================================
+   設定画面用 トグルスイッチ＆バックアップ入力欄
+   ============================================================ */
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #334155;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2563eb;
+}
+
+input:checked + .slider::before {
+  transform: translateX(24px);
+}
+
+.settings-time-input {
+  background: #0f172a;
+  color: white;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: border-color 0.2s;
+}
+
+.settings-time-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+/* ライトテーマ時の調整 */
+[data-theme="light"] .settings-time-input {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: rgba(0,0,0,0.12);
+}
+
+[data-theme="light"] .settings-time-input:focus {
+  border-color: #2563eb;
+}
+
+[data-theme="light"] .slider {
+  background-color: #cbd5e1;
+}
+
+[data-theme="light"] input:checked + .slider {
+  background-color: #2563eb;
+}
+
+

@@ -85,6 +85,44 @@
       </div>
     </div>
 
+    <!-- バックアップ設定（管理者限定、一般ユーザーは非表示） -->
+    <div class="settings-section" id="backupSettingsSection" style="display: none;">
+      <h2 class="settings-title">💾 自動バックアップ設定</h2>
+      
+      <div class="settings-rows">
+        <div class="settings-row" style="align-items: center;">
+          <div>
+            <div class="settings-label">自動バックアップ</div>
+            <div class="settings-sub">毎日指定した時刻に自動でバックアップを実行します</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="backupToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+        
+        <div class="settings-row" style="align-items: center;">
+          <div>
+            <div class="settings-label">実行時刻 (24時間表記)</div>
+            <div class="settings-sub">自動バックアップを実行する時刻 (例: 00:00)</div>
+          </div>
+          <input type="text" id="backupTime" class="settings-time-input" placeholder="00:00" style="width: 100px; text-align: center;">
+        </div>
+
+        <div class="settings-row" style="justify-content: flex-end; gap: 10px; border-bottom: none; padding-bottom: 0;">
+          <button class="save-settings-btn" id="saveBackupBtn" onclick="saveBackupSettings(event)" style="background: #2563eb; padding: 10px 18px; border-radius: 12px; font-weight: bold;">💾 設定を保存</button>
+          <button class="run-backup-btn" id="runBackupBtn" onclick="runManualBackup(event)" style="background: #10b981; padding: 10px 18px; border-radius: 12px; font-weight: bold;">⚡ 今すぐバックアップ</button>
+        </div>
+      </div>
+
+      <div class="backup-history-section" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <h3 class="settings-sub-title" style="color: white; font-size: 15px; margin-bottom: 12px; font-weight: bold;">📁 バックアップ履歴</h3>
+        <div class="file-list" id="backupList">
+          <!-- JSで動的に構築 -->
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script src="script.js"></script>
