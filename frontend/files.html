@@ -39,6 +39,16 @@
 
     </div>
 
+    <!-- タブナビゲーション（横スクロール対応・下線がスライド） -->
+    <div class="tab-bar" id="tabBar">
+      <button class="tab active" data-view="main"         onclick="switchTab('main')">📊 マイファイル</button>
+      <button class="tab"        data-view="uploadedList" onclick="switchTab('uploadedList')">🗂 カテゴリ別</button>
+      <button class="tab"        data-view="shared"       onclick="switchTab('shared')">📂 共有</button>
+      <button class="tab"        data-view="links"        onclick="switchTab('links')">🔗 リンク</button>
+      <button class="tab"        data-view="trash"        onclick="switchTab('trash')">🗑 ゴミ箱</button>
+      <span class="tab-indicator" id="tabIndicator"></span>
+    </div>
+
     <!-- 通常のファイル一覧ビュー -->
     <div id="mainView">
 
@@ -139,10 +149,6 @@
           <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
           <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
           <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
-          <button onclick="showUploadedList()">📊 アップロードしたファイル一覧</button>
-          <button onclick="showShared()">📂 共有一覧</button>
-          <button class="link-btn" onclick="showLinks()">🔗 リンク管理</button>
-          <button onclick="showTrash()">🗑 ゴミ箱</button>
         </div>
 
       </div>
@@ -157,7 +163,14 @@
     <div id="trashView" style="display:none">
 
       <div class="toolbar">
-        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <select id="trashSort" class="sort-select" onchange="loadTrash()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">削除が新しい順</option>
+          <option value="date_asc">削除が古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+        </select>
         <button class="delete-btn" onclick="emptyTrash(event)">ゴミ箱を空にする</button>
       </div>
 
@@ -171,7 +184,15 @@
     <div id="sharedView" style="display:none">
 
       <div class="toolbar">
-        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <select id="sharedSort" class="sort-select" onchange="loadShared()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">共有が新しい順</option>
+          <option value="date_asc">共有が古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+          <option value="owner_asc">共有者順</option>
+        </select>
         <p class="storage-text">みんなが共有したファイル</p>
       </div>
 
@@ -185,7 +206,6 @@
     <div id="uploadedListView" style="display:none">
 
       <div class="toolbar">
-        <button onclick="showFiles()">← ファイル一覧に戻る</button>
         <p class="storage-text">自動分類されたファイル一覧</p>
       </div>
 
@@ -205,7 +225,6 @@
     <div id="linksView" style="display:none">
 
       <div class="toolbar">
-        <button onclick="showFiles()">← ファイル一覧に戻る</button>
         <p class="storage-text">あなたが発行した共有リンク</p>
       </div>
 

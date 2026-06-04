@@ -575,6 +575,83 @@ input:-webkit-autofill:focus{
 .audio-bg   { background:#ec4899; }
 .default-bg { background:#475569; }
 
+/* ===== タブナビゲーション（スライドする下線付き） ===== */
+.tab-bar{
+    position:relative;
+
+    display:flex;
+    gap:4px;
+
+    margin-bottom:24px;
+    padding-bottom:2px;
+
+    border-bottom:1px solid rgba(255,255,255,0.10);
+
+    overflow-x:auto;
+    overflow-y:hidden;
+
+    scrollbar-width:none;
+}
+.tab-bar::-webkit-scrollbar{ display:none; }
+
+.tab{
+    flex:0 0 auto;
+
+    background:transparent;
+    border:none;
+    box-shadow:none;
+
+    color:#94a3b8;
+    font-size:15px;
+    font-weight:bold;
+
+    padding:14px 20px;
+
+    cursor:pointer;
+    white-space:nowrap;
+
+    border-radius:12px 12px 0 0;
+    transition:color 0.2s, background 0.2s;
+}
+.tab:hover{
+    color:#e2e8f0;
+    background:rgba(255,255,255,0.04);
+    transform:none;
+    box-shadow:none;
+}
+.tab.active{
+    color:#60a5fa;
+}
+
+.tab-indicator{
+    position:absolute;
+    bottom:0;
+    left:0;
+
+    height:3px;
+    width:0;
+
+    background:linear-gradient(90deg, #3b82f6, #60a5fa);
+    border-radius:3px;
+
+    transition:transform 0.3s cubic-bezier(0.2,0.7,0.2,1), width 0.3s cubic-bezier(0.2,0.7,0.2,1);
+}
+
+[data-theme="light"] .tab-bar{
+    border-bottom:1px solid rgba(0,0,0,0.10);
+}
+[data-theme="light"] .tab{
+    color:#64748b;
+}
+[data-theme="light"] .tab:hover{
+    color:#0f172a;
+    background:rgba(0,0,0,0.04);
+}
+[data-theme="light"] .tab.active{
+    color:#2563eb;
+}
+
+
 /* ===== 操作バー（並び替え・一括削除・ゴミ箱） ===== */
 .toolbar{
     display:flex;

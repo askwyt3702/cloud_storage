@@ -142,6 +142,47 @@ function closeImagePreview() {
 
 
 // =====================================
+// 表示用サイズ文字列（"1.2MB" など）を概算バイトに戻す（並び替え用）
+// =====================================
+function _sizeToBytes(sizeStr) {
+    if (!sizeStr) return 0;
+    const m = String(sizeStr).match(/([\d.]+)\s*([KMGT]?B)/i);
+    if (!m) return 0;
+    const num = parseFloat(m[1]);
+    const unit = m[2].toUpperCase();
+    const mult = { B: 1, KB: 1024, MB: 1024 ** 2, GB: 1024 ** 3, TB: 1024 ** 4 };
+    return num * (mult[unit] || 1);
+}
+
+
+// =====================================
+// ファイル配列をソート（共有・ゴミ箱の共通処理）
+//   sortValue: "name_asc" / "date_desc" / "size_asc" / "owner_asc" など
+//   dateKey  : 日付として使うプロパティ名（"shared_at" / "deleted_at"）
+// =====================================
+function _sortFileArray(files, sortValue, dateKey) {
+    const [by, order] = (sortValue || "name_asc").split("_");
+    const reverse = (order === "desc") ? -1 : 1;
+
+    const sorted = [...files];
+    sorted.sort((a, b) => {
+        let r = 0;
+        if (by === "size") {
+            r = _sizeToBytes(a.size) - _sizeToBytes(b.size);
+        } else if (by === "date") {
+            r = String(a[dateKey] || "").localeCompare(String(b[dateKey] || ""));
+        } else if (by === "owner") {
+            r = String(a.owner || "").localeCompare(String(b.owner || ""));
+        } else {
+            r = String(a.name || "").toLowerCase().localeCompare(String(b.name || "").toLowerCase());
+        }
+        return r * reverse;
+    });
+    return sorted;
+}
+
+
+// =====================================
 // バイト数を「1.2MB」などの読みやすい形式に変換
 // =====================================
 function _formatFileSize(bytes) {
@@ -1355,6 +1396,49 @@ function switchView(view) {
         void visible.offsetWidth;
         visible.classList.add("view-enter");
     }
+
+    // タブの見た目（active＋スライドする下線）を更新
+    updateTabIndicator(view);
+}
+
+
+// =====================================
+// タブを切り替える（ビュー表示＋データ読み込み）
+// =====================================
+function switchTab(view) {
+    switchView(view);
+
+    if (view === "main")              loadFiles();
+    else if (view === "uploadedList") loadUploadedList();
+    else if (view === "shared")       loadShared();
+    else if (view === "links")        loadLinks();
+    else if (view === "trash")        loadTrash();
+}
+
+
+// アクティブなタブに下線インジケーターをスライド移動
+function updateTabIndicator(view) {
+    const bar = document.getElementById("tabBar");
+    const indicator = document.getElementById("tabIndicator");
+    if (!bar || !indicator) return;
+
+    // 全タブの active クラスを更新
+    const tabs = bar.querySelectorAll(".tab");
+    let activeTab = null;
+    tabs.forEach(t => {
+        const isActive = t.dataset.view === view;
+        t.classList.toggle("active", isActive);
+        if (isActive) activeTab = t;
+    });
+
+    if (!activeTab) return;
+
+    // インジケーターをアクティブタブの位置・幅に合わせる
+    indicator.style.width = activeTab.offsetWidth + "px";
+    indicator.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+
+    // アクティブタブが見える位置までスクロール
+    activeTab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
 }
 
 
@@ -1402,7 +1486,11 @@ async function loadTrash() {
             return;
         }
 
-        trashList.innerHTML = data.files.map(file => {
+        // 並び替え（ゴミ箱は deleted_at で並べられる）
+        const sortSel = document.getElementById("trashSort");
+        const sortedFiles = _sortFileArray(data.files, sortSel ? sortSel.value : "name_asc", "deleted_at");
+
+        trashList.innerHTML = sortedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeName = encodeURIComponent(file.name);
             return `
@@ -1629,7 +1717,11 @@ async function loadShared() {
             return;
         }
 
-        sharedList.innerHTML = data.files.map(file => {
+        // 並び替え（共有はsorted_at／所有者でも並べられる）
+        const sortSel = document.getElementById("sharedSort");
+        const sortedFiles = _sortFileArray(data.files, sortSel ? sortSel.value : "name_asc", "shared_at");
+
+        sharedList.innerHTML = sortedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeOwner = encodeURIComponent(file.owner);
             const safeName  = encodeURIComponent(file.name);
@@ -1868,6 +1960,14 @@ window.addEventListener("load", () => {
     applyHeaderUser();
     // 現在のテーマアイコンに合わせて切替ボタンを更新
     applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+    // タブの下線インジケーターを初期位置（マイファイル）に合わせる
+    updateTabIndicator("main");
+    // ウィンドウ幅が変わったら位置を再計算
+    window.addEventListener("resize", () => {
+        const active = document.querySelector(".tab.active");
+        if (active) updateTabIndicator(active.dataset.view);
+    });
 
     loadFiles();
     loadStorage();
