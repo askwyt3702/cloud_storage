@@ -652,6 +652,79 @@ input:-webkit-autofill:focus{
 }
 
 
+/* ===== 検索バー ===== */
+.search-bar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    background:rgba(51,65,85,0.5);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:12px;
+
+    padding:0 14px;
+    margin-bottom:16px;
+
+    transition:border-color 0.2s;
+}
+.search-bar:focus-within{
+    border-color:#3b82f6;
+}
+.search-bar i{
+    color:#94a3b8;
+    font-size:14px;
+}
+.search-bar input{
+    flex:1;
+
+    background:transparent;
+    border:none;
+
+    color:white;
+    font-size:15px;
+
+    padding:14px 0;
+}
+.search-bar input:focus{
+    outline:none;
+}
+.search-bar input::placeholder{
+    color:#64748b;
+}
+.search-clear{
+    width:26px;
+    height:26px;
+    padding:0;
+
+    border-radius:50%;
+    border:none;
+    box-shadow:none;
+
+    background:rgba(255,255,255,0.1);
+    color:#cbd5e1;
+    font-size:11px;
+
+    cursor:pointer;
+    flex-shrink:0;
+}
+.search-clear:hover{
+    background:#ef4444;
+    color:white;
+}
+
+[data-theme="light"] .search-bar{
+    background:rgba(241,245,249,0.85);
+    border:1px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .search-bar input{
+    color:#0f172a;
+}
+[data-theme="light"] .search-clear{
+    background:rgba(0,0,0,0.08);
+    color:#475569;
+}
+
+
 /* ===== 操作バー（並び替え・一括削除・ゴミ箱） ===== */
 .toolbar{
     display:flex;
@@ -765,6 +838,30 @@ input:-webkit-autofill:focus{
     text-overflow:ellipsis;
     white-space:nowrap;
 }
+/* QRコード */
+.link-qr{
+    display:flex;
+    justify-content:center;
+
+    margin:0 auto 8px;
+    padding:12px;
+
+    width:fit-content;
+
+    background:white;
+    border-radius:14px;
+}
+.link-qr img,
+.link-qr canvas{
+    display:block;
+}
+.link-qr-hint{
+    text-align:center;
+    color:#94a3b8;
+    font-size:12px;
+    margin:0 0 18px;
+}
+
 .link-url-row{
     display:flex;
     gap:8px;

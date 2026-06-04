@@ -672,6 +672,9 @@ async function loadFiles() {
             </div>`;
         }).join("");
 
+        // 検索バーに入力があれば、再描画後も絞り込みを保つ
+        filterFiles();
+
         // 自動分類ビューが表示されているなら、そちらも同期して再読込する
         const uploadedList = document.getElementById("uploadedListView");
         if (uploadedList && uploadedList.style.display === "block") {
@@ -681,6 +684,52 @@ async function loadFiles() {
     } catch (e) {
         fileList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
     }
+}
+
+
+// =====================================
+// ファイル名で絞り込み（クライアント側フィルタ）
+// =====================================
+function filterFiles() {
+    const input = document.getElementById("fileSearch");
+    const clearBtn = document.getElementById("searchClear");
+    if (!input) return;
+
+    const q = input.value.trim().toLowerCase();
+    if (clearBtn) clearBtn.style.display = q ? "block" : "none";
+
+    const cards = document.querySelectorAll("#fileList .file-card");
+    let shown = 0;
+
+    cards.forEach(card => {
+        const nameEl = card.querySelector(".file-name");
+        const name = nameEl ? (nameEl.getAttribute("title") || nameEl.textContent).toLowerCase() : "";
+        const match = name.includes(q);
+        card.style.display = match ? "" : "none";
+        if (match) shown++;
+    });
+
+    // 検索結果が0件のときのメッセージ
+    let noResult = document.getElementById("searchNoResult");
+    if (q && shown === 0 && cards.length > 0) {
+        if (!noResult) {
+            noResult = document.createElement("p");
+            noResult.id = "searchNoResult";
+            noResult.style.cssText = "color:#94a3b8;text-align:center;padding:30px";
+            document.getElementById("fileList").appendChild(noResult);
+        }
+        noResult.textContent = `「${input.value.trim()}」に一致するファイルがありません`;
+        noResult.style.display = "block";
+    } else if (noResult) {
+        noResult.style.display = "none";
+    }
+}
+
+// 検索をクリア
+function clearFileSearch() {
+    const input = document.getElementById("fileSearch");
+    if (input) input.value = "";
+    filterFiles();
 }
 
 
@@ -1181,6 +1230,9 @@ function showLinkModal(filename, data) {
         <h2 class="link-modal-title">🔗 共有リンクを作成しました</h2>
         <p class="link-modal-file">${filename}</p>
 
+        <div class="link-qr" id="link-qr"></div>
+        <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
+
         <div class="link-url-row">
             <input type="text" id="link-url-input" class="link-url-input" value="${data.url}" readonly>
             <button class="link-copy-btn" onclick="copyShareLink()">コピー</button>
@@ -1193,6 +1245,20 @@ function showLinkModal(filename, data) {
             このURLを知っている人なら、ログインなしでダウンロードできます。
         </p>
     `;
+
+    // QRコードを生成
+    const qrBox = document.getElementById("link-qr");
+    if (qrBox && typeof QRCode !== "undefined") {
+        qrBox.innerHTML = "";
+        new QRCode(qrBox, {
+            text: data.url,
+            width: 160,
+            height: 160,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
 
     document.getElementById("link-modal").hidden = false;
 }
