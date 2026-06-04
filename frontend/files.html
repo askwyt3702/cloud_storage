@@ -139,6 +139,7 @@
           <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
           <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
           <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+          <button onclick="showUploadedList()">📊 アップロードしたファイル一覧</button>
           <button onclick="showShared()">📂 共有一覧</button>
           <button class="link-btn" onclick="showLinks()">🔗 リンク管理</button>
           <button onclick="showTrash()">🗑 ゴミ箱</button>
@@ -176,6 +177,26 @@
 
       <div class="file-list" id="sharedList">
         <!-- 共有ファイルが動的に追加される -->
+      </div>
+
+    </div>
+
+    <!-- アップロードしたファイル一覧ビュー（カテゴリ別・最初は非表示） -->
+    <div id="uploadedListView" style="display:none">
+
+      <div class="toolbar">
+        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <p class="storage-text">自動分類されたファイル一覧</p>
+      </div>
+
+      <!-- カテゴリ概要グリッド -->
+      <div class="category-grid" id="categoryGrid">
+        <!-- JSで動的に構築：画像、文書、メディア、その他 -->
+      </div>
+
+      <!-- 選択中カテゴリのファイルリスト -->
+      <div class="file-list" id="categoryFileList">
+        <!-- JSで動的に構築 -->
       </div>
 
     </div>

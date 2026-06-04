@@ -631,6 +631,12 @@ async function loadFiles() {
             </div>`;
         }).join("");
 
+        // 自動分類ビューが表示されているなら、そちらも同期して再読込する
+        const uploadedList = document.getElementById("uploadedListView");
+        if (uploadedList && uploadedList.style.display === "block") {
+            loadUploadedList();
+        }
+
     } catch (e) {
         fileList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
     }
@@ -1331,10 +1337,11 @@ async function renameFile(filename) {
 // =====================================
 function switchView(view) {
     const views = {
-        main:   document.getElementById("mainView"),
-        trash:  document.getElementById("trashView"),
-        shared: document.getElementById("sharedView"),
-        links:  document.getElementById("linksView"),
+        main:          document.getElementById("mainView"),
+        trash:         document.getElementById("trashView"),
+        shared:        document.getElementById("sharedView"),
+        links:         document.getElementById("linksView"),
+        uploadedList:  document.getElementById("uploadedListView"),
     };
 
     for (const key in views) {
@@ -1877,3 +1884,156 @@ window.addEventListener("load", () => {
         });
     }
 });
+
+
+// =====================================================
+// ここから下：自動分類「アップロードしたファイル一覧」表示処理
+// =====================================================
+let _allUploadedFiles = [];
+let _currentCategory = "image";
+
+function showUploadedList() {
+    switchView("uploadedList");
+    loadUploadedList();
+}
+
+function getCategoryByFilename(filename) {
+    const ext = filename.split(".").pop().toLowerCase();
+    const images = ["jpg", "jpeg", "jfif", "png", "gif", "webp", "bmp", "tif", "tiff", "heic", "heif"];
+    const documents = ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"];
+    const media = ["mp4", "mov", "webm", "mp3", "wav", "m4a", "aac"];
+    
+    if (images.includes(ext)) return "image";
+    if (documents.includes(ext)) return "document";
+    if (media.includes(ext)) return "media";
+    return "other";
+}
+
+async function loadUploadedList() {
+    const grid = document.getElementById("categoryGrid");
+    const list = document.getElementById("categoryFileList");
+    if (!grid || !list) return;
+
+    grid.innerHTML = _skeletonHTML(4);
+    list.innerHTML = _skeletonHTML(3);
+
+    try {
+        const res = await fetch(`${API_BASE}/files?sort_by=name&order=asc`);
+        if (!res.ok) {
+            grid.innerHTML = "<p style='color:#f87171'>ファイルの取得に失敗しました</p>";
+            list.innerHTML = "";
+            return;
+        }
+
+        const data = await res.json();
+        _allUploadedFiles = data.files || [];
+
+        renderCategoryGrid();
+        renderCategoryFileList();
+
+    } catch (e) {
+        grid.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+        list.innerHTML = "";
+    }
+}
+
+function renderCategoryGrid() {
+    const grid = document.getElementById("categoryGrid");
+    if (!grid) return;
+
+    const categories = {
+        image:    { title: "画像ファイル", icon: "fa-file-image", count: 0, bytes: 0 },
+        document: { title: "文書・書類",   icon: "fa-file-word",  count: 0, bytes: 0 },
+        media:    { title: "動画・音楽",   icon: "fa-file-video", count: 0, bytes: 0 },
+        other:    { title: "その他・圧縮", icon: "fa-file-zipper", count: 0, bytes: 0 },
+    };
+
+    _allUploadedFiles.forEach(file => {
+        const cat = getCategoryByFilename(file.name);
+        categories[cat].count++;
+        
+        let bytes = 0;
+        const match = file.size.match(/^([\d.]+)\s*([A-Za-z]+)$/);
+        if (match) {
+            const val = parseFloat(match[1]);
+            const unit = match[2].toUpperCase();
+            if (unit === "B") bytes = val;
+            else if (unit === "KB") bytes = val * 1024;
+            else if (unit === "MB") bytes = val * 1024 * 1024;
+            else if (unit === "GB") bytes = val * 1024 * 1024 * 1024;
+        }
+        categories[cat].bytes += bytes;
+    });
+
+    grid.innerHTML = Object.keys(categories).map(key => {
+        const cat = categories[key];
+        const activeClass = (key === _currentCategory) ? "active" : "";
+        const formattedSize = _formatFileSize(cat.bytes);
+
+        return `
+        <div class="category-card ${activeClass}" data-cat="${key}" onclick="selectCategory('${key}')">
+            <div class="category-icon">
+                <i class="fa-solid ${cat.icon}"></i>
+            </div>
+            <div class="category-title">${cat.title}</div>
+            <div class="category-info">
+                <span class="category-count">${cat.count}<span style="font-size:13px; font-weight:normal; margin-left:2px; opacity:0.7">件</span></span>
+                <span class="category-size">${formattedSize}</span>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+function renderCategoryFileList() {
+    const list = document.getElementById("categoryFileList");
+    if (!list) return;
+
+    const filtered = _allUploadedFiles.filter(file => getCategoryByFilename(file.name) === _currentCategory);
+
+    if (filtered.length === 0) {
+        list.innerHTML = _emptyStateHTML(
+            "fa-folder-open",
+            "このカテゴリは空です",
+            "該当するファイルがアップロードされていません。"
+        );
+        return;
+    }
+
+    list.innerHTML = filtered.map(file => {
+        const { icon, bg } = getFileIcon(file.name);
+        const safeName = encodeURIComponent(file.name);
+
+        const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
+        const imgUrl = `${API_BASE}/download/${safeName}`;
+        const thumb = isImg
+            ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+                    onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}')); event.stopPropagation();"
+                    onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
+            : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
+
+        const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
+
+        return `
+        <div class="file-card">
+            <div class="file-info-clickable" onclick="${clickHandler}">
+                ${thumb}
+                <div>
+                    <div class="file-name" title="${file.name}">${file.name}</div>
+                    <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
+                </div>
+            </div>
+            <div class="file-actions">
+                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
+                <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
+                <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
+                <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join("");
+}
+
+function selectCategory(category) {
+    _currentCategory = category;
+    renderCategoryGrid();
+    renderCategoryFileList();
+}
