@@ -1166,6 +1166,108 @@ async function copyShareLink() {
     }
 }
 
+// 任意のURL文字列をコピー（リンク管理画面用）
+async function copyUrlText(url) {
+    try {
+        await navigator.clipboard.writeText(url);
+        notify("リンクをコピーしました");
+    } catch (e) {
+        notify("コピーに失敗しました");
+    }
+}
+
+
+// =====================================
+// リンク管理ビューを表示
+// =====================================
+function showLinks() {
+    switchView("links");
+    loadLinks();
+}
+
+// 発行済みリンク一覧を取得して表示
+async function loadLinks() {
+    const list = document.getElementById("linksList");
+    list.innerHTML = _skeletonHTML(2);
+
+    try {
+        const res = await fetch(`${API_BASE}/my-links`);
+        if (!res.ok) {
+            list.innerHTML = "<p style='color:#f87171'>リンクの取得に失敗しました</p>";
+            return;
+        }
+
+        const data = await res.json();
+
+        if (data.links.length === 0) {
+            list.innerHTML = _emptyStateHTML(
+                "fa-link-slash",
+                "発行したリンクはありません",
+                "共有一覧のファイルから「🔗 リンク作成」で発行できます"
+            );
+            return;
+        }
+
+        list.innerHTML = data.links.map(link => {
+            const { icon, bg } = getFileIcon(link.filename);
+            const safeToken = encodeURIComponent(link.token);
+
+            // 有効期限の表示
+            let expireText = "有効期限: なし";
+            let expired = false;
+            if (link.expires_at) {
+                const d = new Date(link.expires_at);
+                expired = d < new Date();
+                expireText = `有効期限: ${d.toLocaleString()}${expired ? "（期限切れ）" : ""}`;
+            }
+
+            // URLは onclick に渡すため一旦エンコードし、関数側でデコード
+            const safeUrl = encodeURIComponent(link.url);
+
+            return `
+            <div class="file-card">
+                <div class="file-info">
+                    <div class="file-icon ${bg}">
+                        <i class="fa-solid ${icon}"></i>
+                    </div>
+                    <div>
+                        <div class="file-name" title="${link.filename}">${link.filename}</div>
+                        <div class="file-detail" style="${expired ? 'color:#f87171' : ''}">${expireText}</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="download-btn" onclick="copyUrlText(decodeURIComponent('${safeUrl}'))">📋 URLコピー</button>
+                    <button class="delete-btn"   onclick="deleteLink(decodeURIComponent('${safeToken}'))">✕ 無効化</button>
+                </div>
+            </div>`;
+        }).join("");
+
+    } catch (e) {
+        list.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+    }
+}
+
+// リンクを無効化（削除）
+async function deleteLink(token) {
+    if (!confirm("このリンクを無効化しますか？\nこのURLでのダウンロードができなくなります。")) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/link/${encodeURIComponent(token)}`, {
+            method: "DELETE"
+        });
+
+        if (res.ok) {
+            notify("リンクを無効化しました");
+            await loadLinks();
+        } else {
+            const err = await res.json();
+            notify(`エラー: ${err.detail}`);
+        }
+    } catch (e) {
+        notify("無効化に失敗しました");
+    }
+}
+
 
 async function renameFile(filename) {
     // 元の拡張子（".pdf" など）とベース名を分離
@@ -1228,24 +1330,24 @@ async function renameFile(filename) {
 //  + 表示するビューに入場アニメーションを毎回付け直す
 // =====================================
 function switchView(view) {
-    const main   = document.getElementById("mainView");
-    const trash  = document.getElementById("trashView");
-    const shared = document.getElementById("sharedView");
+    const views = {
+        main:   document.getElementById("mainView"),
+        trash:  document.getElementById("trashView"),
+        shared: document.getElementById("sharedView"),
+        links:  document.getElementById("linksView"),
+    };
 
-    main.style.display   = (view === "main")   ? "block" : "none";
-    trash.style.display  = (view === "trash")  ? "block" : "none";
-    shared.style.display = (view === "shared") ? "block" : "none";
+    for (const key in views) {
+        if (views[key]) views[key].style.display = (key === view) ? "block" : "none";
+    }
 
-    // 表示中の要素にアニメーションクラスを付け直す
-    // （リフロー強制で同じクラスでも再生される）
-    const visible =
-        view === "main"  ? main  :
-        view === "trash" ? trash :
-                           shared;
-
-    visible.classList.remove("view-enter");
-    void visible.offsetWidth;          // ← リフローを強制してアニメ再起動
-    visible.classList.add("view-enter");
+    // 表示中の要素にアニメーションクラスを付け直す（リフロー強制で再生）
+    const visible = views[view];
+    if (visible) {
+        visible.classList.remove("view-enter");
+        void visible.offsetWidth;
+        visible.classList.add("view-enter");
+    }
 }
 
 
@@ -1698,7 +1800,56 @@ function _ensureDropOverlay() {
 // =====================================
 // ファイル一覧ページの初期化
 // =====================================
+// =====================================
+// 設定ページの初期化
+// =====================================
+async function initSettingsPage() {
+    const username = sessionStorage.getItem("username");
+    if (!username) {
+        location.href = "login.html";
+        return;
+    }
+
+    // テーマアイコン
+    applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+    // アバター（頭文字）
+    const ch = username.trim().charAt(0).toUpperCase() || "?";
+    const avatar = document.getElementById("settingsAvatar");
+    if (avatar) avatar.textContent = ch;
+
+    document.getElementById("settingsUsername").textContent = username;
+    document.getElementById("infoUsername").textContent = username;
+
+    // /me からロールを取得
+    try {
+        const res = await fetch(`${API_BASE}/me`);
+        if (res.ok) {
+            const data = await res.json();
+            const role = data.role || "user";
+            document.getElementById("settingsRole").textContent = `権限: ${role}`;
+            document.getElementById("infoRole").textContent = role;
+        }
+    } catch (_) {}
+
+    // 容量
+    try {
+        const res = await fetch(`${API_BASE}/storage`);
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById("infoStorage").textContent = `${data.used} / ${data.max}`;
+        }
+    } catch (_) {}
+}
+
+
 window.addEventListener("load", () => {
+    // 設定ページなら専用初期化
+    if (document.getElementById("settingsUsername")) {
+        initSettingsPage();
+        return;
+    }
+
     if (!document.getElementById("fileList")) return;
 
     const username = sessionStorage.getItem("username");

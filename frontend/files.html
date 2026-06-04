@@ -31,6 +31,7 @@
         <div class="avatar" id="userAvatar">?</div>
         <div class="user-name" id="userName">ユーザー</div>
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="テーマ切替" title="テーマ切替">☀</button>
+        <button class="settings-btn" onclick="location.href='settings.html'" title="設定">⚙</button>
         <button class="logout-btn" onclick="logout()">
           ログアウト
         </button>
@@ -139,6 +140,7 @@
           <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
           <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
           <button onclick="showShared()">📂 共有一覧</button>
+          <button class="link-btn" onclick="showLinks()">🔗 リンク管理</button>
           <button onclick="showTrash()">🗑 ゴミ箱</button>
         </div>
 
@@ -174,6 +176,20 @@
 
       <div class="file-list" id="sharedList">
         <!-- 共有ファイルが動的に追加される -->
+      </div>
+
+    </div>
+
+    <!-- リンク管理ビュー（最初は非表示） -->
+    <div id="linksView" style="display:none">
+
+      <div class="toolbar">
+        <button onclick="showFiles()">← ファイル一覧に戻る</button>
+        <p class="storage-text">あなたが発行した共有リンク</p>
+      </div>
+
+      <div class="file-list" id="linksList">
+        <!-- 発行したリンクが動的に追加される -->
       </div>
 
     </div>
