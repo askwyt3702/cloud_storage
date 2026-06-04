@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body
 
-from schemas import LoginRequest, RegisterRequest
-from services.auth_service import (
+from backend.schemas import LoginRequest, RegisterRequest
+from backend.services.auth_service import (
     login_user,
     logout_user,
     get_current_user,

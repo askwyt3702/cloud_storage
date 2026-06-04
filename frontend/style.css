@@ -489,8 +489,9 @@ input:-webkit-autofill:focus{
     min-width:0;
 }
 
-/* file-info の最後の子（ファイル名＋詳細を包むdiv）も縮められるように */
-.file-info > div:last-child{
+/* file-info / file-info-clickable の最後の子（ファイル名＋詳細を包むdiv）も縮められるように */
+.file-info > div:last-child,
+.file-info-clickable > div:last-child {
     flex:1;
     min-width:0;
     overflow:hidden;

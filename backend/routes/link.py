@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, Header, Body
 from fastapi.responses import FileResponse
 from typing import Optional
 
-from schemas import (
+from backend.schemas import (
     CreateLinkRequest,
     CreateLinkResponse,
     LinkInfoResponse,
@@ -19,7 +19,7 @@ from schemas import (
     MessageResponse
 )
 
-from services.file_service import (
+from backend.services.file_service import (
     sanitize_filename,
     # --- 共有フォルダ関連（リンクは共有ファイルを対象にする）---
     shared_file_exists,
@@ -30,13 +30,13 @@ from services.file_service import (
     verify_shared_password
 )
 
-from services.auth_service import (
+from backend.services.auth_service import (
     is_logged_in,
     get_current_user,
     get_current_role
 )
 
-from services.link_service import (
+from backend.services.link_service import (
     create_link,
     get_link,
     list_links_by_owner,

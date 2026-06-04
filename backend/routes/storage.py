@@ -1,8 +1,8 @@
 import os
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
-from schemas import StorageResponse, MessageResponse
-from services.auth_service import get_current_user
-from services.storage_service import calculate_storage
+from backend.schemas import StorageResponse, MessageResponse
+from backend.services.auth_service import get_current_user
+from backend.services.storage_service import calculate_storage
 
 router = APIRouter()
 

@@ -7,7 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Header, Body
 from fastapi.responses import FileResponse, StreamingResponse
 
-from schemas import (
+from backend.schemas import (
     FileInfo,
     FileListResponse,
     MessageResponse,
@@ -23,7 +23,7 @@ from schemas import (
     BulkDownloadRequest    # ← 一括ダウンロード（ZIP）リクエスト
 )
 
-from services.file_service import (
+from backend.services.file_service import (
     get_file_path,
     file_exists,
     sanitize_filename,     # ← ファイル名の無害化
@@ -54,7 +54,7 @@ from services.file_service import (
 )
 
 
-from services.auth_service import (
+from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
     get_current_user,      # ← ログイン中ユーザー取得
     get_current_role       # ← ログイン中ユーザーのロール取得
