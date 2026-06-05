@@ -67,17 +67,21 @@ def send_notification(username: str, event_type: str, message: str, title: str =
         if event_type == "share" and not settings.get("notify_share", True):
             return False
 
-    if not title:
-        title = "Cloud Storage 通知"
+    # 不正なサロゲート文字および文字化けエラー文字(U+FFFD)を除去して安全にする
+    clean_message = "".join(c for c in message if not (0xD800 <= ord(c) <= 0xDFFF or ord(c) == 0xFFFD))
+    clean_title = "".join(c for c in title if not (0xD800 <= ord(c) <= 0xDFFF or ord(c) == 0xFFFD)) if title else ""
+
+    if not clean_title:
+        clean_title = "Cloud Storage 通知"
 
     # Discord と Slack の両方に互換性のあるペイロード
     payload = {
-        "content": f"**{title}**\n{message}",  # Discord用（テキスト）
-        "text": f"*{title}*\n{message}",       # Slack用（テキスト）
+        "content": f"**{clean_title}**\n{clean_message}",  # Discord用（テキスト）
+        "text": f"*{clean_title}*\n{clean_message}",       # Slack用（テキスト）
         "embeds": [                            # Discord用（リッチ埋め込み）
             {
-                "title": title,
-                "description": message,
+                "title": clean_title,
+                "description": clean_message,
                 "color": 3066993,  # 緑っぽい青色 (0x2F3136)
                 "fields": [
                     {"name": "実行ユーザー", "value": username or "システム", "inline": True},
