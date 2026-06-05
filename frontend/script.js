@@ -142,6 +142,90 @@ function closeImagePreview() {
 
 
 // =====================================
+// ファイルプレビュー（画像・PDF・動画・音声・テキスト）
+// =====================================
+function _ensurePreviewModal() {
+    if (document.getElementById("preview-modal")) return;
+    const m = document.createElement("div");
+    m.id = "preview-modal";
+    m.className = "image-modal";       // 背景スタイルを流用
+    m.hidden = true;
+    m.innerHTML = `
+        <div class="image-modal-backdrop" onclick="closePreview()"></div>
+        <div class="preview-box">
+            <div class="preview-head">
+                <span class="preview-title" id="preview-title"></span>
+                <button class="image-modal-close" onclick="closePreview()" aria-label="閉じる">✕</button>
+            </div>
+            <div class="preview-body" id="preview-body"></div>
+        </div>
+    `;
+    document.body.appendChild(m);
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closePreview();
+    });
+}
+
+function closePreview() {
+    const m = document.getElementById("preview-modal");
+    if (m) {
+        // 動画/音声を止めるため中身をクリア
+        const body = document.getElementById("preview-body");
+        if (body) body.innerHTML = "";
+        m.hidden = true;
+    }
+}
+
+async function previewFile(filename) {
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const url = `${API_BASE}/download/${encodeURIComponent(filename)}`;
+
+    // 画像は既存の画像モーダルへ
+    if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
+        openImagePreview(url, filename);
+        return;
+    }
+
+    _ensurePreviewModal();
+    document.getElementById("preview-title").textContent = filename;
+    const body = document.getElementById("preview-body");
+
+    if (ext === "pdf") {
+        body.innerHTML = `<iframe class="preview-frame" src="${url}"></iframe>`;
+    } else if (["mp4","webm","mov"].includes(ext)) {
+        body.innerHTML = `<video class="preview-media" src="${url}" controls autoplay></video>`;
+    } else if (["mp3","wav","m4a","aac"].includes(ext)) {
+        body.innerHTML = `
+            <div class="preview-audio-wrap">
+                <i class="fa-solid fa-music"></i>
+                <audio src="${url}" controls autoplay></audio>
+            </div>`;
+    } else if (["txt","csv"].includes(ext)) {
+        body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
+        try {
+            const res = await fetch(url);
+            const text = await res.text();
+            // テキストはエスケープして表示（XSS対策）
+            const esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+            body.innerHTML = `<pre class="preview-text">${esc}</pre>`;
+        } catch (e) {
+            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">プレビューできませんでした</p>`;
+        }
+    } else {
+        // 非対応形式
+        body.innerHTML = `
+            <div class="preview-unsupported">
+                <i class="fa-solid fa-file-circle-question"></i>
+                <p>この形式はプレビューできません</p>
+                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${encodeURIComponent(filename)}'))">↓ ダウンロード</button>
+            </div>`;
+    }
+
+    document.getElementById("preview-modal").hidden = false;
+}
+
+
+// =====================================
 // 表示用サイズ文字列（"1.2MB" など）を概算バイトに戻す（並び替え用）
 // =====================================
 function _sizeToBytes(sizeStr) {
@@ -383,6 +467,45 @@ function setLoading(btn, on) {
 function _btnFromEvent(e) {
     if (!e) return null;
     return e.currentTarget || e.target || null;
+}
+
+
+// =====================================================
+// お気に入り（スター）管理
+//   ユーザーごとに localStorage に保存（favorites_{username}）
+// =====================================================
+function _favKey() {
+    const user = sessionStorage.getItem("username") || "guest";
+    return `favorites_${user}`;
+}
+
+function _getFavorites() {
+    try {
+        return JSON.parse(localStorage.getItem(_favKey()) || "[]");
+    } catch (_) {
+        return [];
+    }
+}
+
+function isFavorite(filename) {
+    return _getFavorites().includes(filename);
+}
+
+function toggleFavorite(filename) {
+    let favs = _getFavorites();
+    if (favs.includes(filename)) {
+        favs = favs.filter(f => f !== filename);
+        notify(`★を外しました`);
+    } else {
+        favs.push(filename);
+        notify(`★お気に入りに追加しました`);
+    }
+    try { localStorage.setItem(_favKey(), JSON.stringify(favs)); } catch (_) {}
+
+    // 表示中の一覧を更新（お気に入りは上部に来る）
+    loadFiles();
+    const cat = document.getElementById("uploadedListView");
+    if (cat && cat.style.display === "block") loadUploadedList();
 }
 
 
@@ -636,9 +759,17 @@ async function loadFiles() {
             return;
         }
 
-        fileList.innerHTML = data.files.map(file => {
+        // お気に入りを上部に固定（サーバーの並び順は各グループ内で維持）
+        const favs = _getFavorites();
+        const orderedFiles = [
+            ...data.files.filter(f => favs.includes(f.name)),
+            ...data.files.filter(f => !favs.includes(f.name)),
+        ];
+
+        fileList.innerHTML = orderedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeName = encodeURIComponent(file.name);
+            const starred = isFavorite(file.name);
 
             // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
             //   - クリックでフルサイズプレビュー（モーダル）が開く
@@ -654,8 +785,9 @@ async function loadFiles() {
             const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
 
             return `
-            <div class="file-card">
+            <div class="file-card ${starred ? 'is-favorite' : ''}">
                 <input type="checkbox" class="file-check" value="${file.name}" style="margin-right: 12px;">
+                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
@@ -665,6 +797,7 @@ async function loadFiles() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
+                    <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
                     <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
                     <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
                     <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>
@@ -733,11 +866,27 @@ function clearFileSearch() {
 }
 
 
+// 現在表示中のファイルリストのID（マイファイル or カテゴリ別）を返す
+function _activeListId() {
+    const cat = document.getElementById("uploadedListView");
+    if (cat && cat.style.display === "block") return "categoryFileList";
+    return "fileList";
+}
+
+// 表示中リストのチェック済みファイル名を取得
+function _activeCheckedNames() {
+    const id = _activeListId();
+    const checks = document.querySelectorAll(`#${id} .file-check:checked`);
+    return Array.from(checks).map(c => c.value);
+}
+
+
 // =====================================
 // 全選択 / 全解除の切り替え
 // =====================================
 function toggleSelectAll(btn) {
-    const checks = document.querySelectorAll("#fileList .file-check");
+    const id = _activeListId();
+    const checks = document.querySelectorAll(`#${id} .file-check`);
     // 1つでも未チェックがあれば「全部チェック」、全部チェック済みなら「全解除」
     const allChecked = Array.from(checks).every(c => c.checked);
 
@@ -751,8 +900,7 @@ function toggleSelectAll(btn) {
 // =====================================
 async function downloadSelectedZip(e) {
     const btn = _btnFromEvent(e);
-    const checks = document.querySelectorAll("#fileList .file-check:checked");
-    const filenames = Array.from(checks).map(c => c.value);
+    const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
         notify("ダウンロードするファイルを選択してください");
@@ -801,8 +949,7 @@ async function downloadSelectedZip(e) {
 // =====================================
 async function deleteSelected(e) {
     const btn = _btnFromEvent(e);
-    const checks = document.querySelectorAll("#fileList .file-check:checked");
-    const filenames = Array.from(checks).map(c => c.value);
+    const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
         notify("削除するファイルを選択してください");
@@ -1289,6 +1436,39 @@ async function copyUrlText(url) {
     }
 }
 
+// 既存リンクのQRコードをモーダル表示（リンク管理画面用）
+function showLinkQR(url, filename) {
+    _ensureLinkModal();
+
+    document.getElementById("link-modal-body").innerHTML = `
+        <h2 class="link-modal-title">🔗 共有リンクのQRコード</h2>
+        <p class="link-modal-file">${filename}</p>
+
+        <div class="link-qr" id="link-qr"></div>
+        <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
+
+        <div class="link-url-row">
+            <input type="text" id="link-url-input" class="link-url-input" value="${url}" readonly>
+            <button class="link-copy-btn" onclick="copyShareLink()">コピー</button>
+        </div>
+    `;
+
+    const qrBox = document.getElementById("link-qr");
+    if (qrBox && typeof QRCode !== "undefined") {
+        qrBox.innerHTML = "";
+        new QRCode(qrBox, {
+            text: url,
+            width: 160,
+            height: 160,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+    }
+
+    document.getElementById("link-modal").hidden = false;
+}
+
 
 // =====================================
 // リンク管理ビューを表示
@@ -1350,6 +1530,7 @@ async function loadLinks() {
                 </div>
                 <div class="file-actions">
                     <button class="download-btn" onclick="copyUrlText(decodeURIComponent('${safeUrl}'))">📋 URLコピー</button>
+                    <button class="link-btn"     onclick="showLinkQR(decodeURIComponent('${safeUrl}'), decodeURIComponent('${encodeURIComponent(link.filename)}'))">📱 QR</button>
                     <button class="delete-btn"   onclick="deleteLink(decodeURIComponent('${safeToken}'))">✕ 無効化</button>
                 </div>
             </div>`;
@@ -1703,8 +1884,7 @@ async function shareFile(filename) {
 // =====================================
 async function shareSelected(e) {
     const btn = _btnFromEvent(e);
-    const checks = document.querySelectorAll("#fileList .file-check:checked");
-    const filenames = Array.from(checks).map(c => c.value);
+    const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
         notify("共有するファイルを選択してください");
@@ -2189,9 +2369,13 @@ function renderCategoryFileList() {
 
         const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
 
+        const starred = isFavorite(file.name);
+
         return `
         <div class="file-card">
-            <div class="file-info-clickable" onclick="${clickHandler}">
+            <div class="file-info">
+                <input type="checkbox" class="file-check" value="${file.name}">
+                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
                 ${thumb}
                 <div>
                     <div class="file-name" title="${file.name}">${file.name}</div>
@@ -2200,6 +2384,7 @@ function renderCategoryFileList() {
             </div>
             <div class="file-actions">
                 <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
+                <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
                 <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
                 <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
                 <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>

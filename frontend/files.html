@@ -221,6 +221,16 @@
         <!-- JSで動的に構築：画像、文書、メディア、その他 -->
       </div>
 
+      <!-- カテゴリ内の一括操作バー -->
+      <div class="toolbar">
+        <div class="toolbar-right">
+          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
+          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+        </div>
+      </div>
+
       <!-- 選択中カテゴリのファイルリスト -->
       <div class="file-list" id="categoryFileList">
         <!-- JSで動的に構築 -->
