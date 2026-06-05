@@ -45,6 +45,7 @@ from backend.services.link_service import (
 
 from security.permission import can_access
 from security.logger import log_success, log_failed
+from backend.services.settings_service import send_notification
 
 
 router = APIRouter()
@@ -126,6 +127,19 @@ def create_share_link(
     link = get_link(token)["info"]
 
     log_success(current_user, f"CREATE_LINK: {safe_name}")
+
+    try:
+        share_url = _build_share_url(request, token)
+        expire_str = f"{expire_days} 日間" if expire_days else "無期限"
+        send_notification(
+            username=current_user,
+            event_type="share",
+            message=f"ファイル `{safe_name}` の共有リンクを作成しました。\n有効期限: {expire_str}\nURL: {share_url}",
+            title="🔗 共有リンク作成"
+        )
+    except Exception as e:
+        from security.logger import log_error
+        log_error(f"共有リンク通知の送信失敗: {e}")
 
     return CreateLinkResponse(
         success=True,

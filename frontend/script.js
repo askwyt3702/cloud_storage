@@ -2175,13 +2175,18 @@ async function initSettingsPage() {
             document.getElementById("settingsRole").textContent = `権限: ${role}`;
             document.getElementById("infoRole").textContent = role;
 
-            // 管理者の場合はバックアップ設定を表示
+            // 管理者の場合はバックアップ設定とWebhook設定を表示
             if (role === "admin") {
                 const bSec = document.getElementById("backupSettingsSection");
                 if (bSec) {
                     bSec.style.display = "block";
                     loadBackupSettings();
                     loadBackupHistory();
+                }
+                const wSec = document.getElementById("webhookSettingsSection");
+                if (wSec) {
+                    wSec.style.display = "block";
+                    loadWebhookSettings();
                 }
             }
         }
@@ -2551,5 +2556,107 @@ async function deleteBackup(filename) {
         }
     } catch (e) {
         notify("削除に失敗しました");
+    }
+}
+
+// =====================================================
+// 外部サービス連携 (Webhook) 管理処理（設定取得、保存、テスト）
+// =====================================================
+async function loadWebhookSettings() {
+    try {
+        const res = await fetch(`${API_BASE}/settings/webhook`);
+        if (res.ok) {
+            const data = await res.json();
+            const urlInput = document.getElementById("webhookUrl");
+            const uploadToggle = document.getElementById("notifyUpload");
+            const deleteToggle = document.getElementById("notifyDelete");
+            const shareToggle = document.getElementById("notifyShare");
+
+            if (urlInput) urlInput.value = data.webhook_url || "";
+            if (uploadToggle) uploadToggle.checked = data.notify_upload !== false;
+            if (deleteToggle) deleteToggle.checked = data.notify_delete !== false;
+            if (shareToggle) shareToggle.checked = data.notify_share !== false;
+        }
+    } catch (e) {
+        notify("Webhook設定の取得に失敗しました");
+    }
+}
+
+async function saveWebhookSettings(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById("saveWebhookBtn");
+    const urlInput = document.getElementById("webhookUrl");
+    const uploadToggle = document.getElementById("notifyUpload");
+    const deleteToggle = document.getElementById("notifyDelete");
+    const shareToggle = document.getElementById("notifyShare");
+
+    const webhook_url = urlInput ? urlInput.value.trim() : "";
+    const notify_upload = uploadToggle ? uploadToggle.checked : false;
+    const notify_delete = deleteToggle ? deleteToggle.checked : false;
+    const notify_share = shareToggle ? shareToggle.checked : false;
+
+    if (webhook_url && !/^https?:\/\/.+/.test(webhook_url)) {
+        notify("有効な URL を入力してください (http:// または https://)");
+        return;
+    }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/settings/webhook`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                webhook_url,
+                notify_upload,
+                notify_delete,
+                notify_share
+            })
+        });
+        if (res.ok) {
+            notify("Webhook設定を保存しました");
+        } else {
+            const err = await res.json();
+            notify(`保存失敗: ${err.detail}`);
+        }
+    } catch (err) {
+        notify("サーバー通信に失敗しました");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+async function testWebhookSettings(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById("testWebhookBtn");
+    const urlInput = document.getElementById("webhookUrl");
+    const webhook_url = urlInput ? urlInput.value.trim() : "";
+
+    if (!webhook_url) {
+        notify("テスト送信する Webhook URL を入力してください");
+        return;
+    }
+
+    if (!/^https?:\/\/.+/.test(webhook_url)) {
+        notify("有効な URL を入力してください (http:// または https://)");
+        return;
+    }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/settings/webhook/test`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ webhook_url })
+        });
+        if (res.ok) {
+            notify("テスト通知を送信しました。設定されたチャンネルを確認してください。");
+        } else {
+            const err = await res.json();
+            notify(`テスト送信失敗: ${err.detail}`);
+        }
+    } catch (err) {
+        notify("サーバー通信に失敗しました");
+    } finally {
+        setLoading(btn, false);
     }
 }

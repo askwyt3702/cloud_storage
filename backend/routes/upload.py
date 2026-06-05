@@ -29,6 +29,8 @@ from backend.services.storage_service import (
     get_used_bytes         # ← 使用量チェック
 )
 
+from backend.services.settings_service import send_notification
+
 
 # =====================================
 # アップロード制限の定数
@@ -186,6 +188,19 @@ async def upload_file(file: UploadFile = File(...)):
 
 
     log_success(username, f"UPLOAD: {safe_name}")
+
+    try:
+        size_kb = round(len(data) / 1024, 1)
+        size_str = f"{size_kb} KB" if size_kb < 1024 else f"{round(size_kb / 1024, 2)} MB"
+        send_notification(
+            username=username,
+            event_type="upload",
+            message=f"ファイル `{safe_name}` ({size_str}) がアップロードされました。",
+            title="📥 ファイルアップロード"
+        )
+    except Exception as e:
+        from security.logger import log_error
+        log_error(f"アップロード通知の送信失敗: {e}")
 
     return MessageResponse(
         success=True,

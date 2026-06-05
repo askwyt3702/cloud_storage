@@ -70,6 +70,7 @@ from security.logger import (
     log_error      # ← エラーログ
 )
 
+from backend.services.settings_service import send_notification
 
 router = APIRouter()
 
@@ -453,6 +454,16 @@ def delete_file(filename: str):
 
     log_success(current_user, f"TRASH: {safe_name}")
 
+    try:
+        send_notification(
+            username=current_user,
+            event_type="delete",
+            message=f"ファイル `{safe_name}` をゴミ箱に移動しました。",
+            title="🗑️ ファイルのゴミ箱移動"
+        )
+    except Exception as e:
+        log_error(f"削除通知の送信失敗: {e}")
+
     return MessageResponse(
         success=True,
         user=current_user,
@@ -526,6 +537,18 @@ def delete_multiple(body: BulkDeleteRequest):
 
 
     log_success(current_user, f"BULK_DELETE: 成功{len(succeeded)}件 / 失敗{len(failed)}件")
+
+    if succeeded:
+        try:
+            files_str = ", ".join([f"`{f}`" for f in succeeded])
+            send_notification(
+                username=current_user,
+                event_type="delete",
+                message=f"ファイル {files_str} をゴミ箱に移動しました。",
+                title="🗑️ ファイルの一括ゴミ箱移動"
+            )
+        except Exception as e:
+            log_error(f"一括削除通知の送信失敗: {e}")
 
     return BulkActionResponse(
         success=True,
@@ -882,6 +905,16 @@ def delete_trash_file(filename: str):
 
     log_success(current_user, f"TRASH_DELETE: {safe_name}")
 
+    try:
+        send_notification(
+            username=current_user,
+            event_type="delete",
+            message=f"ファイル `{safe_name}` をゴミ箱から完全に削除しました。",
+            title="🗑️ ファイルの完全削除"
+        )
+    except Exception as e:
+        log_error(f"完全削除通知の送信失敗: {e}")
+
     return MessageResponse(
         success=True,
         user=current_user,
@@ -931,6 +964,17 @@ def empty_trash_all():
     count = empty_trash(current_user)
 
     log_success(current_user, f"TRASH_EMPTY: {count}件")
+
+    if count > 0:
+        try:
+            send_notification(
+                username=current_user,
+                event_type="delete",
+                message=f"ゴミ箱を空にしました（合計 {count} 件のファイルが完全に削除されました）。",
+                title="🗑️ ゴミ箱を空にする"
+            )
+        except Exception as e:
+            log_error(f"ゴミ箱クリア通知の送信失敗: {e}")
 
     return MessageResponse(
         success=True,
