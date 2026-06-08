@@ -148,14 +148,17 @@ function _ensurePreviewModal() {
     if (document.getElementById("preview-modal")) return;
     const m = document.createElement("div");
     m.id = "preview-modal";
-    m.className = "image-modal";       // 背景スタイルを流用
+    m.className = "image-modal";
     m.hidden = true;
     m.innerHTML = `
         <div class="image-modal-backdrop" onclick="closePreview()"></div>
         <div class="preview-box">
             <div class="preview-head">
                 <span class="preview-title" id="preview-title"></span>
-                <button class="image-modal-close" onclick="closePreview()" aria-label="閉じる">✕</button>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="preview-download-btn" id="preview-dl-btn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-download"></i>ダウンロード</button>
+                    <button class="image-modal-close" onclick="closePreview()" aria-label="閉じる" style="position:static; padding:0; background:none;">✕</button>
+                </div>
             </div>
             <div class="preview-body" id="preview-body"></div>
         </div>
@@ -169,7 +172,6 @@ function _ensurePreviewModal() {
 function closePreview() {
     const m = document.getElementById("preview-modal");
     if (m) {
-        // 動画/音声を止めるため中身をクリア
         const body = document.getElementById("preview-body");
         if (body) body.innerHTML = "";
         m.hidden = true;
@@ -178,46 +180,106 @@ function closePreview() {
 
 async function previewFile(filename) {
     const ext = (filename.split(".").pop() || "").toLowerCase();
-    const url = `${API_BASE}/download/${encodeURIComponent(filename)}`;
-
-    // 画像は既存の画像モーダルへ
-    if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
-        openImagePreview(url, filename);
-        return;
-    }
+    const url = `${API_BASE}/preview/${encodeURIComponent(filename)}`;
 
     _ensurePreviewModal();
     document.getElementById("preview-title").textContent = filename;
+    
+    const dlBtn = document.getElementById("preview-dl-btn");
+    if (dlBtn) {
+        dlBtn.onclick = () => downloadFile(filename);
+    }
+    
     const body = document.getElementById("preview-body");
+    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
 
-    if (ext === "pdf") {
-        body.innerHTML = `<iframe class="preview-frame" src="${url}"></iframe>`;
+    if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
+        body.innerHTML = `<img class="preview-image" src="${url}" alt="${filename}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
+    } else if (ext === "pdf") {
+        body.innerHTML = `<iframe class="preview-frame" src="${url}" style="width:100%; height:70vh; border:none;"></iframe>`;
     } else if (["mp4","webm","mov"].includes(ext)) {
-        body.innerHTML = `<video class="preview-media" src="${url}" controls autoplay></video>`;
+        body.innerHTML = `<video class="preview-media" src="${url}" controls autoplay style="max-width:100%; max-height:70vh; display:block; margin:0 auto;"></video>`;
     } else if (["mp3","wav","m4a","aac"].includes(ext)) {
         body.innerHTML = `
-            <div class="preview-audio-wrap">
+            <div class="preview-audio-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; color:#3b82f6; font-size:48px; gap:20px;">
                 <i class="fa-solid fa-music"></i>
-                <audio src="${url}" controls autoplay></audio>
+                <audio src="${url}" controls autoplay style="width:100%; max-width:400px;"></audio>
             </div>`;
-    } else if (["txt","csv"].includes(ext)) {
-        body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
+    } else if (["txt","csv","json","md","py","js","html","css"].includes(ext)) {
         try {
             const res = await fetch(url);
             const text = await res.text();
-            // テキストはエスケープして表示（XSS対策）
             const esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-            body.innerHTML = `<pre class="preview-text">${esc}</pre>`;
+            body.innerHTML = `<pre class="preview-text" style="white-space:pre-wrap; word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; max-height:70vh; overflow-y:auto; color:#e2e8f0; text-align:left;">${esc}</pre>`;
         } catch (e) {
             body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">プレビューできませんでした</p>`;
         }
     } else {
-        // 非対応形式
         body.innerHTML = `
-            <div class="preview-unsupported">
-                <i class="fa-solid fa-file-circle-question"></i>
+            <div class="preview-unsupported" style="text-align:center; padding:40px 20px; color:#94a3b8; display:flex; flex-direction:column; align-items:center; gap:16px;">
+                <i class="fa-solid fa-file-circle-question" style="font-size:48px; color:#64748b;"></i>
                 <p>この形式はプレビューできません</p>
-                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${encodeURIComponent(filename)}'))">↓ ダウンロード</button>
+                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${encodeURIComponent(filename)}'))" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">↓ ダウンロード</button>
+            </div>`;
+    }
+
+    document.getElementById("preview-modal").hidden = false;
+}
+
+async function previewSharedFile(owner, filename, isProtected) {
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    
+    let password = null;
+    if (isProtected) {
+        password = prompt(`「${filename}」はパスワードで保護されています。\nパスワードを入力:`);
+        if (password === null) return;
+    }
+
+    _ensurePreviewModal();
+    document.getElementById("preview-title").textContent = filename;
+
+    const dlBtn = document.getElementById("preview-dl-btn");
+    if (dlBtn) {
+        dlBtn.onclick = () => downloadShared(owner, filename, isProtected);
+    }
+
+    const body = document.getElementById("preview-body");
+    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
+
+    const url = `${API_BASE}/shared/preview/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}` + (password ? `?p=${encodeURIComponent(password)}` : "");
+
+    if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
+        body.innerHTML = `<img class="preview-image" src="${url}" alt="${filename}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
+    } else if (ext === "pdf") {
+        body.innerHTML = `<iframe class="preview-frame" src="${url}" style="width:100%; height:70vh; border:none;"></iframe>`;
+    } else if (["mp4","webm","mov"].includes(ext)) {
+        body.innerHTML = `<video class="preview-media" src="${url}" controls autoplay style="max-width:100%; max-height:70vh; display:block; margin:0 auto;"></video>`;
+    } else if (["mp3","wav","m4a","aac"].includes(ext)) {
+        body.innerHTML = `
+            <div class="preview-audio-wrap" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; color:#3b82f6; font-size:48px; gap:20px;">
+                <i class="fa-solid fa-music"></i>
+                <audio src="${url}" controls autoplay style="width:100%; max-width:400px;"></audio>
+            </div>`;
+    } else if (["txt","csv","json","md","py","js","html","css"].includes(ext)) {
+        const headers = {};
+        if (password) {
+            headers["X-Share-Password"] = password;
+        }
+        try {
+            const res = await fetch(url, { headers });
+            if (!res.ok) throw new Error("Fetch failed");
+            const text = await res.text();
+            const esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+            body.innerHTML = `<pre class="preview-text" style="white-space:pre-wrap; word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; max-height:70vh; overflow-y:auto; color:#e2e8f0; text-align:left;">${esc}</pre>`;
+        } catch (e) {
+            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">プレビューできませんでした（パスワードが違います）</p>`;
+        }
+    } else {
+        body.innerHTML = `
+            <div class="preview-unsupported" style="text-align:center; padding:40px 20px; color:#94a3b8; display:flex; flex-direction:column; align-items:center; gap:16px;">
+                <i class="fa-solid fa-file-circle-question" style="font-size:48px; color:#64748b;"></i>
+                <p>この形式はプレビューできません</p>
+                <button class="download-btn" onclick="downloadShared(decodeURIComponent('${encodeURIComponent(owner)}'), decodeURIComponent('${encodeURIComponent(filename)}'), ${isProtected})" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">↓ ダウンロード</button>
             </div>`;
     }
 
@@ -775,14 +837,14 @@ async function loadFiles() {
             //   - クリックでフルサイズプレビュー（モーダル）が開く
             //   - 画像が壊れていたら色付きアイコンにフォールバック
             const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
-            const imgUrl = `${API_BASE}/download/${safeName}`;
+            const imgUrl = `${API_BASE}/preview/${safeName}`;
             const thumb = isImg
                 ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
-                        onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}')); event.stopPropagation();"
+                        onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
                         onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
 
-            const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
+            const clickHandler = `previewFile(decodeURIComponent('${safeName}'))`;
 
             return `
             <div class="file-card ${starred ? 'is-favorite' : ''}">
@@ -2007,7 +2069,8 @@ async function loadShared() {
                    <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))" title="共有解除"><i class="fa-solid fa-link-slash"></i></button>`
                 : "";
 
-            const clickHandler = `downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
+            const clickHandler = `previewSharedFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
+            const dlHandler = `downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
 
             return `
             <div class="file-card">
@@ -2021,7 +2084,8 @@ async function loadShared() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="${clickHandler}">↓ ダウンロード</button>
+                    <button class="download-btn" onclick="${dlHandler}">↓ ダウンロード</button>
+                    <button class="preview-btn"  onclick="${clickHandler}" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
                     ${ownerBtns}
                 </div>
             </div>`;
@@ -2390,26 +2454,28 @@ function renderCategoryFileList() {
         const safeName = encodeURIComponent(file.name);
 
         const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
-        const imgUrl = `${API_BASE}/download/${safeName}`;
+        const imgUrl = `${API_BASE}/preview/${safeName}`;
         const thumb = isImg
             ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
-                    onclick="openImagePreview('${imgUrl}', decodeURIComponent('${safeName}')); event.stopPropagation();"
+                    onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
                     onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
             : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
 
-        const clickHandler = `downloadFile(decodeURIComponent('${safeName}'))`;
+        const clickHandler = `previewFile(decodeURIComponent('${safeName}'))`;
 
         const starred = isFavorite(file.name);
 
         return `
         <div class="file-card">
-            <div class="file-info">
-                <input type="checkbox" class="file-check" value="${file.name}">
-                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
-                ${thumb}
-                <div>
-                    <div class="file-name" title="${file.name}">${file.name}</div>
-                    <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
+            <div class="file-info" style="display:flex; align-items:center; width:100%;">
+                <input type="checkbox" class="file-check" value="${file.name}" style="margin-right:12px;">
+                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り" style="margin-right:12px;">${starred ? '★' : '☆'}</button>
+                <div class="file-info-clickable" onclick="${clickHandler}" style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;">
+                    ${thumb}
+                    <div>
+                        <div class="file-name" title="${file.name}">${file.name}</div>
+                        <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
+                    </div>
                 </div>
             </div>
             <div class="file-actions">

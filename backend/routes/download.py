@@ -1,6 +1,8 @@
 import os
 import io
 import zipfile
+import mimetypes
+import urllib.parse
 from datetime import datetime
 from typing import Optional
 
@@ -1415,4 +1417,91 @@ def unshare_my_file(owner: str, filename: str):
         success=True,
         user=current_user,
         message=f"{safe_name} の共有を解除しました"
+    )
+
+
+@router.get("/preview/{filename}")
+def preview_file(filename: str):
+    # ① 認証チェック
+    if not is_logged_in():
+        raise HTTPException(status_code=401, detail="ログインが必要です")
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+    if not can_access(role, "read"):
+        raise HTTPException(status_code=403, detail="このファイルにアクセスする権限がありません")
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="ファイル名が不正です")
+
+    # ④ ファイルの存在チェック
+    if not file_exists(current_user, safe_name):
+        raise HTTPException(status_code=404, detail=f"ファイルが見つかりません: {safe_name}")
+
+    # ⑤ インライン返却
+    file_path = get_file_path(current_user, safe_name)
+    
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    log_success(current_user, f"PREVIEW: {safe_name}")
+
+    safe_filename_header = urllib.parse.quote(safe_name)
+    return FileResponse(
+        path=file_path,
+        media_type=mime_type,
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{safe_filename_header}"}
+    )
+
+
+@router.get("/shared/preview/{owner}/{filename}")
+def preview_shared_file(
+    owner: str,
+    filename: str,
+    p: Optional[str] = None,
+    x_share_password: Optional[str] = Header(default=None)
+):
+    # ① 認証チェック
+    if not is_logged_in():
+        raise HTTPException(status_code=401, detail="ログインが必要です")
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+    if not can_access(role, "read"):
+        raise HTTPException(status_code=403, detail="ファイルにアクセスする権限がありません")
+
+    # ③ 名前の無害化
+    safe_owner = sanitize_filename(owner)
+    safe_name = sanitize_filename(filename)
+    if not safe_owner or not safe_name:
+        raise HTTPException(status_code=400, detail="ファイル名が不正です")
+
+    # ④ 共有ファイルの存在チェック
+    if not shared_file_exists(safe_owner, safe_name):
+        raise HTTPException(status_code=404, detail=f"共有ファイルが見つかりません: {safe_name}")
+
+    # ⑤ パスワード照合
+    password = p if p is not None else x_share_password
+    if not verify_shared_password(safe_owner, safe_name, password):
+        raise HTTPException(status_code=401, detail="パスワードが必要です（または間違っています）")
+
+    # ⑥ インライン返却
+    file_path = get_shared_file_path(safe_owner, safe_name)
+    
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    log_success(current_user, f"SHARED_PREVIEW: {safe_owner}/{safe_name}")
+
+    safe_filename_header = urllib.parse.quote(safe_name)
+    return FileResponse(
+        path=file_path,
+        media_type=mime_type,
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{safe_filename_header}"}
     )
