@@ -165,7 +165,12 @@ async function loadFiles() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name">${file.name}</div>
+                        <div
+                            class="file-name"
+                            onclick="previewImage('${file.name}')"
+                            style="cursor:pointer">
+                            ${file.name}
+                        </div>
                         <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
                     </div>
                 </div>
@@ -180,6 +185,31 @@ async function loadFiles() {
     } catch (e) {
         fileList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
     }
+}
+const searchInput =
+    document.getElementById("searchInput");
+
+if (searchInput) {
+
+    searchInput.addEventListener("input", function () {
+
+        const keyword =
+            this.value.toLowerCase();
+
+        const files =
+            document.querySelectorAll(".file-card");
+
+        files.forEach(file => {
+
+            const name =
+                file.textContent.toLowerCase();
+
+            file.style.display =
+                name.includes(keyword)
+                ? "flex"
+                : "none";
+        });
+    });
 }
 
 
@@ -232,26 +262,64 @@ async function uploadFileData(file) {
     const formData = new FormData();
     formData.append("file", file);
 
-    try {
+    const progressBar =
+        document.getElementById("progressBar");
 
-        const res = await fetch(`${API_BASE}/upload`, {
-            method: "POST",
-            body: formData
-        });
+    progressBar.style.width = "0%";
 
-        if (res.ok) {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open("POST", `${API_BASE}/upload`, true);
+
+    // =========================
+    // アップロード進行状況
+    // =========================
+    xhr.upload.onprogress = (e) => {
+
+        if (e.lengthComputable) {
+
+            const percent =
+                (e.loaded / e.total) * 100;
+
+            progressBar.style.width =
+                percent + "%";
+        }
+    };
+
+    // =========================
+    // アップロード完了
+    // =========================
+    xhr.onload = async () => {
+
+        if (xhr.status === 200) {
+
+            progressBar.style.width = "100%";
+
             alert(`${file.name} をアップロードしました！`);
+
             await loadFiles();
             await loadStorage();
 
-        } else {
-            const err = await res.json();
-            alert(`エラー: ${err.detail}`);
-        }
+            // 2秒後にバーを戻す
+            setTimeout(() => {
+                progressBar.style.width = "0%";
+            }, 2000);
 
-    } catch (e) {
-        alert("アップロードに失敗しました");
-    }
+        } else {
+
+            alert("アップロード失敗");
+        }
+    };
+
+    // =========================
+    // 通信エラー
+    // =========================
+    xhr.onerror = () => {
+
+        alert("サーバー接続失敗");
+    };
+
+    xhr.send(formData);
 }
 
 
@@ -360,3 +428,20 @@ window.addEventListener("load", () => {
     loadStorage();
     setupDropArea();
 });
+function previewImage(filename){
+
+    const modal =
+        document.getElementById("previewModal");
+
+    const img =
+        document.getElementById("previewImage");
+
+    img.src =
+        `${API_BASE}/download/${encodeURIComponent(filename)}`;
+
+    modal.style.display = "flex";
+
+    modal.onclick = () => {
+        modal.style.display = "none";
+    };
+}

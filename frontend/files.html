@@ -30,20 +30,25 @@
       </button>
 
     </div>
+<div class="upload-buttons">
 
-    <div class="upload-buttons">
+  <input type="file" id="fileInput" hidden>
 
-      <input type="file" id="fileInput" hidden>
+  <button onclick="document.getElementById('fileInput').click()">
+    📁 ファイル選択
+  </button>
 
-      <button onclick="document.getElementById('fileInput').click()">
-        📁 ファイル選択
-      </button>
+  <button onclick="uploadSelectedFile()">
+    ⬆ アップロード
+  </button>
 
-      <button onclick="uploadSelectedFile()">
-        ⬆ アップロード
-      </button>
+  <input type="text" id="searchInput" placeholder="ファイル検索">
 
-    </div>
+</div>
+
+<div class="progress">
+  <div id="progressBar"></div>
+</div>
 
     <div class="drop-area">
       <p class="drop-title">
@@ -62,5 +67,8 @@
 
   <script src="script.js"></script>
 
+<div id="previewModal" class="preview-modal">
+    <img id="previewImage">
+</div>
 </body>
 </html>

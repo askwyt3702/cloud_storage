@@ -3,51 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>アカウント作成</title>
+  <title>新規登録</title>
 
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<div class="login-box">
+  <div class="login-box">
 
-  <h1>アカウント作成</h1>
+    <h1>アカウント作成</h1>
 
-  <input
-    type="text"
-    id="username"
-    placeholder="ユーザー名"
-  >
+    <input type="text" id="username" placeholder="ユーザー名">
 
-  <input
-    type="email"
-    id="register-email"
-    placeholder="メールアドレス"
-  >
+    <input type="email" id="register-email" placeholder="メールアドレス">
 
-  <input
-    type="password"
-    id="register-password"
-    placeholder="パスワード（8文字以上・大文字・数字・記号を含む）"
-  >
+    <input type="password" id="register-password" placeholder="パスワード">
 
-  <input
-    type="password"
-    id="confirm-password"
-    placeholder="パスワード（確認）"
-  >
+    <input type="password" id="confirm-password" placeholder="パスワード確認">
 
-  <button onclick="register()">
-    アカウントを作成
-  </button>
+    <button onclick="register()">
+      新規登録
+    </button>
 
-  <p class="register-text">
-    既にアカウントをお持ちの方は
-    <a href="login.html">ログイン</a>
-  </p>
+    <p class="register-text">
+      既にアカウントをお持ちの方は
+      <a href="login.html">ログイン</a>
+    </p>
 
-</div>
+  </div>
 
   <script src="script.js"></script>
 
