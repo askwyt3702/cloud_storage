@@ -936,6 +936,10 @@ input:-webkit-autofill:focus{
 .preview-unsupported p{
     margin-bottom:18px;
 }
+.preview-download-btn:hover{
+    background:#1d4ed8 !important;
+    box-shadow:0 4px 15px rgba(37,99,235,0.4);
+}
 
 [data-theme="light"] .preview-box{
     background:white;
