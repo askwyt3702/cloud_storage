@@ -1,13 +1,26 @@
 import os
+import io
+import zipfile
+from datetime import datetime
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, Header, Body
+from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.schemas import (
     FileInfo,
     FileListResponse,
     MessageResponse,
-    RenameRequest
+    RenameRequest,
+    BulkDeleteRequest,     # ← 一括削除リクエスト
+    BulkActionResponse,    # ← 一括操作レスポンス
+    TrashFileInfo,         # ← ゴミ箱内ファイル情報
+    TrashListResponse,     # ← ゴミ箱一覧レスポンス
+    SharedFileInfo,        # ← 共有ファイル情報
+    SharedListResponse,    # ← 共有ファイル一覧レスポンス
+    ShareRequest,          # ← 共有リクエスト（パスワード任意）
+    BulkShareRequest,      # ← 一括共有リクエスト
+    BulkDownloadRequest    # ← 一括ダウンロード（ZIP）リクエスト
 )
 
 from backend.services.file_service import (
@@ -16,12 +29,35 @@ from backend.services.file_service import (
     sanitize_filename,     # ← ファイル名の無害化
     list_files,            # ← ファイル一覧取得
     get_file_size,         # ← ファイルサイズ取得
-    get_file_metadata      # ← メタデータ取得
+    get_file_mtime,        # ← 更新日時取得（並び替え用）
+    get_file_metadata,     # ← メタデータ取得
+    # --- ゴミ箱関連 ---
+    move_to_trash,             # ← ゴミ箱へ移動（論理削除）
+    list_trash,                # ← ゴミ箱一覧
+    trash_file_exists,         # ← ゴミ箱に存在するか
+    get_trash_file_size,       # ← ゴミ箱内ファイルのサイズ
+    get_trash_file_metadata,   # ← ゴミ箱内ファイルのメタデータ
+    restore_from_trash,        # ← ゴミ箱から復元
+    delete_from_trash,         # ← ゴミ箱から完全削除
+    empty_trash,               # ← ゴミ箱を空にする
+    # --- 共有フォルダ関連 ---
+    share_file,                # ← 個人ファイルを共有
+    unshare_file,              # ← 共有を解除
+    list_shared,               # ← 共有ファイル一覧（全員分）
+    shared_file_exists,        # ← 共有に存在するか
+    get_shared_file_path,      # ← 共有ファイルのパス
+    get_shared_file_size,      # ← 共有ファイルのサイズ
+    get_shared_file_metadata,  # ← 共有ファイルのメタデータ
+    set_shared_password,       # ← 共有パスワードの設定
+    is_shared_protected,       # ← パスワード保護されているか
+    verify_shared_password     # ← パスワード照合
 )
+
 
 from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
-    get_current_user       # ← ログイン中ユーザー取得
+    get_current_user,      # ← ログイン中ユーザー取得
+    get_current_role       # ← ログイン中ユーザーのロール取得
 )
 
 from security.permission import (
@@ -34,6 +70,7 @@ from security.logger import (
     log_error      # ← エラーログ
 )
 
+from backend.services.settings_service import send_notification
 
 router = APIRouter()
 
@@ -65,17 +102,24 @@ def _format_size(size_bytes: int) -> str:
 # ファイル一覧取得API
 #
 # URL:
-# GET /files?page=1&per_page=20
+# GET /files?page=1&per_page=20&sort_by=name&order=asc
 #
 # クエリパラメータ:
 #   page     : ページ番号（デフォルト: 1）
 #   per_page : 1ページの件数（デフォルト: 20）
+#   sort_by  : 並び替えの基準 name(名前) / date(日付) / size(サイズ)
+#   order    : 並び順 asc(昇順) / desc(降順)
 #
 # エラー:
 #   401 : 未ログイン
 # =====================================
 @router.get("/files", response_model=FileListResponse)
-def get_files(page: int = 1, per_page: int = 20):
+def get_files(
+    page: int = 1,
+    per_page: int = 20,
+    sort_by: str = "name",
+    order: str = "asc"
+):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -94,14 +138,40 @@ def get_files(page: int = 1, per_page: int = 20):
     total = len(all_files)
 
 
-    # ③ ページネーション
+    # ③ 並び替え
+    #    desc（降順）かどうか
+    reverse = (order == "desc")
+
+    if sort_by == "size":
+        # サイズ順
+        all_files.sort(
+            key=lambda f: get_file_size(current_user, f),
+            reverse=reverse
+        )
+
+    elif sort_by == "date":
+        # 更新日時順
+        all_files.sort(
+            key=lambda f: get_file_mtime(current_user, f),
+            reverse=reverse
+        )
+
+    else:
+        # 名前順（大文字小文字を区別しない）
+        all_files.sort(
+            key=lambda f: f.lower(),
+            reverse=reverse
+        )
+
+
+    # ④ ページネーション
     #    例: page=2, per_page=20 → 21件目〜40件目
     start = (page - 1) * per_page
     end = start + per_page
     paged_files = all_files[start:end]
 
 
-    # ④ メタデータ付きで整形
+    # ⑤ メタデータ付きで整形
     files_info = [
         FileInfo(
             name=f,
@@ -154,8 +224,9 @@ def download_file(filename: str):
 
     # ② 権限チェック
     current_user = get_current_user()
+    role = get_current_role()
 
-    if not can_access("user", "read"):
+    if not can_access(role, "read"):
 
         log_failed(current_user, "DOWNLOAD", "権限なし")
 
@@ -202,7 +273,108 @@ def download_file(filename: str):
 
 
 # =====================================
-# ファイル削除API
+# 一括ダウンロードAPI（複数ファイルをZIPにまとめる）
+#
+# URL:
+# POST /download-zip
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", "b.pdf", ...] }
+#
+# 選択した自分のファイルを1つのZIPにまとめて返す。
+# ZIPはメモリ上で作るので一時ファイルは残さない。
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイルが1つも指定されていない
+#   404 : 有効なファイルが1つも無い
+# =====================================
+@router.post("/download-zip")
+def download_zip(body: BulkDownloadRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "DOWNLOAD_ZIP", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック（読み取り）
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "read"):
+
+        log_failed(current_user, "DOWNLOAD_ZIP", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをダウンロードする権限がありません"
+        )
+
+
+    # ③ ファイルが指定されているか
+    if not body.filenames:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ダウンロードするファイルを選択してください"
+        )
+
+
+    # ④ メモリ上でZIPを構築
+    buffer = io.BytesIO()
+    added = 0
+
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        for name in body.filenames:
+
+            safe_name = sanitize_filename(name)
+
+            # 不正な名前・存在しないファイルはスキップ
+            if not safe_name or not file_exists(current_user, safe_name):
+                continue
+
+            file_path = get_file_path(current_user, safe_name)
+            zf.write(file_path, arcname=safe_name)
+            added += 1
+
+
+    # ⑤ 有効なファイルが1つも無ければエラー
+    if added == 0:
+
+        raise HTTPException(
+            status_code=404,
+            detail="有効なファイルがありませんでした"
+        )
+
+
+    buffer.seek(0)
+
+    # ダウンロードされるZIPの名前（日時入り）
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_name = f"cloudstorage_{stamp}.zip"
+
+    log_success(current_user, f"DOWNLOAD_ZIP: {added}件")
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_name}"'}
+    )
+
+
+# =====================================
+# ファイル削除API（ゴミ箱へ移動＝論理削除）
+#
+# 即座に消すのではなく、ゴミ箱（.trash）へ移動する。
+# 完全に消したい場合は DELETE /trash/{filename} を使う。
 #
 # URL:
 # DELETE /delete/{filename}
@@ -233,8 +405,9 @@ def delete_file(filename: str):
 
     # ② 権限チェック
     current_user = get_current_user()
+    role = get_current_role()
 
-    if not can_access("user", "write"):
+    if not can_access(role, "write"):
 
         log_failed(current_user, "DELETE", "権限なし")
 
@@ -268,8 +441,8 @@ def delete_file(filename: str):
         )
 
 
-    # ⑤ 削除実行
-    success = _delete_file_from_storage(current_user, safe_name)
+    # ⑤ ゴミ箱へ移動
+    success = move_to_trash(current_user, safe_name)
 
     if not success:
 
@@ -279,12 +452,110 @@ def delete_file(filename: str):
         )
 
 
-    log_success(current_user, f"DELETE: {safe_name}")
+    log_success(current_user, f"TRASH: {safe_name}")
+
+    try:
+        send_notification(
+            username=current_user,
+            event_type="delete",
+            message=f"ファイル `{safe_name}` をゴミ箱に移動しました。",
+            title="🗑️ ファイルのゴミ箱移動"
+        )
+    except Exception as e:
+        log_error(f"削除通知の送信失敗: {e}")
 
     return MessageResponse(
         success=True,
         user=current_user,
-        message=f"{safe_name} を削除しました"
+        message=f"{safe_name} をゴミ箱に移動しました"
+    )
+
+
+# =====================================
+# ファイル一括削除API（まとめてゴミ箱へ）
+#
+# URL:
+# POST /delete-multiple
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", "b.pdf", ...] }
+#
+# レスポンス:
+#   succeeded : ゴミ箱へ移動できたファイル
+#   failed    : 失敗したファイル（存在しない・不正な名前など）
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.post("/delete-multiple", response_model=BulkActionResponse)
+def delete_multiple(body: BulkDeleteRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "BULK_DELETE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "BULK_DELETE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを削除する権限がありません"
+        )
+
+
+    # ③ 1件ずつゴミ箱へ移動
+    succeeded = []
+    failed = []
+
+    for name in body.filenames:
+
+        safe_name = sanitize_filename(name)
+
+        # 名前が不正、または存在しないものは失敗扱い
+        if not safe_name or not file_exists(current_user, safe_name):
+
+            failed.append(name)
+            continue
+
+        if move_to_trash(current_user, safe_name):
+            succeeded.append(safe_name)
+        else:
+            failed.append(name)
+
+
+    log_success(current_user, f"BULK_DELETE: 成功{len(succeeded)}件 / 失敗{len(failed)}件")
+
+    if succeeded:
+        try:
+            files_str = ", ".join([f"`{f}`" for f in succeeded])
+            send_notification(
+                username=current_user,
+                event_type="delete",
+                message=f"ファイル {files_str} をゴミ箱に移動しました。",
+                title="🗑️ ファイルの一括ゴミ箱移動"
+            )
+        except Exception as e:
+            log_error(f"一括削除通知の送信失敗: {e}")
+
+    return BulkActionResponse(
+        success=True,
+        user=current_user,
+        succeeded=succeeded,
+        failed=failed,
+        message=f"{len(succeeded)}件をゴミ箱に移動しました"
     )
 
 
@@ -319,6 +590,17 @@ def rename_file(filename: str, body: RenameRequest):
         )
 
     current_user = get_current_user()
+    role = get_current_role()
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "RENAME", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを変更する権限がありません"
+        )
 
 
     # ② 変更前ファイル名の無害化
@@ -340,6 +622,22 @@ def rename_file(filename: str, body: RenameRequest):
         raise HTTPException(
             status_code=400,
             detail="変更後のファイル名が不正です"
+        )
+
+
+    # ③-2 拡張子の保護：拡張子は変更不可
+    #      ファイル中身が変わらないのに拡張子だけ変えると、
+    #      開けない・誤解を招くので 400 で弾く。
+    old_ext = os.path.splitext(safe_old)[1].lower()
+    new_ext = os.path.splitext(safe_new)[1].lower()
+
+    if old_ext != new_ext:
+
+        log_failed(current_user, "RENAME", f"拡張子変更を拒否: {old_ext} → {new_ext}")
+
+        raise HTTPException(
+            status_code=400,
+            detail=f"拡張子は変更できません（{old_ext or '(なし)'} のままにしてください）"
         )
 
 
@@ -387,19 +685,734 @@ def rename_file(filename: str, body: RenameRequest):
     )
 
 
+# =====================================================
+# ここから下：ゴミ箱（.trash）操作API
+# =====================================================
+
+
 # =====================================
-# 内部関数：ファイル削除実行
+# ゴミ箱一覧取得API
+#
+# URL:
+# GET /trash
+#
+# エラー:
+#   401 : 未ログイン
 # =====================================
-def _delete_file_from_storage(username: str, filename: str) -> bool:
+@router.get("/trash", response_model=TrashListResponse)
+def get_trash():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "TRASH_LIST", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② ゴミ箱の中身を取得
+    current_user = get_current_user()
+    trash_files = list_trash(current_user)
+
+
+    # ③ メタデータ付きで整形
+    files_info = [
+        TrashFileInfo(
+            name=f,
+            size=_format_size(get_trash_file_size(current_user, f)),
+            **get_trash_file_metadata(current_user, f)
+        )
+        for f in trash_files
+    ]
+
+    log_success(current_user, "TRASH_LIST")
+
+    return TrashListResponse(
+        success=True,
+        user=current_user,
+        files=files_info,
+        total=len(trash_files)
+    )
+
+
+# =====================================
+# ゴミ箱からの復元API
+#
+# URL:
+# POST /restore/{filename}
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : ゴミ箱に存在しない
+#   409 : 同名のファイルが既に存在する
+#   500 : 復元処理に失敗した場合
+# =====================================
+@router.post("/restore/{filename}", response_model=MessageResponse)
+def restore_file(filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "RESTORE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "RESTORE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを復元する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ ゴミ箱に存在するか
+    if not trash_file_exists(current_user, safe_name):
+
+        log_failed(current_user, "RESTORE", f"ゴミ箱にファイルなし: {safe_name}")
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ゴミ箱にファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 復元先に同名ファイルが無いか（あると上書きしてしまうので拒否）
+    if file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のファイルが既に存在するため復元できません: {safe_name}"
+        )
+
+
+    # ⑥ 復元実行
+    success = restore_from_trash(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="ファイルの復元に失敗しました"
+        )
+
+
+    log_success(current_user, f"RESTORE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を復元しました"
+    )
+
+
+# =====================================
+# ゴミ箱内ファイルの完全削除API（復元不可）
+#
+# URL:
+# DELETE /trash/{filename}
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : ゴミ箱に存在しない
+#   500 : 削除処理に失敗した場合
+# =====================================
+@router.delete("/trash/{filename}", response_model=MessageResponse)
+def delete_trash_file(filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "TRASH_DELETE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "TRASH_DELETE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを削除する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ ゴミ箱に存在するか
+    if not trash_file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ゴミ箱にファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 完全削除実行
+    success = delete_from_trash(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="ファイルの完全削除に失敗しました"
+        )
+
+
+    log_success(current_user, f"TRASH_DELETE: {safe_name}")
 
     try:
-
-        file_path = get_file_path(username, filename)
-        os.remove(file_path)
-        return True
-
+        send_notification(
+            username=current_user,
+            event_type="delete",
+            message=f"ファイル `{safe_name}` をゴミ箱から完全に削除しました。",
+            title="🗑️ ファイルの完全削除"
+        )
     except Exception as e:
+        log_error(f"完全削除通知の送信失敗: {e}")
 
-        log_error(f"ファイル削除失敗: {username}/{filename} - {e}")
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を完全に削除しました"
+    )
 
-        return False
+
+# =====================================
+# ゴミ箱を空にするAPI（全件完全削除）
+#
+# URL:
+# DELETE /trash
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.delete("/trash", response_model=MessageResponse)
+def empty_trash_all():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "TRASH_EMPTY", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "TRASH_EMPTY", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ゴミ箱を空にする権限がありません"
+        )
+
+
+    # ③ 全件完全削除
+    count = empty_trash(current_user)
+
+    log_success(current_user, f"TRASH_EMPTY: {count}件")
+
+    if count > 0:
+        try:
+            send_notification(
+                username=current_user,
+                event_type="delete",
+                message=f"ゴミ箱を空にしました（合計 {count} 件のファイルが完全に削除されました）。",
+                title="🗑️ ゴミ箱を空にする"
+            )
+        except Exception as e:
+            log_error(f"ゴミ箱クリア通知の送信失敗: {e}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"ゴミ箱を空にしました（{count}件）"
+    )
+
+
+# =====================================================
+# ここから下：共有フォルダ（_shared）操作API
+# =====================================================
+
+
+# =====================================
+# 共有ファイル一覧取得API（全員分）
+#
+# URL:
+# GET /shared
+#
+# ログインしていれば、誰が共有したファイルでも一覧で見られる。
+#
+# エラー:
+#   401 : 未ログイン
+# =====================================
+@router.get("/shared", response_model=SharedListResponse)
+def get_shared():
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARED_LIST", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 共有ファイルを取得
+    current_user = get_current_user()
+    shared_files = list_shared()
+
+
+    # ③ メタデータ付きで整形（パスワード保護の有無も付与）
+    files_info = [
+        SharedFileInfo(
+            owner=item["owner"],
+            name=item["name"],
+            size=_format_size(
+                get_shared_file_size(item["owner"], item["name"])
+            ),
+            protected=is_shared_protected(item["owner"], item["name"]),
+            **get_shared_file_metadata(item["owner"], item["name"])
+        )
+        for item in shared_files
+    ]
+
+    log_success(current_user, "SHARED_LIST")
+
+    return SharedListResponse(
+        success=True,
+        files=files_info,
+        total=len(files_info)
+    )
+
+
+# =====================================
+# 共有ファイルのダウンロードAPI
+#
+# URL:
+# GET /shared/download/{owner}/{filename}
+#
+# ログインしていれば、他人が共有したファイルもダウンロードできる。
+# パスワード保護されている場合は、ヘッダー「X-Share-Password」に
+# パスワードを入れて送る必要がある。
+#
+# エラー:
+#   401 : 未ログイン / パスワード未入力・不一致
+#   403 : 権限なし
+#   400 : 名前が不正
+#   404 : 共有ファイルが存在しない
+# =====================================
+@router.get("/shared/download/{owner}/{filename}")
+def download_shared_file(
+    owner: str,
+    filename: str,
+    x_share_password: Optional[str] = Header(default=None)
+):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARED_DOWNLOAD", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック（読み取り）
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "read"):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをダウンロードする権限がありません"
+        )
+
+
+    # ③ 名前の無害化（所有者名・ファイル名どちらも）
+    safe_owner = sanitize_filename(owner)
+    safe_name = sanitize_filename(filename)
+
+    if not safe_owner or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 共有ファイルの存在チェック
+    if not shared_file_exists(safe_owner, safe_name):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", f"共有ファイルなし: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"共有ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ パスワード照合（保護されている場合のみチェック）
+    if not verify_shared_password(safe_owner, safe_name, x_share_password):
+
+        log_failed(current_user, "SHARED_DOWNLOAD", f"パスワード不一致: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=401,
+            detail="パスワードが必要です（または間違っています）"
+        )
+
+
+    # ⑥ ダウンロード実行
+    file_path = get_shared_file_path(safe_owner, safe_name)
+
+    log_success(current_user, f"SHARED_DOWNLOAD: {safe_owner}/{safe_name}")
+
+    return FileResponse(
+        path=file_path,
+        filename=safe_name,
+        media_type="application/octet-stream"
+    )
+
+
+# =====================================
+# ファイル共有API（自分の個人ファイルを共有フォルダへ）
+#
+# URL:
+# POST /share/{filename}
+#
+# リクエストボディ（任意）:
+#   { "password": "ひみつ" }   ← 空 or 省略でパスワードなし
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : ファイル名が不正
+#   404 : 個人ファイルが存在しない
+#   409 : 既に共有済み
+#   500 : 共有処理に失敗した場合
+# =====================================
+@router.post("/share/{filename}", response_model=MessageResponse)
+def share_my_file(filename: str, body: Optional[ShareRequest] = Body(default=None)):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "SHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "SHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを共有する権限がありません"
+        )
+
+
+    # ③ ファイル名の無害化
+    safe_name = sanitize_filename(filename)
+
+    if not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 自分の個人ファイルが存在するか
+    if not file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑤ 既に共有済みでないか
+    if shared_file_exists(current_user, safe_name):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"このファイルは既に共有されています: {safe_name}"
+        )
+
+
+    # ⑥ 共有実行
+    success = share_file(current_user, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="共有に失敗しました"
+        )
+
+
+    # ⑦ パスワードの設定（任意）
+    password = body.password if body else None
+    set_shared_password(current_user, safe_name, password)
+
+    msg = f"{safe_name} を共有しました"
+    if password:
+        msg += "（パスワード付き）"
+
+    log_success(current_user, f"SHARE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=msg
+    )
+
+
+# =====================================
+# ファイル一括共有API（選択した複数を同じパスワードで共有）
+#
+# URL:
+# POST /share-multiple
+#
+# リクエストボディ:
+#   { "filenames": ["a.txt", ...], "password": "ひみつ"（任意） }
+#
+# レスポンス:
+#   succeeded : 共有できたファイル
+#   failed    : 失敗したファイル（存在しない・既に共有済みなど）
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+# =====================================
+@router.post("/share-multiple", response_model=BulkActionResponse)
+def share_multiple(body: BulkShareRequest):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "BULK_SHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    # ② 権限チェック
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "BULK_SHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルを共有する権限がありません"
+        )
+
+
+    # ③ 1件ずつ共有
+    succeeded = []
+    failed = []
+
+    for name in body.filenames:
+
+        safe_name = sanitize_filename(name)
+
+        # 名前が不正／個人ファイルが無い／既に共有済み → 失敗扱い
+        if (
+            not safe_name
+            or not file_exists(current_user, safe_name)
+            or shared_file_exists(current_user, safe_name)
+        ):
+            failed.append(name)
+            continue
+
+        if share_file(current_user, safe_name):
+            # 同じパスワードを設定（任意）
+            set_shared_password(current_user, safe_name, body.password)
+            succeeded.append(safe_name)
+        else:
+            failed.append(name)
+
+
+    log_success(current_user, f"BULK_SHARE: 成功{len(succeeded)}件 / 失敗{len(failed)}件")
+
+    msg = f"{len(succeeded)}件を共有しました"
+    if body.password:
+        msg += "（パスワード付き）"
+
+    return BulkActionResponse(
+        success=True,
+        user=current_user,
+        succeeded=succeeded,
+        failed=failed,
+        message=msg
+    )
+
+
+# =====================================
+# 共有解除API（自分が共有したファイルのみ）
+#
+# URL:
+# DELETE /shared/{owner}/{filename}
+#
+# 他人が共有したファイルは解除できない（owner が自分のときだけ）。
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし / 他人の共有を解除しようとした
+#   400 : 名前が不正
+#   404 : 共有ファイルが存在しない
+#   500 : 解除処理に失敗した場合
+# =====================================
+@router.delete("/shared/{owner}/{filename}", response_model=MessageResponse)
+def unshare_my_file(owner: str, filename: str):
+
+    # ① 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "UNSHARE", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+
+    current_user = get_current_user()
+    role = get_current_role()
+
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(current_user, "UNSHARE", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="共有を解除する権限がありません"
+        )
+
+
+    # ③ 名前の無害化
+    safe_owner = sanitize_filename(owner)
+    safe_name = sanitize_filename(filename)
+
+    if not safe_owner or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名が不正です"
+        )
+
+
+    # ④ 自分が共有したファイルか（他人のものは解除不可）
+    if safe_owner != current_user:
+
+        log_failed(current_user, "UNSHARE", f"他人の共有を解除しようとした: {safe_owner}/{safe_name}")
+
+        raise HTTPException(
+            status_code=403,
+            detail="他の人が共有したファイルは解除できません"
+        )
+
+
+    # ⑤ 共有ファイルの存在チェック
+    if not shared_file_exists(safe_owner, safe_name):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"共有ファイルが見つかりません: {safe_name}"
+        )
+
+
+    # ⑥ 共有解除実行
+    success = unshare_file(safe_owner, safe_name)
+
+    if not success:
+
+        raise HTTPException(
+            status_code=500,
+            detail="共有の解除に失敗しました"
+        )
+
+
+    log_success(current_user, f"UNSHARE: {safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} の共有を解除しました"
+    )

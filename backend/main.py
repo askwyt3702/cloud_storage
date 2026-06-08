@@ -1,3 +1,10 @@
+import sys
+import os
+
+# プロジェクトのルート（このファイルの2つ上 = cloud_storage）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
 # FastAPI起動
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,14 +24,25 @@ from backend.routes.download import (
     router as download_router
 )
 
-# user.py はルートなし（現在未使用）
-# from backend.routes.user import (
-#     router as user_router
-# )
-
 # アップロードAPI
 from backend.routes.upload import (
     router as upload_router
+)
+
+# 共有リンクAPI（ギガファイル便方式）
+from backend.routes.link import (
+    router as link_router
+)
+
+# バックアップ管理API & スケジューラー
+from backend.routes.backup import (
+    router as backup_router
+)
+from backend.services.backup_service import start_backup_scheduler
+
+# 通知設定API
+from backend.routes.settings import (
+    router as settings_router
 )
 
 
@@ -83,4 +101,39 @@ app.include_router(
 # アップロード機能追加
 app.include_router(
     upload_router
+<<<<<<< HEAD
+=======
+)
+
+# 共有リンク機能追加
+app.include_router(
+    link_router
+)
+
+# バックアップ機能追加
+app.include_router(
+    backup_router
+)
+
+# 設定機能追加
+app.include_router(
+    settings_router
+)
+
+# 起動時に自動バックアップ監視スレッドを開始
+@app.on_event("startup")
+def startup_event():
+    start_backup_scheduler()
+
+
+# ==========================
+# フロントエンドの配信
+# frontend/ フォルダを /static として公開
+# ※ 絶対パスにして、どのフォルダから起動しても動くようにする
+# ==========================
+app.mount(
+    "/static",
+    StaticFiles(directory=os.path.join(BASE_DIR, "frontend")),
+    name="static"
+>>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
 )

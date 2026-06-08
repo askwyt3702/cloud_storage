@@ -12,7 +12,12 @@ from backend.services.file_service import (
 
 from backend.services.auth_service import (
     is_logged_in,          # ← 認証チェック
-    get_current_user       # ← ログイン中ユーザー取得
+    get_current_user,      # ← ログイン中ユーザー取得
+    get_current_role       # ← ログイン中ユーザーのロール取得
+)
+
+from security.permission import (
+    can_access             # ← 権限チェック
 )
 
 from security.logger import (
@@ -23,6 +28,8 @@ from security.logger import (
 from backend.services.storage_service import (
     get_used_bytes         # ← 使用量チェック
 )
+
+from backend.services.settings_service import send_notification
 
 
 # =====================================
@@ -36,11 +43,22 @@ MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024
 MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024
 
 # アップロード許可する拡張子
+# 方針：中身が「素直なデータファイル」で安全なものだけを許可（ホワイトリスト）。
+#       スクリプトを埋め込める .svg や、実行ファイル系（.exe/.bat等）は意図的に除外。
 ALLOWED_EXTENSIONS = {
+    # --- 文書 ---
     ".pdf", ".txt", ".csv",
-    ".jpg", ".jpeg", ".png", ".gif",
+    # --- 画像 ---
+    ".jpg", ".jpeg", ".jfif", ".png", ".gif",
+    ".webp", ".bmp", ".tif", ".tiff", ".heic", ".heif",
+    # --- Office ---
     ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-    ".zip", ".mp4", ".mp3"
+    # --- 音声 ---
+    ".mp3", ".wav", ".m4a", ".aac",
+    # --- 動画 ---
+    ".mp4", ".mov", ".webm",
+    # --- 圧縮 ---
+    ".zip"
 }
 
 
@@ -78,6 +96,17 @@ async def upload_file(file: UploadFile = File(...)):
         )
 
     username = get_current_user()
+    role = get_current_role()
+
+    # ② 権限チェック
+    if not can_access(role, "write"):
+
+        log_failed(username, "UPLOAD", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ファイルをアップロードする権限がありません"
+        )
 
     # ② ファイル名の無害化
     #    例: "../../etc/passwd" → "passwd" に変換
@@ -159,6 +188,19 @@ async def upload_file(file: UploadFile = File(...)):
 
 
     log_success(username, f"UPLOAD: {safe_name}")
+
+    try:
+        size_kb = round(len(data) / 1024, 1)
+        size_str = f"{size_kb} KB" if size_kb < 1024 else f"{round(size_kb / 1024, 2)} MB"
+        send_notification(
+            username=username,
+            event_type="upload",
+            message=f"ファイル `{safe_name}` ({size_str}) がアップロードされました。",
+            title="📥 ファイルアップロード"
+        )
+    except Exception as e:
+        from security.logger import log_error
+        log_error(f"アップロード通知の送信失敗: {e}")
 
     return MessageResponse(
         success=True,

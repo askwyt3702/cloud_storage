@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>クラウドストレージ</title>
 
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="style.css">
   <link
     rel="stylesheet"
@@ -18,20 +19,155 @@
 
     <div class="top-area">
 
-      <div>
-        <h1>☁ Cloud Storage</h1>
-        <p class="storage-text" id="storageText">
-          使用容量：取得中...
+      <div class="brand">
+        <div class="brand-icon">☁</div>
+        <div>
+          <h1>Cloud Storage</h1>
+          <p class="brand-sub">あなたのファイルをいつでもどこでも</p>
+        </div>
+      </div>
+
+      <div class="user-pill">
+        <div class="avatar" id="userAvatar">?</div>
+        <div class="user-name" id="userName">ユーザー</div>
+        <button class="theme-toggle" onclick="toggleTheme()" aria-label="テーマ切替" title="テーマ切替">☀</button>
+        <button class="settings-btn" onclick="location.href='settings.html'" title="設定">⚙</button>
+        <button class="logout-btn" onclick="logout()">
+          ログアウト
+        </button>
+      </div>
+
+    </div>
+
+    <!-- タブナビゲーション（横スクロール対応・下線がスライド） -->
+    <div class="tab-bar" id="tabBar">
+      <button class="tab active" data-view="main"         onclick="switchTab('main')">📊 マイファイル</button>
+      <button class="tab"        data-view="uploadedList" onclick="switchTab('uploadedList')">🗂 カテゴリ別</button>
+      <button class="tab"        data-view="shared"       onclick="switchTab('shared')">📂 共有</button>
+      <button class="tab"        data-view="links"        onclick="switchTab('links')">🔗 リンク</button>
+      <button class="tab"        data-view="trash"        onclick="switchTab('trash')">🗑 ゴミ箱</button>
+      <span class="tab-indicator" id="tabIndicator"></span>
+    </div>
+
+    <!-- 通常のファイル一覧ビュー -->
+    <div id="mainView">
+
+      <!-- ダッシュボード（ようこそ＋容量＋統計） -->
+      <div class="hero-card" id="heroCard">
+
+        <div class="hero-welcome">
+          <h2>おかえりなさい、<span id="heroUserName">ゲスト</span> さん</h2>
+          <p id="storageText">使用容量を取得中...</p>
+        </div>
+
+        <div class="hero-stats">
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">使用容量</div>
+            <div class="hero-stat-value" id="heroStorageText">--</div>
+            <div class="storage-gauge">
+              <div class="storage-gauge-fill" id="heroStorageFill"></div>
+            </div>
+            <div class="hero-stat-sub" id="heroStoragePct">0%</div>
+          </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">マイファイル</div>
+            <div class="hero-stat-value" id="heroFileCount">--</div>
+            <div class="hero-stat-sub">件</div>
+          </div>
+
+          <div class="hero-stat">
+            <div class="hero-stat-label">あなたが共有中</div>
+            <div class="hero-stat-value" id="heroSharedCount">--</div>
+            <div class="hero-stat-sub">件</div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="upload-buttons">
+
+        <input type="file" id="fileInput" hidden multiple>
+
+        <button onclick="document.getElementById('fileInput').click()">
+          📁 ファイルを追加
+        </button>
+
+        <button onclick="uploadSelectedFile(event)">
+          ⬆ アップロード
+        </button>
+
+      </div>
+
+      <!-- 選択中のファイルリスト（選ぶまでは非表示） -->
+      <div id="uploadTray" class="upload-tray" hidden>
+
+        <div class="upload-tray-head">
+          <span id="uploadTraySummary">選択中のファイル</span>
+          <button class="tray-clear-all" onclick="clearAllSelected()">すべてクリア</button>
+        </div>
+
+        <div id="uploadTrayList" class="upload-tray-list">
+          <!-- ファイル行が動的に追加される -->
+        </div>
+
+        <div class="upload-tray-foot">
+          <label class="zip-toggle">
+            <input type="checkbox" id="zipModeToggle" onchange="renderUploadTray()">
+            チェックしたファイルを <b>1つのZIP</b> にまとめる
+          </label>
+          <span class="zip-hint" id="zipHint"></span>
+        </div>
+
+      </div>
+
+      <div class="drop-area">
+        <p class="drop-title">
+          ファイルをドラッグ＆ドロップ
+        </p>
+        <p class="drop-sub">
+          またはファイルを選択
         </p>
       </div>
 
-      <button class="logout-btn" onclick="logout()">
-        ログアウト
-      </button>
+      <!-- 検索バー -->
+      <div class="search-bar">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="fileSearch" placeholder="ファイル名で絞り込み..." oninput="filterFiles()">
+        <button class="search-clear" id="searchClear" onclick="clearFileSearch()" style="display:none">✕</button>
+      </div>
+
+      <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
+      <div class="toolbar">
+
+        <select id="sortSelect" class="sort-select" onchange="loadFiles()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">新しい順</option>
+          <option value="date_asc">古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+        </select>
+
+        <div class="toolbar-right">
+          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
+          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+        </div>
+
+      </div>
+
+      <div class="file-list" id="fileList">
+        <!-- ここに動的に追加される -->
+      </div>
 
     </div>
 <div class="upload-buttons">
 
+<<<<<<< HEAD
   <input type="file" id="fileInput" hidden>
 
   <button onclick="document.getElementById('fileInput').click()">
@@ -43,6 +179,26 @@
   </button>
 
   <input type="text" id="searchInput" placeholder="ファイル検索">
+=======
+    <!-- ゴミ箱ビュー（最初は非表示） -->
+    <div id="trashView" style="display:none">
+
+      <div class="toolbar">
+        <select id="trashSort" class="sort-select" onchange="loadTrash()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">削除が新しい順</option>
+          <option value="date_asc">削除が古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+        </select>
+        <button class="delete-btn" onclick="emptyTrash(event)">ゴミ箱を空にする</button>
+      </div>
+
+      <div class="file-list" id="trashList">
+        <!-- ゴミ箱の中身が動的に追加される -->
+      </div>
+>>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
 
 </div>
 
@@ -50,21 +206,74 @@
   <div id="progressBar"></div>
 </div>
 
-    <div class="drop-area">
-      <p class="drop-title">
-        ファイルをドラッグ＆ドロップ
-      </p>
-      <p class="drop-sub">
-        またはファイルを選択
-      </p>
+    <!-- 共有ビュー（最初は非表示） -->
+    <div id="sharedView" style="display:none">
+
+      <div class="toolbar">
+        <select id="sharedSort" class="sort-select" onchange="loadShared()">
+          <option value="name_asc">名前順（A→Z）</option>
+          <option value="name_desc">名前順（Z→A）</option>
+          <option value="date_desc">共有が新しい順</option>
+          <option value="date_asc">共有が古い順</option>
+          <option value="size_desc">サイズ大きい順</option>
+          <option value="size_asc">サイズ小さい順</option>
+          <option value="owner_asc">共有者順</option>
+        </select>
+        <p class="storage-text">みんなが共有したファイル</p>
+      </div>
+
+      <div class="file-list" id="sharedList">
+        <!-- 共有ファイルが動的に追加される -->
+      </div>
+
     </div>
 
-    <div class="file-list" id="fileList">
-      <!-- ここに動的に追加される -->
+    <!-- アップロードしたファイル一覧ビュー（カテゴリ別・最初は非表示） -->
+    <div id="uploadedListView" style="display:none">
+
+      <div class="toolbar">
+        <p class="storage-text">自動分類されたファイル一覧</p>
+      </div>
+
+      <!-- カテゴリ概要グリッド -->
+      <div class="category-grid" id="categoryGrid">
+        <!-- JSで動的に構築：画像、文書、メディア、その他 -->
+      </div>
+
+      <!-- カテゴリ内の一括操作バー -->
+      <div class="toolbar">
+        <div class="toolbar-right">
+          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
+          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+        </div>
+      </div>
+
+      <!-- 選択中カテゴリのファイルリスト -->
+      <div class="file-list" id="categoryFileList">
+        <!-- JSで動的に構築 -->
+      </div>
+
+    </div>
+
+    <!-- リンク管理ビュー（最初は非表示） -->
+    <div id="linksView" style="display:none">
+
+      <div class="toolbar">
+        <p class="storage-text">あなたが発行した共有リンク</p>
+      </div>
+
+      <div class="file-list" id="linksList">
+        <!-- 発行したリンクが動的に追加される -->
+      </div>
+
     </div>
 
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="script.js"></script>
 
 <div id="previewModal" class="preview-modal">
