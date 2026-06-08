@@ -2072,12 +2072,19 @@ async function loadShared() {
             const clickHandler = `previewSharedFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
             const dlHandler = `downloadShared(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
 
+            // 共有ファイルのサムネイル表示
+            const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
+            const imgUrl = `${API_BASE}/shared/preview/${safeOwner}/${safeName}`;
+            const thumb = (isImg && !file.protected)
+                ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+                        onclick="previewSharedFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected}); event.stopPropagation();"
+                        onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
+                : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
+
             return `
             <div class="file-card">
                 <div class="file-info-clickable" onclick="${clickHandler}">
-                    <div class="file-icon ${bg}">
-                        <i class="fa-solid ${icon}"></i>
-                    </div>
+                    ${thumb}
                     <div>
                         <div class="file-name" title="${file.name}">${file.name}${lock}</div>
                         <div class="file-detail">共有者: ${file.owner} ・ ${file.size} ・ ${file.shared_at}</div>
