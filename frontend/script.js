@@ -791,16 +791,7 @@ async function loadFiles() {
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
-<<<<<<< HEAD
-                        <div
-                            class="file-name"
-                            onclick="previewImage('${file.name}')"
-                            style="cursor:pointer">
-                            ${file.name}
-                        </div>
-=======
                         <div class="file-name" title="${file.name}">${file.name}</div>
->>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
                         <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
                     </div>
                 </div>
@@ -1222,66 +1213,6 @@ function uploadFileData(file, index, total) {
     const formData = new FormData();
     formData.append("file", file);
 
-<<<<<<< HEAD
-    const progressBar =
-        document.getElementById("progressBar");
-
-    progressBar.style.width = "0%";
-
-    const xhr = new XMLHttpRequest();
-
-    xhr.open("POST", `${API_BASE}/upload`, true);
-
-    // =========================
-    // アップロード進行状況
-    // =========================
-    xhr.upload.onprogress = (e) => {
-
-        if (e.lengthComputable) {
-
-            const percent =
-                (e.loaded / e.total) * 100;
-
-            progressBar.style.width =
-                percent + "%";
-        }
-    };
-
-    // =========================
-    // アップロード完了
-    // =========================
-    xhr.onload = async () => {
-
-        if (xhr.status === 200) {
-
-            progressBar.style.width = "100%";
-
-            alert(`${file.name} をアップロードしました！`);
-
-            await loadFiles();
-            await loadStorage();
-
-            // 2秒後にバーを戻す
-            setTimeout(() => {
-                progressBar.style.width = "0%";
-            }, 2000);
-
-        } else {
-
-            alert("アップロード失敗");
-        }
-    };
-
-    // =========================
-    // 通信エラー
-    // =========================
-    xhr.onerror = () => {
-
-        alert("サーバー接続失敗");
-    };
-
-    xhr.send(formData);
-=======
     _ensureUploadProgressUI();
     const bar   = document.getElementById("uploadProgress");
     const fill  = document.getElementById("uploadProgressFill");
@@ -1336,7 +1267,6 @@ function uploadFileData(file, index, total) {
 
         xhr.send(formData);
     });
->>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
 }
 
 
@@ -2340,24 +2270,6 @@ window.addEventListener("load", () => {
         });
     }
 });
-<<<<<<< HEAD
-function previewImage(filename){
-
-    const modal =
-        document.getElementById("previewModal");
-
-    const img =
-        document.getElementById("previewImage");
-
-    img.src =
-        `${API_BASE}/download/${encodeURIComponent(filename)}`;
-
-    modal.style.display = "flex";
-
-    modal.onclick = () => {
-        modal.style.display = "none";
-    };
-=======
 
 
 // =====================================================
@@ -2772,5 +2684,4 @@ async function testWebhookSettings(e) {
     } finally {
         setLoading(btn, false);
     }
->>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
 }

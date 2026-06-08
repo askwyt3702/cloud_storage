@@ -8,6 +8,7 @@ sys.path.append(BASE_DIR)
 # FastAPI起動
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles  # 💡 【追加】StaticFilesのインポート
 
 # ログインAPI
 from backend.routes.login import (
@@ -101,8 +102,6 @@ app.include_router(
 # アップロード機能追加
 app.include_router(
     upload_router
-<<<<<<< HEAD
-=======
 )
 
 # 共有リンク機能追加
@@ -135,5 +134,4 @@ app.mount(
     "/static",
     StaticFiles(directory=os.path.join(BASE_DIR, "frontend")),
     name="static"
->>>>>>> a97c82f51195692cc8f659e27cd441e30bac5d6d
 )
