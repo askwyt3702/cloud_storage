@@ -7,6 +7,7 @@ sys.path.append(BASE_DIR)
 
 # FastAPI起動
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -59,28 +60,11 @@ app.add_middleware(
 
 
 # ==========================
-# トップ画面
+# トップ画面 → ログイン画面にリダイレクト
 # ==========================
 @app.get("/")
 def home():
-
-    return """
-    <h1>クラウドストレージ</h1>
-
-    <input placeholder='ユーザー名'>
-
-    <br><br>
-
-    <input
-    type='password'
-    placeholder='パスワード'>
-
-    <br><br>
-
-    <button>
-    ログイン
-    </button>
-    """
+    return RedirectResponse(url="/static/login.html")
 
 
 # ログイン機能追加
