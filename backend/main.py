@@ -31,7 +31,7 @@ from backend.routes.upload import (
     router as upload_router
 )
 
-# 共有リンクAPI（ギガファイル便方式）
+# 共有リンクAPI（ギガファイル便方式）cd backend
 from backend.routes.link import (
     router as link_router
 )
@@ -92,7 +92,6 @@ app.include_router(
 app.include_router(
     link_router
 )
-
 # バックアップ機能追加
 app.include_router(
     backup_router
