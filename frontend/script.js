@@ -194,7 +194,7 @@ async function previewFile(filename) {
     body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
 
     if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
-        body.innerHTML = `<img class="preview-image" src="${url}" alt="${filename}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
+        body.innerHTML = `<img class="preview-image" src="${url}" alt="${escapeHtml(filename)}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
     } else if (ext === "pdf") {
         body.innerHTML = `<iframe class="preview-frame" src="${url}" style="width:100%; height:70vh; border:none;"></iframe>`;
     } else if (["mp4","webm","mov"].includes(ext)) {
@@ -249,7 +249,7 @@ async function previewSharedFile(owner, filename, isProtected) {
     const url = `${API_BASE}/shared/preview/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}` + (password ? `?p=${encodeURIComponent(password)}` : "");
 
     if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
-        body.innerHTML = `<img class="preview-image" src="${url}" alt="${filename}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
+        body.innerHTML = `<img class="preview-image" src="${url}" alt="${escapeHtml(filename)}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
     } else if (ext === "pdf") {
         body.innerHTML = `<iframe class="preview-frame" src="${url}" style="width:100%; height:70vh; border:none;"></iframe>`;
     } else if (["mp4","webm","mov"].includes(ext)) {
@@ -426,7 +426,7 @@ function renderUploadTray() {
                     <i class="fa-solid ${icon}"></i>
                 </div>
                 <div class="tray-row-meta">
-                    <div class="tray-row-name" title="${f.name}">${f.name}</div>
+                    <div class="tray-row-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
                     <div class="tray-row-size">${_formatFileSize(f.size)}</div>
                 </div>
                 <button class="tray-row-remove" onclick="removeFromQueue(${i})" title="この行を削除">✕</button>
@@ -568,6 +568,22 @@ function toggleFavorite(filename) {
     loadFiles();
     const cat = document.getElementById("uploadedListView");
     if (cat && cat.style.display === "block") loadUploadedList();
+}
+
+
+// =====================================
+// HTMLエスケープ（XSS対策）
+//   ファイル名などのユーザー由来の文字列を innerHTML に
+//   埋め込む前に、HTMLとして解釈される文字を無害化する。
+//   例: "<img onerror=...>" → "&lt;img onerror=...&gt;"
+// =====================================
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
 }
 
 
@@ -830,7 +846,9 @@ async function loadFiles() {
 
         fileList.innerHTML = orderedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
-            const safeName = encodeURIComponent(file.name);
+            const safeName = encodeURIComponent(file.name);   // onclick/URL用（安全）
+            const dispName = escapeHtml(file.name);            // 画面表示用（XSS対策）
+            const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
             const starred = isFavorite(file.name);
 
             // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
@@ -839,7 +857,7 @@ async function loadFiles() {
             const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
             const imgUrl = `${API_BASE}/preview/${safeName}`;
             const thumb = isImg
-                ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+                ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
                         onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
                         onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
@@ -848,13 +866,13 @@ async function loadFiles() {
 
             return `
             <div class="file-card ${starred ? 'is-favorite' : ''}">
-                <input type="checkbox" class="file-check" value="${file.name}" style="margin-right: 12px;">
+                <input type="checkbox" class="file-check" value="${dispName}" style="margin-right: 12px;">
                 <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
-                        <div class="file-name" title="${file.name}">${file.name}</div>
-                        <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
+                        <div class="file-name" title="${dispName}">${dispName}</div>
+                        <div class="file-detail">${dispType} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.uploaded_at)}</div>
                     </div>
                 </div>
                 <div class="file-actions">
@@ -1462,7 +1480,7 @@ function showLinkModal(filename, data) {
 
     document.getElementById("link-modal-body").innerHTML = `
         <h2 class="link-modal-title">🔗 共有リンクを作成しました</h2>
-        <p class="link-modal-file">${filename}</p>
+        <p class="link-modal-file">${escapeHtml(filename)}</p>
 
         <div class="link-qr" id="link-qr"></div>
         <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
@@ -1529,7 +1547,7 @@ function showLinkQR(url, filename) {
 
     document.getElementById("link-modal-body").innerHTML = `
         <h2 class="link-modal-title">🔗 共有リンクのQRコード</h2>
-        <p class="link-modal-file">${filename}</p>
+        <p class="link-modal-file">${escapeHtml(filename)}</p>
 
         <div class="link-qr" id="link-qr"></div>
         <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
@@ -1611,8 +1629,8 @@ async function loadLinks() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name" title="${link.filename}">${link.filename}</div>
-                        <div class="file-detail" style="${expired ? 'color:#f87171' : ''}">${expireText}</div>
+                        <div class="file-name" title="${escapeHtml(link.filename)}">${escapeHtml(link.filename)}</div>
+                        <div class="file-detail" style="${expired ? 'color:#f87171' : ''}">${escapeHtml(expireText)}</div>
                     </div>
                 </div>
                 <div class="file-actions">
@@ -1827,6 +1845,8 @@ async function loadTrash() {
         trashList.innerHTML = sortedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeName = encodeURIComponent(file.name);
+            const dispName = escapeHtml(file.name);
+            const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
             return `
             <div class="file-card">
                 <div class="file-info">
@@ -1834,8 +1854,8 @@ async function loadTrash() {
                         <i class="fa-solid ${icon}"></i>
                     </div>
                     <div>
-                        <div class="file-name" title="${file.name}">${file.name}</div>
-                        <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ 削除: ${file.deleted_at}</div>
+                        <div class="file-name" title="${dispName}">${dispName}</div>
+                        <div class="file-detail">${dispType} ・ ${escapeHtml(file.size)} ・ 削除: ${escapeHtml(file.deleted_at)}</div>
                     </div>
                 </div>
                 <div class="file-actions">
@@ -2058,6 +2078,8 @@ async function loadShared() {
             const { icon, bg } = getFileIcon(file.name);
             const safeOwner = encodeURIComponent(file.owner);
             const safeName  = encodeURIComponent(file.name);
+            const dispName  = escapeHtml(file.name);    // 画面表示用（XSS対策）
+            const dispOwner = escapeHtml(file.owner);
 
             // パスワード保護されているファイルには鍵マークを付ける
             const lock = file.protected ? " 🔒" : "";
@@ -2076,7 +2098,7 @@ async function loadShared() {
             const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
             const imgUrl = `${API_BASE}/shared/preview/${safeOwner}/${safeName}`;
             const thumb = (isImg && !file.protected)
-                ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+                ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
                         onclick="previewSharedFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected}); event.stopPropagation();"
                         onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
@@ -2086,8 +2108,8 @@ async function loadShared() {
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
-                        <div class="file-name" title="${file.name}">${file.name}${lock}</div>
-                        <div class="file-detail">共有者: ${file.owner} ・ ${file.size} ・ ${file.shared_at}</div>
+                        <div class="file-name" title="${dispName}">${dispName}${lock}</div>
+                        <div class="file-detail">共有者: ${dispOwner} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.shared_at)}</div>
                     </div>
                 </div>
                 <div class="file-actions">
@@ -2459,11 +2481,13 @@ function renderCategoryFileList() {
     list.innerHTML = filtered.map(file => {
         const { icon, bg } = getFileIcon(file.name);
         const safeName = encodeURIComponent(file.name);
+        const dispName = escapeHtml(file.name);
+        const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
 
         const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
         const imgUrl = `${API_BASE}/preview/${safeName}`;
         const thumb = isImg
-            ? `<img class="file-thumb" src="${imgUrl}" alt="${file.name}"
+            ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
                     onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
                     onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
             : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
@@ -2475,13 +2499,13 @@ function renderCategoryFileList() {
         return `
         <div class="file-card">
             <div class="file-info" style="display:flex; align-items:center; width:100%;">
-                <input type="checkbox" class="file-check" value="${file.name}" style="margin-right:12px;">
+                <input type="checkbox" class="file-check" value="${dispName}" style="margin-right:12px;">
                 <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り" style="margin-right:12px;">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}" style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;">
                     ${thumb}
                     <div>
-                        <div class="file-name" title="${file.name}">${file.name}</div>
-                        <div class="file-detail">${file.file_type.toUpperCase().replace(".", "")} ・ ${file.size} ・ ${file.uploaded_at}</div>
+                        <div class="file-name" title="${dispName}">${dispName}</div>
+                        <div class="file-detail">${dispType} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.uploaded_at)}</div>
                     </div>
                 </div>
             </div>
