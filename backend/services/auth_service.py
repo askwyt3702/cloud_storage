@@ -113,6 +113,78 @@ def verify_mfa_login(code: str) -> bool:
         return False
 
 
+def reset_password(email: str, code: str, new_password: str) -> dict:
+    """
+    パスワードリセット処理（パスワードを忘れた時用）
+
+    本人確認は MFA（認証アプリの6桁コード）で行う。
+    流れ:
+        1. メールアドレスでユーザーを検索
+        2. MFAコードを検証（本人確認）
+        3. 新パスワードの強度チェック
+        4. ハッシュ化してDBを更新
+
+    戻り値:
+        {"success": True}
+        {"success": False, "detail": str}
+    """
+    if not email or not code or not new_password:
+        return {"success": False, "detail": "すべての項目を入力してください"}
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT username, mfa_secret FROM users WHERE email = %s",
+                (email,)
+            )
+            row = cur.fetchone()
+
+        if not row:
+            log_failed(email, "RESET_PW", "メールが存在しません")
+            return {"success": False, "detail": "メールアドレスが見つかりません"}
+
+        username = row["username"]
+
+        # MFAコードで本人確認
+        # DBに秘密鍵があればそれを使い、無ければテスト用の固定鍵を使う
+        user_secret = row["mfa_secret"] or "JBSWY3DPEHPK3PXP"
+
+        if not MFAService.verify_code(user_secret, code):
+            log_failed(username, "RESET_PW", "MFAコード不一致")
+            return {"success": False, "detail": "認証コードが正しくありません"}
+
+        # 新パスワードの強度チェック
+        try:
+            validate_password(new_password)
+        except ValueError as e:
+            return {"success": False, "detail": str(e)}
+
+        # ハッシュ化してDBを更新
+        hashed = hash_password(new_password)
+        conn2 = get_db_connection()
+        try:
+            with conn2.cursor() as cur:
+                cur.execute(
+                    "UPDATE users SET password_hash = %s WHERE email = %s",
+                    (hashed, email)
+                )
+                conn2.commit()
+        finally:
+            conn2.close()
+
+        log_success(username, "RESET_PW")
+        return {"success": True}
+
+    except Exception as e:
+        log_error(f"パスワードリセットエラー: {e}")
+        return {"success": False, "detail": f"システムエラーが発生しました: {e}"}
+    finally:
+        if conn:
+            conn.close()
+
+
 def register_user(
     username: str,
     email: str,

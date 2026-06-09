@@ -788,6 +788,56 @@ async function register(e) {
 
 
 // =====================================
+// パスワードリセット（パスワードを忘れた時）
+// メール＋MFAコードで本人確認 → 新パスワード設定
+// =====================================
+async function resetPassword(e) {
+    const btn = _btnFromEvent(e);
+
+    const email     = document.getElementById("reset-email").value;
+    const code      = document.getElementById("reset-code").value;
+    const newPw      = document.getElementById("reset-new-password").value;
+    const newPw2    = document.getElementById("reset-new-password2").value;
+
+    if (!email || !code || !newPw || !newPw2) {
+        notify("全て入力してください");
+        return;
+    }
+    if (newPw !== newPw2) {
+        notify("新しいパスワードが一致しません");
+        return;
+    }
+    if (code.length !== 6) {
+        notify("認証コードは6桁です");
+        return;
+    }
+
+    setLoading(btn, true);
+    try {
+        const res = await fetch(`${API_BASE}/reset-password`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, code, new_password: newPw })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            notify(data.message || "パスワードを変更しました");
+            location.href = "login.html";
+        } else {
+            const err = await res.json();
+            const msg = typeof err.detail === "string" ? err.detail : "変更に失敗しました";
+            notify(msg);
+        }
+    } catch (err) {
+        notify("サーバーに接続できません");
+    } finally {
+        setLoading(btn, false);
+    }
+}
+
+
+// =====================================
 // ログアウトAPI呼び出し
 // =====================================
 async function logout() {
