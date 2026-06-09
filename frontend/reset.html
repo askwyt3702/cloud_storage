@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>パスワードの再設定</title>
+
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="login-box">
+
+  <h1>パスワード再設定</h1>
+
+  <p class="register-text" style="margin-bottom:6px;">
+    登録メールアドレスと、認証アプリの6桁コードで本人確認します
+  </p>
+
+  <input type="email" id="reset-email" placeholder="メールアドレス">
+
+  <input type="text" id="reset-code" placeholder="認証コード（6桁）" maxlength="6"
+         style="text-align:center; letter-spacing:2px;">
+
+  <input type="password" id="reset-new-password"
+         placeholder="新しいパスワード（8文字以上・大文字・数字・記号）">
+
+  <input type="password" id="reset-new-password2" placeholder="新しいパスワード（確認）">
+
+  <button onclick="resetPassword(event)">
+    パスワードを変更
+  </button>
+
+  <p class="register-text">
+    <a href="login.html">← ログインに戻る</a>
+  </p>
+
+</div>
+
+  <script src="script.js"></script>
+
+</body>
+</html>

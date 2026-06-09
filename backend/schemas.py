@@ -203,3 +203,13 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
+
+
+# =====================================
+# パスワードリセットリクエスト
+# （メール＋MFAコードで本人確認 → 新パスワード設定）
+# =====================================
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str

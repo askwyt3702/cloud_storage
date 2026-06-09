@@ -1,13 +1,14 @@
 from fastapi import APIRouter, HTTPException, Body
 
-from backend.schemas import LoginRequest, RegisterRequest
+from backend.schemas import LoginRequest, RegisterRequest, ResetPasswordRequest
 from backend.services.auth_service import (
     login_user,
     logout_user,
     get_current_user,
     get_current_role,
     register_user,
-    verify_mfa_login
+    verify_mfa_login,
+    reset_password
 )
 
 router = APIRouter()
@@ -126,6 +127,37 @@ def login_mfa(code: str = Body(..., embed=True)):
     raise HTTPException(
         status_code=401,
         detail="認証コードが正しくないか、有効期限が切れています"
+    )
+
+
+# =====================================
+# パスワードリセットAPI（パスワードを忘れた時）
+#
+# URL:
+# POST /reset-password
+#
+# パラメータ (JSON Body):
+#   email        : 登録メールアドレス
+#   code         : MFA（認証アプリ）の6桁コード
+#   new_password : 新しいパスワード
+#
+# エラー:
+#   400 : 入力不備 / コード不一致 / パスワード強度不足 / メールなし
+# =====================================
+@router.post("/reset-password")
+def reset_pw(body: ResetPasswordRequest):
+
+    result = reset_password(body.email, body.code, body.new_password)
+
+    if result["success"]:
+        return {
+            "success": True,
+            "message": "パスワードを変更しました。新しいパスワードでログインしてください"
+        }
+
+    raise HTTPException(
+        status_code=400,
+        detail=result["detail"]
     )
 
 
