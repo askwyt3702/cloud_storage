@@ -1,9 +1,7 @@
-# 環境構築： pip install -r requirements.txt
-
 fastapi
 uvicorn
-python-multipart   # ファイルアップロード（UploadFile）に必須
+python-multipart
 bcrypt
-psycopg2-binary    # PostgreSQL 接続ドライバ
+psycopg2-binary
 pydantic
 pyotp
