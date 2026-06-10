@@ -861,6 +861,147 @@ input:-webkit-autofill:focus{
 }
 
 
+/* ===== カテゴリフィルタチップ ===== */
+.filter-chips{
+    display:flex;
+    gap:8px;
+
+    margin-bottom:16px;
+
+    overflow-x:auto;
+    scrollbar-width:none;
+}
+.filter-chips::-webkit-scrollbar{ display:none; }
+
+.chip{
+    flex:0 0 auto;
+
+    padding:8px 16px;
+
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,0.12);
+
+    background:rgba(255,255,255,0.05);
+    color:#94a3b8;
+
+    font-size:13px;
+    font-weight:bold;
+
+    cursor:pointer;
+    box-shadow:none;
+    transition:0.2s;
+}
+.chip:hover{
+    background:rgba(255,255,255,0.10);
+    color:#e2e8f0;
+    transform:none;
+    box-shadow:none;
+}
+.chip.active{
+    background:linear-gradient(135deg, #2563eb, #3b82f6);
+    border-color:transparent;
+    color:white;
+}
+
+[data-theme="light"] .chip{
+    background:rgba(0,0,0,0.04);
+    border:1px solid rgba(0,0,0,0.10);
+    color:#64748b;
+}
+[data-theme="light"] .chip:hover{
+    background:rgba(0,0,0,0.08);
+    color:#0f172a;
+}
+[data-theme="light"] .chip.active{
+    background:linear-gradient(135deg, #2563eb, #3b82f6);
+    color:white;
+}
+
+
+/* ===== 右クリックメニュー（コンテキストメニュー） ===== */
+.context-menu{
+    position:fixed;
+    z-index:10002;
+
+    min-width:200px;
+    padding:6px;
+
+    background:#1e293b;
+    border:1px solid rgba(255,255,255,0.12);
+    border-radius:12px;
+
+    box-shadow:0 12px 35px rgba(0,0,0,0.5);
+
+    animation:ctx-in 0.12s ease;
+}
+.context-menu[hidden]{ display:none; }
+
+@keyframes ctx-in{
+    from{ opacity:0; transform:scale(0.96); }
+    to  { opacity:1; transform:scale(1); }
+}
+
+.context-menu-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    width:100%;
+    padding:9px 12px;
+
+    background:transparent;
+    border:none;
+    border-radius:8px;
+    box-shadow:none;
+
+    color:#e2e8f0;
+    font-size:14px;
+    text-align:left;
+
+    cursor:pointer;
+    transition:background 0.12s;
+}
+.context-menu-item:hover{
+    background:rgba(59,130,246,0.18);
+    transform:none;
+    box-shadow:none;
+}
+.context-menu-item.danger{
+    color:#f87171;
+}
+.context-menu-item.danger:hover{
+    background:rgba(239,68,68,0.15);
+}
+.context-menu-icon{
+    width:20px;
+    text-align:center;
+    flex-shrink:0;
+}
+.context-menu-divider{
+    height:1px;
+    margin:5px 8px;
+    background:rgba(255,255,255,0.10);
+}
+
+[data-theme="light"] .context-menu{
+    background:white;
+    border:1px solid rgba(0,0,0,0.10);
+    box-shadow:0 12px 35px rgba(0,0,0,0.18);
+}
+[data-theme="light"] .context-menu-item{
+    color:#0f172a;
+}
+[data-theme="light"] .context-menu-item:hover{
+    background:rgba(59,130,246,0.10);
+}
+[data-theme="light"] .context-menu-item.danger{
+    color:#dc2626;
+}
+[data-theme="light"] .context-menu-divider{
+    background:rgba(0,0,0,0.08);
+}
+
+
 /* ===== 操作バー（並び替え・一括削除・ゴミ箱） ===== */
 .toolbar{
     display:flex;

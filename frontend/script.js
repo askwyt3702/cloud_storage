@@ -949,7 +949,7 @@ async function loadFiles() {
             const clickHandler = `previewFile(decodeURIComponent('${safeName}'))`;
 
             return `
-            <div class="file-card ${starred ? 'is-favorite' : ''}">
+            <div class="file-card ${starred ? 'is-favorite' : ''}" data-ctx="main" data-filename="${dispName}">
                 <input type="checkbox" class="file-check" value="${dispName}" style="margin-right: 12px;">
                 <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}">
@@ -1012,6 +1012,18 @@ if (searchInput) {
 // =====================================
 // ファイル名で絞り込み（クライアント側フィルタ）
 // =====================================
+// カテゴリフィルタの状態（"all" / "image" / "document" / "media" / "other"）
+let _categoryFilter = "all";
+
+// カテゴリチップをクリックしたとき
+function setCategoryFilter(cat, btn) {
+    _categoryFilter = cat;
+    document.querySelectorAll("#categoryChips .chip").forEach(c => {
+        c.classList.toggle("active", c === btn);
+    });
+    filterFiles();
+}
+
 function filterFiles() {
     const input = document.getElementById("fileSearch");
     const clearBtn = document.getElementById("searchClear");
@@ -1026,21 +1038,30 @@ function filterFiles() {
     cards.forEach(card => {
         const nameEl = card.querySelector(".file-name");
         const name = nameEl ? (nameEl.getAttribute("title") || nameEl.textContent).toLowerCase() : "";
-        const match = name.includes(q);
+
+        // 検索文字列とカテゴリの両方に一致したものだけ表示
+        const matchText = name.includes(q);
+        const matchCat  = (_categoryFilter === "all")
+            || (getCategoryByFilename(name) === _categoryFilter);
+
+        const match = matchText && matchCat;
         card.style.display = match ? "" : "none";
         if (match) shown++;
     });
 
-    // 検索結果が0件のときのメッセージ
+    // 絞り込み結果が0件のときのメッセージ
     let noResult = document.getElementById("searchNoResult");
-    if (q && shown === 0 && cards.length > 0) {
+    const filtering = q || _categoryFilter !== "all";
+    if (filtering && shown === 0 && cards.length > 0) {
         if (!noResult) {
             noResult = document.createElement("p");
             noResult.id = "searchNoResult";
             noResult.style.cssText = "color:#94a3b8;text-align:center;padding:30px";
             document.getElementById("fileList").appendChild(noResult);
         }
-        noResult.textContent = `「${input.value.trim()}」に一致するファイルがありません`;
+        noResult.textContent = q
+            ? `「${input.value.trim()}」に一致するファイルがありません`
+            : "このカテゴリのファイルはありません";
         noResult.style.display = "block";
     } else if (noResult) {
         noResult.style.display = "none";
@@ -1055,6 +1076,122 @@ function clearFileSearch() {
 }
 
 
+// =====================================================
+// 右クリックメニュー（コンテキストメニュー）
+//   file-card の data-ctx 属性を見て、その場に合った
+//   メニューを表示する（main / trash / shared / link）
+// =====================================================
+function _ensureContextMenuEl() {
+    let m = document.getElementById("context-menu");
+    if (!m) {
+        m = document.createElement("div");
+        m.id = "context-menu";
+        m.className = "context-menu";
+        m.hidden = true;
+        document.body.appendChild(m);
+    }
+    return m;
+}
+
+function hideContextMenu() {
+    const m = document.getElementById("context-menu");
+    if (m) m.hidden = true;
+}
+
+function showContextMenu(x, y, items) {
+    const m = _ensureContextMenuEl();
+
+    m.innerHTML = items.map((it, i) => {
+        if (it.divider) return `<div class="context-menu-divider"></div>`;
+        return `<button class="context-menu-item ${it.danger ? 'danger' : ''}" data-idx="${i}">
+                    <span class="context-menu-icon">${it.icon || ""}</span>${escapeHtml(it.label)}
+                </button>`;
+    }).join("");
+
+    // 項目クリックで対応するアクションを実行
+    m.querySelectorAll(".context-menu-item").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            hideContextMenu();
+            const item = items[parseInt(btn.dataset.idx, 10)];
+            if (item && typeof item.action === "function") item.action();
+        });
+    });
+
+    // 一旦表示してサイズを測り、画面からはみ出さない位置に調整
+    m.hidden = false;
+    const rect = m.getBoundingClientRect();
+    let px = x, py = y;
+    if (px + rect.width  > window.innerWidth)  px = window.innerWidth  - rect.width  - 8;
+    if (py + rect.height > window.innerHeight) py = window.innerHeight - rect.height - 8;
+    m.style.left = px + "px";
+    m.style.top  = py + "px";
+}
+
+// file-card の右クリックを拾う（イベント委譲なので再描画されても効く）
+function setupContextMenus() {
+    document.addEventListener("contextmenu", (e) => {
+        const card = e.target.closest(".file-card[data-ctx]");
+        if (!card) { hideContextMenu(); return; }
+
+        e.preventDefault();
+
+        const ctx  = card.dataset.ctx;
+        const name = card.dataset.filename;
+        let items = [];
+
+        if (ctx === "main") {
+            const fav = isFavorite(name);
+            items = [
+                { icon: "👁", label: "プレビュー",            action: () => previewFile(name) },
+                { icon: "⬇", label: "ダウンロード",          action: () => downloadFile(name) },
+                { icon: fav ? "★" : "☆", label: fav ? "お気に入りを外す" : "お気に入りに追加", action: () => toggleFavorite(name) },
+                { divider: true },
+                { icon: "✏", label: "名前を変更",            action: () => renameFile(name) },
+                { icon: "🔗", label: "共有する",              action: () => shareFile(name) },
+                { divider: true },
+                { icon: "🗑", label: "削除（ゴミ箱へ）",      action: () => deleteFile(name), danger: true },
+            ];
+        } else if (ctx === "trash") {
+            items = [
+                { icon: "↩", label: "復元する",              action: () => restoreFile(name) },
+                { divider: true },
+                { icon: "✕", label: "完全に削除",            action: () => permanentDelete(name), danger: true },
+            ];
+        } else if (ctx === "shared") {
+            const owner = card.dataset.owner;
+            const prot  = card.dataset.protected === "true";
+            const me    = sessionStorage.getItem("username");
+            items = [
+                { icon: "👁", label: "プレビュー",            action: () => previewSharedFile(owner, name, prot) },
+                { icon: "⬇", label: "ダウンロード",          action: () => downloadShared(owner, name, prot) },
+            ];
+            if (owner === me) {
+                items.push({ divider: true });
+                items.push({ icon: "🔗", label: "リンク作成",  action: () => createShareLink(name) });
+                items.push({ icon: "✕", label: "共有を解除",  action: () => unshareFile(owner, name), danger: true });
+            }
+        } else if (ctx === "link") {
+            const url   = card.dataset.url;
+            const token = card.dataset.token;
+            items = [
+                { icon: "📋", label: "URLをコピー",           action: () => copyUrlText(url) },
+                { icon: "📱", label: "QRコードを表示",        action: () => showLinkQR(url, name) },
+                { divider: true },
+                { icon: "✕", label: "リンクを無効化",        action: () => deleteLink(token), danger: true },
+            ];
+        }
+
+        if (items.length) showContextMenu(e.clientX, e.clientY, items);
+    });
+
+    // どこかをクリック / Esc / スクロールで閉じる
+    document.addEventListener("click", hideContextMenu);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideContextMenu(); });
+    window.addEventListener("scroll", hideContextMenu, true);
+}
+
+
 // 現在表示中のファイルリストのID（マイファイル or カテゴリ別）を返す
 function _activeListId() {
     const cat = document.getElementById("uploadedListView");
@@ -1062,22 +1199,33 @@ function _activeListId() {
     return "fileList";
 }
 
+// 表示中（フィルタで隠れていない）カードのチェックボックスだけを取得
+function _visibleChecks(id) {
+    return Array.from(document.querySelectorAll(`#${id} .file-card`))
+        .filter(card => card.style.display !== "none")
+        .map(card => card.querySelector(".file-check"))
+        .filter(Boolean);
+}
+
 // 表示中リストのチェック済みファイル名を取得
+// （検索・カテゴリで非表示のものは、チェックされていても対象外にする）
 function _activeCheckedNames() {
     const id = _activeListId();
-    const checks = document.querySelectorAll(`#${id} .file-check:checked`);
-    return Array.from(checks).map(c => c.value);
+    return _visibleChecks(id).filter(c => c.checked).map(c => c.value);
 }
 
 
 // =====================================
 // 全選択 / 全解除の切り替え
+// （絞り込み中は「表示されているものだけ」を対象にする）
 // =====================================
 function toggleSelectAll(btn) {
     const id = _activeListId();
-    const checks = document.querySelectorAll(`#${id} .file-check`);
+    const checks = _visibleChecks(id);
+    if (checks.length === 0) return;
+
     // 1つでも未チェックがあれば「全部チェック」、全部チェック済みなら「全解除」
-    const allChecked = Array.from(checks).every(c => c.checked);
+    const allChecked = checks.every(c => c.checked);
 
     checks.forEach(c => c.checked = !allChecked);
     btn.textContent = allChecked ? "☑ 全選択" : "☐ 全解除";
@@ -1707,7 +1855,7 @@ async function loadLinks() {
             const safeUrl = encodeURIComponent(link.url);
 
             return `
-            <div class="file-card">
+            <div class="file-card" data-ctx="link" data-filename="${escapeHtml(link.filename)}" data-url="${escapeHtml(link.url)}" data-token="${escapeHtml(link.token)}">
                 <div class="file-info">
                     <div class="file-icon ${bg}">
                         <i class="fa-solid ${icon}"></i>
@@ -1932,7 +2080,7 @@ async function loadTrash() {
             const dispName = escapeHtml(file.name);
             const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
             return `
-            <div class="file-card">
+            <div class="file-card" data-ctx="trash" data-filename="${dispName}">
                 <div class="file-info">
                     <div class="file-icon ${bg}">
                         <i class="fa-solid ${icon}"></i>
@@ -2188,7 +2336,7 @@ async function loadShared() {
                 : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
 
             return `
-            <div class="file-card">
+            <div class="file-card" data-ctx="shared" data-filename="${dispName}" data-owner="${dispOwner}" data-protected="${file.protected}">
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
@@ -2440,6 +2588,7 @@ window.addEventListener("load", () => {
     loadDashboardStats();
     setupDropArea();
     _ensureUploadProgressUI();
+    setupContextMenus();   // ファイルカードの右クリックメニュー
 
     // ファイル選択直後にトレイへ追加（複数回の選択も累積できる）
     const fileInput = document.getElementById("fileInput");
@@ -2584,7 +2733,7 @@ function renderCategoryFileList() {
         const starred = isFavorite(file.name);
 
         return `
-        <div class="file-card">
+        <div class="file-card" data-ctx="main" data-filename="${dispName}">
             <div class="file-info" style="display:flex; align-items:center; width:100%;">
                 <input type="checkbox" class="file-check" value="${dispName}" style="margin-right:12px;">
                 <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り" style="margin-right:12px;">${starred ? '★' : '☆'}</button>

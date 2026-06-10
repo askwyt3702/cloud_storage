@@ -40,12 +40,12 @@
     </div>
 
     <!-- タブナビゲーション（横スクロール対応・下線がスライド） -->
+    <!-- ※「カテゴリ別」タブは「マイファイル」のカテゴリフィルタに統合（uploadedListViewのコードは temporarily 非表示で保持） -->
     <div class="tab-bar" id="tabBar">
-      <button class="tab active" data-view="main"         onclick="switchTab('main')">📊 マイファイル</button>
-      <button class="tab"        data-view="uploadedList" onclick="switchTab('uploadedList')">🗂 カテゴリ別</button>
-      <button class="tab"        data-view="shared"       onclick="switchTab('shared')">📂 共有</button>
-      <button class="tab"        data-view="links"        onclick="switchTab('links')">🔗 リンク</button>
-      <button class="tab"        data-view="trash"        onclick="switchTab('trash')">🗑 ゴミ箱</button>
+      <button class="tab active" data-view="main"   onclick="switchTab('main')">📊 マイファイル</button>
+      <button class="tab"        data-view="shared" onclick="switchTab('shared')">📂 共有</button>
+      <button class="tab"        data-view="links"  onclick="switchTab('links')">🔗 リンク</button>
+      <button class="tab"        data-view="trash"  onclick="switchTab('trash')">🗑 ゴミ箱</button>
       <span class="tab-indicator" id="tabIndicator"></span>
     </div>
 
@@ -137,6 +137,15 @@
         <i class="fa-solid fa-magnifying-glass"></i>
         <input type="text" id="fileSearch" placeholder="ファイル名で絞り込み..." oninput="filterFiles()">
         <button class="search-clear" id="searchClear" onclick="clearFileSearch()" style="display:none">✕</button>
+      </div>
+
+      <!-- カテゴリフィルタチップ（旧カテゴリ別タブの機能を統合） -->
+      <div class="filter-chips" id="categoryChips">
+        <button class="chip active" data-cat="all"      onclick="setCategoryFilter('all', this)">すべて</button>
+        <button class="chip"        data-cat="image"    onclick="setCategoryFilter('image', this)">🖼 画像</button>
+        <button class="chip"        data-cat="document" onclick="setCategoryFilter('document', this)">📄 文書</button>
+        <button class="chip"        data-cat="media"    onclick="setCategoryFilter('media', this)">🎬 メディア</button>
+        <button class="chip"        data-cat="other"    onclick="setCategoryFilter('other', this)">📦 その他</button>
       </div>
 
       <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
