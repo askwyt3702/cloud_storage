@@ -34,6 +34,40 @@ function toggleTheme() {
 
 
 // =====================================
+// 表示モード（リスト / グリッド）の切替
+//   localStorage に保存して次回も維持する
+// =====================================
+function _getViewMode() {
+    try { return localStorage.getItem("viewMode") || "list"; }
+    catch (_) { return "list"; }
+}
+
+function applyViewMode() {
+    const grid = _getViewMode() === "grid";
+
+    // マイファイル一覧とカテゴリ別一覧の両方に適用
+    ["fileList", "categoryFileList"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("grid-view", grid);
+    });
+
+    // ボタンの表示を「次に切り替わるモード」に合わせる
+    const btn = document.getElementById("viewToggleBtn");
+    if (btn) {
+        btn.innerHTML = grid
+            ? '<i class="fa-solid fa-list"></i> リスト'
+            : '<i class="fa-solid fa-table-cells"></i> タイル';
+    }
+}
+
+function toggleViewMode() {
+    const next = _getViewMode() === "grid" ? "list" : "grid";
+    try { localStorage.setItem("viewMode", next); } catch (_) {}
+    applyViewMode();
+}
+
+
+// =====================================
 // ログイン成功演出（緑のチェックマークを出してから遷移）
 //   onDone: アニメ後に実行するコールバック（画面遷移など）
 // =====================================
@@ -2389,6 +2423,9 @@ window.addEventListener("load", () => {
     applyHeaderUser();
     // 現在のテーマアイコンに合わせて切替ボタンを更新
     applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark");
+
+    // 前回の表示モード（リスト/グリッド）を復元
+    applyViewMode();
 
     // タブの下線インジケーターを初期位置（マイファイル）に合わせる
     updateTabIndicator("main");

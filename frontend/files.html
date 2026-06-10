@@ -142,14 +142,20 @@
       <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
       <div class="toolbar">
 
-        <select id="sortSelect" class="sort-select" onchange="loadFiles()">
-          <option value="name_asc">名前順（A→Z）</option>
-          <option value="name_desc">名前順（Z→A）</option>
-          <option value="date_desc">新しい順</option>
-          <option value="date_asc">古い順</option>
-          <option value="size_desc">サイズ大きい順</option>
-          <option value="size_asc">サイズ小さい順</option>
-        </select>
+        <div class="toolbar-left">
+          <select id="sortSelect" class="sort-select" onchange="loadFiles()">
+            <option value="name_asc">名前順（A→Z）</option>
+            <option value="name_desc">名前順（Z→A）</option>
+            <option value="date_desc">新しい順</option>
+            <option value="date_asc">古い順</option>
+            <option value="size_desc">サイズ大きい順</option>
+            <option value="size_asc">サイズ小さい順</option>
+          </select>
+
+          <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleViewMode()" title="表示切替">
+            <i class="fa-solid fa-table-cells"></i> タイル
+          </button>
+        </div>
 
         <div class="toolbar-right">
           <button onclick="toggleSelectAll(this)">☑ 全選択</button>
