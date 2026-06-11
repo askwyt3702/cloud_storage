@@ -86,6 +86,20 @@ const TRANSLATIONS = {
         title_files: "マイファイル - Cloud Storage",
         title_settings: "設定 - Cloud Storage",
         title_share: "共有ファイル - Cloud Storage",
+        copy_url_btn: "URLコピー",
+        disable_btn: "無効化",
+        qr_btn: "QR",
+        restore: "復元",
+        expires_none: "有効期限: なし（無期限）",
+        expires_none_brief: "有効期限: なし",
+        password_protected: "🔒 パスワード保護あり",
+        password_none: "パスワード: なし",
+        share_link_created: "🔗 共有リンクを作成しました",
+        share_link_qr: "🔗 共有リンクのQRコード",
+        qr_hint: "スマホのカメラで読み取ってアクセスできます",
+        copy: "コピー",
+        share_hint: "${t("share_hint")}",
+        expired: "期限切れ",
         menu_preview: "プレビュー",
         menu_download: "ダウンロード",
         menu_unstar: "お気に入りを外す",
@@ -345,6 +359,20 @@ const TRANSLATIONS = {
         title_files: "My Files - Cloud Storage",
         title_settings: "Settings - Cloud Storage",
         title_share: "Shared File - Cloud Storage",
+        copy_url_btn: "Copy URL",
+        disable_btn: "Disable",
+        qr_btn: "QR",
+        restore: "Restore",
+        expires_none: "Expires: None (Unlimited)",
+        expires_none_brief: "Expires: None",
+        password_protected: "🔒 Password Protected",
+        password_none: "Password: None",
+        share_link_created: "🔗 Shared Link Created",
+        share_link_qr: "🔗 Shared Link QR Code",
+        qr_hint: "Scan with smartphone camera to access",
+        copy: "Copy",
+        share_hint: "Anyone with this URL can download the file without logging in.",
+        expired: "Expired",
         menu_preview: "Preview",
         menu_download: "Download",
         menu_unstar: "Remove Favorite",
@@ -1598,11 +1626,11 @@ async function loadFiles() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
-                    <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
-                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
-                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
-                    <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>
+                    <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">${t("download_btn_text")}</button>
+                    <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="${t("menu_preview")}"><i class="fa-solid fa-eye"></i></button>
+                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="${t("menu_rename")}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="${t("menu_share")}"><i class="fa-solid fa-share-nodes"></i></button>
+                    <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="${t("delete")}"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>`;
         }).join("");
@@ -2354,27 +2382,27 @@ function showLinkModal(filename, data) {
     _ensureLinkModal();
 
     const expireText = data.expires_at
-        ? `有効期限: ${new Date(data.expires_at).toLocaleString()}`
-        : "有効期限: なし（無期限）";
-    const pwText = data.protected ? "🔒 パスワード保護あり" : "パスワード: なし";
+        ? t("expires_at", { time: new Date(data.expires_at).toLocaleString() })
+        : t("expires_none");
+    const pwText = data.protected ? t("password_protected") : t("password_none");
 
     document.getElementById("link-modal-body").innerHTML = `
-        <h2 class="link-modal-title">🔗 共有リンクを作成しました</h2>
+        <h2 class="link-modal-title">${t("share_link_created")}</h2>
         <p class="link-modal-file">${escapeHtml(filename)}</p>
 
         <div class="link-qr" id="link-qr"></div>
-        <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
+        <p class="link-qr-hint">${t("qr_hint")}</p>
 
         <div class="link-url-row">
             <input type="text" id="link-url-input" class="link-url-input" value="${data.url}" readonly>
-            <button class="link-copy-btn" onclick="copyShareLink()">コピー</button>
+            <button class="link-copy-btn" onclick="copyShareLink()">${t("copy")}</button>
         </div>
 
         <p class="link-modal-meta">${expireText}</p>
         <p class="link-modal-meta">${pwText}</p>
 
         <p class="link-modal-hint">
-            このURLを知っている人なら、ログインなしでダウンロードできます。
+            ${t("share_hint")}
         </p>
     `;
 
@@ -2426,15 +2454,15 @@ function showLinkQR(url, filename) {
     _ensureLinkModal();
 
     document.getElementById("link-modal-body").innerHTML = `
-        <h2 class="link-modal-title">🔗 共有リンクのQRコード</h2>
+        <h2 class="link-modal-title">${t("share_link_qr")}</h2>
         <p class="link-modal-file">${escapeHtml(filename)}</p>
 
         <div class="link-qr" id="link-qr"></div>
-        <p class="link-qr-hint">スマホのカメラで読み取ってアクセスできます</p>
+        <p class="link-qr-hint">${t("qr_hint")}</p>
 
         <div class="link-url-row">
             <input type="text" id="link-url-input" class="link-url-input" value="${url}" readonly>
-            <button class="link-copy-btn" onclick="copyShareLink()">コピー</button>
+            <button class="link-copy-btn" onclick="copyShareLink()">${t("copy")}</button>
         </div>
     `;
 
@@ -2487,12 +2515,12 @@ async function loadLinks() {
             const safeToken = encodeURIComponent(link.token);
 
             // 有効期限の表示
-            let expireText = "有効期限: なし";
+            let expireText = t("expires_none_brief");
             let expired = false;
             if (link.expires_at) {
                 const d = new Date(link.expires_at);
                 expired = d < new Date();
-                expireText = `有効期限: ${d.toLocaleString()}${expired ? "（期限切れ）" : ""}`;
+                expireText = t("expires_at", { time: d.toLocaleString() }) + (expired ? ` (${t("expired")})` : "");
             }
 
             // URLは onclick に渡すため一旦エンコードし、関数側でデコード
@@ -2510,9 +2538,9 @@ async function loadLinks() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="copyUrlText(decodeURIComponent('${safeUrl}'))">📋 URLコピー</button>
-                    <button class="link-btn"     onclick="showLinkQR(decodeURIComponent('${safeUrl}'), decodeURIComponent('${encodeURIComponent(link.filename)}'))">📱 QR</button>
-                    <button class="delete-btn"   onclick="deleteLink(decodeURIComponent('${safeToken}'))">✕ 無効化</button>
+                    <button class="download-btn" onclick="copyUrlText(decodeURIComponent('${safeUrl}'))">📋 ${t("copy_url_btn")}</button>
+                    <button class="link-btn"     onclick="showLinkQR(decodeURIComponent('${safeUrl}'), decodeURIComponent('${encodeURIComponent(link.filename)}'))">📱 ${t("qr_btn")}</button>
+                    <button class="delete-btn"   onclick="deleteLink(decodeURIComponent('${safeToken}'))">✕ ${t("disable_btn")}</button>
                 </div>
             </div>`;
         }).join("");
@@ -2729,7 +2757,7 @@ async function loadTrash() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="restoreFile(decodeURIComponent('${safeName}'))">↩ 復元</button>
+                    <button class="download-btn" onclick="restoreFile(decodeURIComponent('${safeName}'))">↩ ${t("restore")}</button>
                     <button class="delete-btn"   onclick="permanentDelete(decodeURIComponent('${safeName}'))" title="完全削除"><i class="fa-solid fa-trash-can"></i></button>
                 </div>
             </div>`;
@@ -2947,8 +2975,8 @@ async function loadShared() {
             // 自分が共有したファイルだけ「共有解除」ボタンを表示
             // 自分が共有したファイルだけ「リンク作成」「共有解除」を表示
             const ownerBtns = (file.owner === me)
-                ? `<button class="link-btn" onclick="createShareLink(decodeURIComponent('${safeName}'))" title="リンク作成"><i class="fa-solid fa-link"></i></button>
-                   <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))" title="共有解除"><i class="fa-solid fa-link-slash"></i></button>`
+                ? `<button class="link-btn" onclick="createShareLink(decodeURIComponent('${safeName}'))" title="${t('menu_create_link')}"><i class="fa-solid fa-link"></i></button>
+                   <button class="delete-btn" onclick="unshareFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'))" title="${t('menu_remove_share')}"><i class="fa-solid fa-link-slash"></i></button>`
                 : "";
 
             const clickHandler = `previewSharedFile(decodeURIComponent('${safeOwner}'), decodeURIComponent('${safeName}'), ${file.protected})`;
@@ -2969,19 +2997,19 @@ async function loadShared() {
                     ${thumb}
                     <div>
                         <div class="file-name" title="${dispName}">${dispName}${lock}</div>
-                        <div class="file-detail">共有者: ${dispOwner} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.shared_at)}</div>
+                        <div class="file-detail">${t("shared_by", { owner: dispOwner })} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.shared_at)}</div>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="${dlHandler}">↓ ダウンロード</button>
-                    <button class="preview-btn"  onclick="${clickHandler}" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
+                    <button class="download-btn" onclick="${dlHandler}">${t("download_btn_text")}</button>
+                    <button class="preview-btn"  onclick="${clickHandler}" title="${t('menu_preview')}"><i class="fa-solid fa-eye"></i></button>
                     ${ownerBtns}
                 </div>
             </div>`;
         }).join("");
 
     } catch (e) {
-        sharedList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+        sharedList.innerHTML = `<p style='color:#f87171'>${t("cannot_connect")}</p>`;
     }
 }
 
@@ -3370,11 +3398,11 @@ function renderCategoryFileList() {
                 </div>
             </div>
             <div class="file-actions">
-                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">↓ ダウンロード</button>
-                <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="プレビュー"><i class="fa-solid fa-eye"></i></button>
-                <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="名前変更"><i class="fa-solid fa-pen"></i></button>
-                <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="共有"><i class="fa-solid fa-share-nodes"></i></button>
-                <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="削除"><i class="fa-solid fa-trash"></i></button>
+                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))">${t("download_btn_text")}</button>
+                <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="${t("menu_preview")}"><i class="fa-solid fa-eye"></i></button>
+                <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="${t("menu_rename")}"><i class="fa-solid fa-pen"></i></button>
+                <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="${t("menu_share")}"><i class="fa-solid fa-share-nodes"></i></button>
+                <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="${t("delete")}"><i class="fa-solid fa-trash"></i></button>
             </div>
         </div>`;
     }).join("");
