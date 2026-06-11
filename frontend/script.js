@@ -98,7 +98,7 @@ const TRANSLATIONS = {
         share_link_qr: "🔗 共有リンクのQRコード",
         qr_hint: "スマホのカメラで読み取ってアクセスできます",
         copy: "コピー",
-        share_hint: "${t("share_hint")}",
+        share_hint: "このURLを知っている人なら、ログインなしでダウンロードできます。",
         expired: "期限切れ",
         menu_preview: "プレビュー",
         menu_download: "ダウンロード",
