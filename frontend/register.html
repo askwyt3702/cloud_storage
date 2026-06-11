@@ -10,32 +10,36 @@
 </head>
 
 <body>
-
-  <div class="login-box">
-
-    <h1>アカウント作成</h1>
-
-    <input type="text" id="username" placeholder="ユーザー名">
-
-    <input type="email" id="register-email" placeholder="メールアドレス">
-
-    <input type="password" id="register-password" placeholder="パスワード">
-
-    <input type="password" id="confirm-password" placeholder="パスワード確認">
-
-
-    <button onclick="register(event)">
-      アカウントを作成
-    </button>
-
-
-    <p class="register-text">
-      既にアカウントをお持ちの方は
-      <a href="login.html">ログイン</a>
-    </p>
-
+ 
+  <div class="floating-controls">
+    <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
   </div>
 
+  <div class="login-box">
+ 
+    <h1 data-i18n="register_title">アカウント作成</h1>
+ 
+    <input type="text" id="username" placeholder="ユーザー名" data-i18n-placeholder="username_placeholder">
+ 
+    <input type="email" id="register-email" placeholder="メールアドレス" data-i18n-placeholder="email_placeholder">
+ 
+    <input type="password" id="register-password" placeholder="パスワード" data-i18n-placeholder="password_placeholder">
+ 
+    <input type="password" id="confirm-password" placeholder="パスワード確認" data-i18n-placeholder="confirm_password_placeholder">
+ 
+ 
+    <button onclick="register(event)" data-i18n="register_btn">
+      アカウントを作成
+    </button>
+ 
+ 
+    <p class="register-text">
+      <span data-i18n="already_have_account">既にアカウントをお持ちの方は</span>
+      <a href="login.html" data-i18n="login_link">ログイン</a>
+    </p>
+ 
+  </div>
+ 
   <script src="script.js"></script>
 
 </body>

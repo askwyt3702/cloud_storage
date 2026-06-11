@@ -3,6 +3,630 @@
 // =====================================
 const API_BASE = "http://127.0.0.1:8000";
 
+// =====================================
+// 多言語（日本語 / 英語）データ ＆ 切り替えロジック
+// =====================================
+const TRANSLATIONS = {
+    ja: {
+        brand_sub: "あなたのファイルをいつでもどこでも",
+        logout_btn: "ログアウト",
+        tab_my_files: "📊 マイファイル",
+        tab_shared: "📂 共有",
+        tab_links: "🔗 リンク",
+        tab_trash: "🗑 ゴミ箱",
+        storage_text: "使用容量を取得中...",
+        stat_storage: "使用容量",
+        stat_my_files: "マイファイル",
+        stat_sharing: "あなたが共有中",
+        unit_items: "件",
+        btn_add_files: "📁 ファイルを追加",
+        btn_upload: "⬆ アップロード",
+        tray_selected: "選択中のファイル",
+        tray_clear_all: "すべてクリア",
+        tray_zip_mode: "チェックしたファイルを 1つのZIP にまとめる",
+        drop_title: "ファイルをドラッグ＆ドロップ",
+        drop_sub: "またはファイルを選択",
+        search_placeholder: "ファイル名で絞り込み...",
+        sort_name_asc: "名前順（A→Z）",
+        sort_name_desc: "名前順（Z→A）",
+        sort_date_desc: "新しい順",
+        sort_date_asc: "古い順",
+        sort_size_desc: "サイズ大きい順",
+        sort_size_asc: "サイズ小さい順",
+        view_tile: "タイル",
+        btn_select_all: "☑ 全選択",
+        btn_zip_download: "📦 ZIP取得",
+        btn_share: "🔗 選択を共有",
+        btn_delete: "🗑 選択削除",
+        sort_trash_date_desc: "削除が新しい順",
+        sort_trash_date_asc: "削除が古い順",
+        btn_empty_trash: "ゴミ箱を空にする",
+        sort_shared_date_desc: "共有が新しい順",
+        sort_shared_date_asc: "共有が古い順",
+        sort_owner_asc: "共有者順",
+        shared_info_text: "みんなが共有したファイル",
+        cat_title_text: "自動分類されたファイル一覧",
+        links_info_text: "あなたが発行した共有リンク",
+        
+        // ログイン画面
+        login_brand: "Cloud Storage",
+        login_tagline: "あなたのファイルを、いつでも・どこでも・安全に",
+        email_placeholder: "メールアドレス",
+        password_placeholder: "パスワード",
+        login_btn: "ログイン",
+        mfa_instruction: "スマートフォン認証アプリに表示されている<br>6桁の認証コードを入力してください。",
+        mfa_code_placeholder: "6桁の認証コード（例: 123456）",
+        verify_btn: "認証してログイン",
+        no_account_prompt: "アカウントをお持ちでない方は",
+        create_account_link: "アカウントを作成",
+        forgot_password_link: "パスワードをお忘れですか？",
+        feature_mfa: "🔒 2段階認証",
+        feature_share: "🔗 共有リンク",
+        feature_trash: "🗑 ゴミ箱復元",
+        
+        // 新規登録画面
+        register_title: "アカウント作成",
+        username_placeholder: "ユーザー名",
+        confirm_password_placeholder: "パスワード確認",
+        register_btn: "アカウントを作成",
+        already_have_account: "既にアカウントをお持ちの方は",
+        login_link: "ログイン",
+        
+        // 動的な文言
+        welcome_greeting: "おかえりなさい、{name} さん",
+        storage_status: "使用容量: {used} / {total} ({pct}%)",
+        unsupported_preview: "この形式はプレビューできません",
+        download_btn_text: "↓ ダウンロード",
+        preview_failed_pw: "プレビューできませんでした（パスワードが違います）",
+
+        // ページタイトル
+        title_login: "ログイン",
+        title_register: "新規登録",
+        title_reset: "パスワードの再設定",
+        title_files: "マイファイル - Cloud Storage",
+        title_settings: "設定 - Cloud Storage",
+        title_share: "共有ファイル - Cloud Storage",
+        menu_preview: "プレビュー",
+        menu_download: "ダウンロード",
+        menu_unstar: "お気に入りを外す",
+        menu_star: "お気に入りに追加",
+        menu_rename: "名前を変更",
+        menu_share: "共有する",
+        menu_delete: "削除（ゴミ箱へ）",
+        menu_restore: "復元する",
+        menu_perm_delete: "完全に削除",
+        menu_create_link: "リンク作成",
+        menu_remove_share: "共有を解除",
+        menu_copy_url: "URLをコピー",
+        menu_qr: "QRコードを表示",
+        menu_disable_link: "リンクを無効化",
+        star_title: "お気に入り",
+        wrong_password_or_required: "パスワードが違います（または必要です）",
+        loading: "読み込み中...",
+        delete: "削除",
+        unsupported: "この形式はプレビューできません",
+
+        // パスワードリセット画面
+        reset_title: "パスワード再設定",
+        reset_instruction: "登録メールアドレスと、認証アプリの6桁コードで本人確認します",
+        reset_code_placeholder: "認証コード（6桁）",
+        reset_new_password_placeholder: "新しいパスワード（8文字以上・大文字・数字・記号）",
+        reset_new_password_confirm_placeholder: "新しいパスワード（確認）",
+        reset_btn: "パスワードを変更",
+        back_to_login: "← ログインに戻る",
+
+        // 設定画面
+        settings_header: "設定",
+        settings_sub: "アカウント情報",
+        back_to_files: "← ファイルに戻る",
+        profile_section: "👤 プロフィール",
+        label_username: "ユーザー名",
+        label_role: "権限（ロール）",
+        label_storage: "使用容量",
+        security_section: "🔒 セキュリティ",
+        label_change_password: "パスワード変更",
+        sub_change_password: "パスワードを変更します",
+        label_mfa: "2段階認証（MFA）",
+        sub_mfa: "認証アプリでログインを保護",
+        btn_preparing: "準備中",
+        backup_section: "💾 自動バックアップ設定",
+        label_backup: "自動バックアップ",
+        sub_backup: "毎日指定した時刻に自動でバックアップを実行します",
+        label_backup_time: "実行時刻 (24時間表記)",
+        sub_backup_time: "自動バックアップを実行する時刻 (例: 00:00)",
+        btn_save_settings: "💾 設定を保存",
+        btn_run_backup: "⚡ 今すぐバックアップ",
+        backup_history_title: "📁 バックアップ履歴",
+        webhook_section: "🚀 外部サービス連携 (Webhook)",
+        label_webhook_url: "Webhook URL",
+        sub_webhook_url: "DiscordまたはSlackのWebhook URLを入力します",
+        label_notify_events: "通知するイベント",
+        sub_notify_events: "通知を送信する操作を選択してください",
+        event_upload: "📥 ファイルのアップロード時",
+        event_delete: "🗑️ ファイルの削除時（ゴミ箱移動・完全削除）",
+        event_share: "🔗 共有リンクの作成時",
+        btn_test_send: "🔔 テスト送信",
+
+        // 共有受信画面 (share.html)
+        share_title: "共有ファイル",
+        share_loading: "読み込み中...",
+        share_password_placeholder: "このファイルのパスワード",
+        share_download_btn: "⬇ ダウンロード",
+        share_error_header: "エラー",
+
+        // 空画面表示 (empty state)
+        no_files: "ファイルがありません",
+        no_files_sub: "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう",
+        no_links: "発行したリンクはありません",
+        no_links_sub: "共上一覧のファイルから「🔗 リンク作成」で発行できます",
+        trash_empty: "ゴミ箱は空です",
+        trash_empty_sub: "ここから削除したファイルを復元できます",
+        no_shared_files: "共有ファイルはありません",
+        no_shared_files_sub: "ファイル一覧の「🔗 共有」ボタンから共有できます",
+        category_empty: "このカテゴリは空です",
+        category_empty_sub: "該当するファイルがアップロードされていません。",
+        backup_no_history: "バックアップ履歴はありません",
+        backup_no_history_sub: "設定時刻になるか、「今すぐバックアップ」で作成できます",
+
+        // トースト通知・アラート・確認・プロンプト用
+        unstarred: "★を外しました",
+        starred: "★お気に入りに追加しました",
+        input_required: "入力してください",
+        wrong_credentials: "ユーザー名またはパスワードが違います",
+        cannot_connect: "サーバーに接続できません",
+        input_mfa: "6桁の認証コードを入力してください",
+        all_fields_required: "全て入力してください",
+        passwords_mismatch: "パスワードが一致しません",
+        account_created: "アカウントを作成しました！",
+        error_prefix: "エラー: ",
+        new_passwords_mismatch: "新しいパスワードが一致しません",
+        mfa_code_6_digits: "認証コードは6桁です",
+        password_changed: "パスワードを変更しました",
+        select_file_download: "ダウンロードするファイルを選択してください",
+        zip_download_success: "{count}件をZIPでダウンロードしました",
+        zip_download_failed: "ZIPのダウンロードに失敗しました",
+        select_file_delete: "削除するファイルを選択してください",
+        trash_move_success: "{count}件をゴミ箱に移動しました。\n失敗: {failed}",
+        delete_failed: "削除に失敗しました",
+        select_file: "ファイルを選択してください",
+        check_zip_files: "ZIPに入れるファイルにチェックを付けてください",
+        upload_complete: "{okCount} / {totalCount} 件のアップロードが完了しました",
+        zip_load_failed: "ZIP機能の読み込みに失敗しました（個別アップロードをお使いください）",
+        zip_creation_failed: "ZIPの作成に失敗しました",
+        zip_archive_success: "{count}個のファイルを {zipName} にまとめました",
+        upload_success: "{name} をアップロードしました",
+        upload_failed: "{name}: アップロードに失敗しました",
+        download_failed: "ダウンロードに失敗しました",
+        expire_positive_num: "有効期限は正の数で入力してください",
+        link_creation_failed: "リンクの作成に失敗しました",
+        link_copied: "リンクをコピーしました",
+        copy_failed: "コピーに失敗しました",
+        link_disabled: "リンクを無効化しました",
+        disable_failed: "無効化に失敗しました",
+        name_changed: "名前を変更しました",
+        name_change_failed: "名前の変更に失敗しました",
+        restore_failed: "復元に失敗しました",
+        permanent_delete_failed: "完全削除に失敗しました",
+        empty_trash_failed: "ゴミ箱を空にできませんでした",
+        share_failed: "共有に失敗しました",
+        select_file_share: "共有するファイルを選択してください",
+        share_removed_failed: "共有の解除に失敗しました",
+        added_to_selection: "{count}件を選択に追加しました",
+        backup_get_settings_failed: "バックアップ設定の取得に失敗しました",
+        backup_time_format_error: "実行時刻は '00:00' のような半角の形式で入力してください",
+        backup_time_invalid: "実行時刻が正しくありません (00:00 〜 23:59)",
+        backup_settings_saved: "バックアップ設定を保存しました",
+        backup_save_failed: "保存失敗: {detail}",
+        server_communication_failed: "サーバー通信に失敗しました",
+        backup_created: "バックアップを作成しました: {filename}",
+        backup_create_failed: "作成失敗: {detail}",
+        backup_deleted: "バックアップを削除しました",
+        backup_delete_failed: "削除失敗: {detail}",
+        webhook_get_settings_failed: "Webhook設定の取得に失敗しました",
+        webhook_url_invalid: "有効な URL を入力してください (http:// または https://)",
+        webhook_settings_saved: "Webhook設定を保存しました",
+        webhook_test_url_required: "テスト送信する Webhook URL を入力してください",
+        webhook_test_sent: "テスト通知を送信しました。設定されたチャンネルを確認してください。",
+        webhook_test_failed: "テスト送信失敗: {detail}",
+
+        // 動的ダイアログ・ラベル用
+        role_label: "権限: {role}",
+        backup_history_get_failed: "バックアップ履歴の取得に失敗しました",
+        backup_detail: "ZIP圧縮形式 ・ {size} ・ 作成: {date}",
+        download: "ダウンロード",
+        close: "閉じる",
+        theme_toggle_title: "テーマ切替",
+
+        // プロンプトと確認ダイアログ
+        password_required: "「{name}」はパスワードで保護されています。\nパスワードを入力:",
+        create_link_prompt: "「{name}」の共有リンクを作成します。\n\n有効期限（日数）を入力してください。\n空欄なら無期限です。",
+        rename_prompt_with_ext: "新しい名前を入力してください\n（拡張子 {ext} はそのままです）",
+        rename_prompt_no_ext: "新しい名前を入力してください",
+        share_prompt: "「{name}」を共有します。\nパスワードを付ける場合は入力（不要なら空欄でOK）:",
+        share_multiple_prompt: "選択した {count} 件を共有します。\n共通のパスワードを付ける場合は入力（不要なら空欄でOK）:",
+        confirm_move_to_trash: "選択した {count} 件をゴミ箱に移動しますか？",
+        confirm_delete_single: "「{name}」を削除しますか？",
+        confirm_disable_link: "このリンクを無効化しますか？\nこのURLでのダウンロードができなくなります。",
+        confirm_permanent_delete: "「{name}」を完全に削除しますか？\nこの操作は元に戻せません。",
+        confirm_empty_trash: "ゴミ箱を空にしますか？\nすべてのファイルが完全に削除され、元に戻せません。",
+        confirm_remove_share: "「{name}」の共有を解除しますか？\n（あなたの個人ファイルは残ります）",
+        confirm_manual_backup: "手動バックアップを作成しますか？\n（ファイル数によっては数十秒かかる場合があります）",
+        confirm_delete_backup: "バックアップ「{name}」を削除しますか？\nこの操作は元に戻せません。",
+
+        // 共有リンク受信ページ用
+        invalid_token: "無効なリンクです（トークンがありません）",
+        expired_link: "このリンクは有効期限が切れています",
+        link_not_found: "リンクが見つかりません（削除されたか、URLが間違っています）",
+        failed_get_info: "ファイル情報の取得に失敗しました",
+        cannot_connect_server: "サーバーに接続できません",
+        input_password: "パスワードを入力してください",
+        downloading: "ダウンロード中...",
+        wrong_password: "パスワードが違います",
+        shared_by: "提供者: {owner}",
+        expires_at: "有効期限: {time}",
+        preview_failed: "プレビューできませんでした"
+    },
+    en: {
+        brand_sub: "Access your files anywhere, anytime",
+        logout_btn: "Logout",
+        tab_my_files: "📊 My Files",
+        tab_shared: "📂 Shared",
+        tab_links: "🔗 Links",
+        tab_trash: "🗑 Trash",
+        storage_text: "Retrieving storage space...",
+        stat_storage: "Storage Space",
+        stat_my_files: "My Files",
+        stat_sharing: "You Are Sharing",
+        unit_items: "files",
+        btn_add_files: "📁 Add Files",
+        btn_upload: "⬆ Upload",
+        tray_selected: "Selected Files",
+        tray_clear_all: "Clear All",
+        tray_zip_mode: "Compress checked files into 1 ZIP",
+        drop_title: "Drag & drop files here",
+        drop_sub: "or click to select files",
+        search_placeholder: "Filter by file name...",
+        sort_name_asc: "Name (A to Z)",
+        sort_name_desc: "Name (Z to A)",
+        sort_date_desc: "Newest first",
+        sort_date_asc: "Oldest first",
+        sort_size_desc: "Size (Largest)",
+        sort_size_asc: "Size (Smallest)",
+        view_tile: "Grid",
+        btn_select_all: "☑ Select All",
+        btn_zip_download: "📦 Get ZIP",
+        btn_share: "🔗 Share Selection",
+        btn_delete: "🗑 Delete Selection",
+        sort_trash_date_desc: "Date Deleted (Newest)",
+        sort_trash_date_asc: "Date Deleted (Oldest)",
+        btn_empty_trash: "Empty Trash",
+        sort_shared_date_desc: "Date Shared (Newest)",
+        sort_shared_date_asc: "Date Shared (Oldest)",
+        sort_owner_asc: "Shared By",
+        shared_info_text: "Files shared by other users",
+        cat_title_text: "Auto-categorized file list",
+        links_info_text: "Shared links issued by you",
+        
+        // Login Screen
+        login_brand: "Cloud Storage",
+        login_tagline: "Your files, safe and accessible anywhere, anytime",
+        email_placeholder: "Email Address",
+        password_placeholder: "Password",
+        login_btn: "Log In",
+        mfa_instruction: "Please enter the 6-digit authentication code<br>displayed in your authenticator app.",
+        mfa_code_placeholder: "6-digit code (e.g. 123456)",
+        verify_btn: "Verify & Log In",
+        no_account_prompt: "Don't have an account?",
+        create_account_link: "Create Account",
+        forgot_password_link: "Forgot Password?",
+        feature_mfa: "🔒 Two-Factor Auth",
+        feature_share: "🔗 Shared Links",
+        feature_trash: "🗑 Trash Restore",
+        
+        // Register Screen
+        register_title: "Create Account",
+        username_placeholder: "Username",
+        confirm_password_placeholder: "Confirm Password",
+        register_btn: "Create Account",
+        already_have_account: "Already have an account?",
+        login_link: "Log In",
+        
+        // Dynamic labels
+        welcome_greeting: "Welcome back, {name}",
+        storage_status: "Storage: {used} / {total} ({pct}%)",
+        unsupported_preview: "This file format cannot be previewed",
+        download_btn_text: "↓ Download",
+        preview_failed_pw: "Could not preview (incorrect password)",
+
+        // Page Titles
+        title_login: "Log In",
+        title_register: "Create Account",
+        title_reset: "Reset Password",
+        title_files: "My Files - Cloud Storage",
+        title_settings: "Settings - Cloud Storage",
+        title_share: "Shared File - Cloud Storage",
+        menu_preview: "Preview",
+        menu_download: "Download",
+        menu_unstar: "Remove Favorite",
+        menu_star: "Add to Favorites",
+        menu_rename: "Rename",
+        menu_share: "Share",
+        menu_delete: "Delete (Move to Trash)",
+        menu_restore: "Restore",
+        menu_perm_delete: "Permanently Delete",
+        menu_create_link: "Create Link",
+        menu_remove_share: "Stop Sharing",
+        menu_copy_url: "Copy URL",
+        menu_qr: "Show QR Code",
+        menu_disable_link: "Disable Link",
+        star_title: "Favorite",
+        wrong_password_or_required: "Incorrect password (or required)",
+        loading: "Loading...",
+        delete: "Delete",
+        unsupported: "This file format cannot be previewed",
+
+        // Password Reset Screen
+        reset_title: "Reset Password",
+        reset_instruction: "Verify identity using your registered email address and the 6-digit code from your authenticator app.",
+        reset_code_placeholder: "6-digit code",
+        reset_new_password_placeholder: "New Password (8+ chars, upper, digit, symbol)",
+        reset_new_password_confirm_placeholder: "Confirm New Password",
+        reset_btn: "Reset Password",
+        back_to_login: "← Back to Login",
+
+        // Settings Screen
+        settings_header: "Settings",
+        settings_sub: "Account Info",
+        back_to_files: "← Back to Files",
+        profile_section: "👤 Profile",
+        label_username: "Username",
+        label_role: "Role",
+        label_storage: "Storage Space",
+        security_section: "🔒 Security",
+        label_change_password: "Change Password",
+        sub_change_password: "Change your password",
+        label_mfa: "Two-Factor Auth (MFA)",
+        sub_mfa: "Protect login with authenticator app",
+        btn_preparing: "Coming Soon",
+        backup_section: "💾 Auto-Backup Settings",
+        label_backup: "Auto-Backup",
+        sub_backup: "Automatically run backup daily at specified time",
+        label_backup_time: "Execution Time (24h format)",
+        sub_backup_time: "Time to run automatic backup (e.g. 00:00)",
+        btn_save_settings: "💾 Save Settings",
+        btn_run_backup: "⚡ Backup Now",
+        backup_history_title: "📁 Backup History",
+        webhook_section: "🚀 Webhook Integration",
+        label_webhook_url: "Webhook URL",
+        sub_webhook_url: "Enter Discord or Slack Webhook URL",
+        label_notify_events: "Notification Events",
+        sub_notify_events: "Select actions that trigger notifications",
+        event_upload: "📥 On file upload",
+        event_delete: "🗑️ On file deletion (trash/permanent)",
+        event_share: "🔗 On sharing link creation",
+        btn_test_send: "🔔 Test Send",
+
+        // Share Page
+        share_title: "Shared File",
+        share_loading: "Loading...",
+        share_password_placeholder: "Password for this file",
+        share_download_btn: "⬇ Download",
+        share_error_header: "Error",
+
+        // Empty states
+        no_files: "No files found",
+        no_files_sub: "Try uploading files by clicking 'Add Files' or dragging them here",
+        no_links: "No links have been created",
+        no_links_sub: "You can create links from shared files by clicking '🔗 Create Link'",
+        trash_empty: "Trash is empty",
+        trash_empty_sub: "Deleted files will appear here and can be restored",
+        no_shared_files: "No shared files found",
+        no_shared_files_sub: "You can share files by clicking the '🔗 Share' button in My Files",
+        category_empty: "This category is empty",
+        category_empty_sub: "No files of this category have been uploaded yet.",
+        backup_no_history: "No backup history available",
+        backup_no_history_sub: "Backups will appear here once scheduled or when you click 'Backup Now'",
+
+        // Toast Notifications & Alerts
+        unstarred: "Removed from favorites",
+        starred: "Added to favorites",
+        input_required: "Please enter a value",
+        wrong_credentials: "Incorrect username or password",
+        cannot_connect: "Cannot connect to server",
+        input_mfa: "Please enter the 6-digit authentication code",
+        all_fields_required: "All fields are required",
+        passwords_mismatch: "Passwords do not match",
+        account_created: "Account created successfully!",
+        error_prefix: "Error: ",
+        new_passwords_mismatch: "New passwords do not match",
+        mfa_code_6_digits: "Verification code must be 6 digits",
+        password_changed: "Password changed successfully",
+        select_file_download: "Please select a file to download",
+        zip_download_success: "Downloaded {count} files as ZIP",
+        zip_download_failed: "Failed to download ZIP",
+        select_file_delete: "Please select a file to delete",
+        trash_move_success: "Moved {count} items to trash.\nFailed: {failed}",
+        delete_failed: "Failed to delete",
+        select_file: "Please select a file",
+        check_zip_files: "Please check files to include in the ZIP",
+        upload_complete: "Upload complete: {okCount} / {totalCount} files",
+        zip_load_failed: "Failed to load ZIP library (use individual upload)",
+        zip_creation_failed: "Failed to create ZIP",
+        zip_archive_success: "Compressed {count} files into {zipName}",
+        upload_success: "Uploaded {name} successfully",
+        upload_failed: "Failed to upload {name}",
+        download_failed: "Download failed",
+        expire_positive_num: "Expiration must be a positive number",
+        link_creation_failed: "Failed to create link",
+        link_copied: "Link copied to clipboard",
+        copy_failed: "Failed to copy",
+        link_disabled: "Link disabled successfully",
+        disable_failed: "Failed to disable",
+        name_changed: "Name changed successfully",
+        name_change_failed: "Failed to change name",
+        restore_failed: "Failed to restore",
+        permanent_delete_failed: "Failed to permanently delete",
+        empty_trash_failed: "Failed to empty trash",
+        share_failed: "Sharing failed",
+        select_file_share: "Please select a file to share",
+        share_removed_failed: "Failed to remove share",
+        added_to_selection: "Added {count} files to selection",
+        backup_get_settings_failed: "Failed to get backup settings",
+        backup_time_format_error: "Please enter execution time in '00:00' 24-hour format",
+        backup_time_invalid: "Invalid execution time (00:00 to 23:59)",
+        backup_settings_saved: "Backup settings saved successfully",
+        backup_save_failed: "Save failed: {detail}",
+        server_communication_failed: "Failed to communicate with server",
+        backup_created: "Backup created: {filename}",
+        backup_create_failed: "Failed to create backup: {detail}",
+        backup_deleted: "Backup deleted successfully",
+        backup_delete_failed: "Failed to delete backup: {detail}",
+        webhook_get_settings_failed: "Failed to get Webhook settings",
+        webhook_url_invalid: "Please enter a valid URL (starting with http:// or https://)",
+        webhook_settings_saved: "Webhook settings saved successfully",
+        webhook_test_url_required: "Please enter Webhook URL for testing",
+        webhook_test_sent: "Test notification sent. Please check the configured channel.",
+        webhook_test_failed: "Test send failed: {detail}",
+
+        // Dynamic dialogs & labels
+        role_label: "Role: {role}",
+        backup_history_get_failed: "Failed to retrieve backup history",
+        backup_detail: "ZIP Archive ・ {size} ・ Created: {date}",
+        download: "Download",
+        close: "Close",
+        theme_toggle_title: "Toggle Theme",
+
+        // Prompts & Confirms
+        password_required: "「{name}」 is password protected.\nEnter password:",
+        create_link_prompt: "Create shared link for \"{name}\".\n\nEnter expiration time in days.\nLeave blank for no expiration.",
+        rename_prompt_with_ext: "Enter a new name\n(The extension {ext} will be kept)",
+        rename_prompt_no_ext: "Enter a new name",
+        share_prompt: "Share \"{name}\".\nEnter password if you want to protect it (leave blank for none):",
+        share_multiple_prompt: "Share selected {count} items.\nEnter common password if you want to protect them (leave blank for none):",
+        confirm_move_to_trash: "Do you want to move the selected {count} items to the trash?",
+        confirm_delete_single: "Are you sure you want to delete \"{name}\"?",
+        confirm_disable_link: "Do you want to disable this link?\nDownloading from this URL will no longer be possible.",
+        confirm_permanent_delete: "Are you sure you want to permanently delete \"{name}\"?\nThis action cannot be undone.",
+        confirm_empty_trash: "Are you sure you want to empty the trash?\nAll files will be permanently deleted and cannot be recovered.",
+        confirm_remove_share: "Do you want to stop sharing \"{name}\"?\n(Your own personal file will remain intact)",
+        confirm_manual_backup: "Do you want to create a manual backup?\n(This may take up to a few dozen seconds depending on the number of files)",
+        confirm_delete_backup: "Are you sure you want to delete backup \"{name}\"?\nThis action cannot be undone.",
+
+        // Shared link page
+        invalid_token: "Invalid link (no token)",
+        expired_link: "This link has expired",
+        link_not_found: "Link not found (deleted or incorrect URL)",
+        failed_get_info: "Failed to retrieve file information",
+        cannot_connect_server: "Cannot connect to server",
+        input_password: "Please enter password",
+        downloading: "Downloading...",
+        wrong_password: "Incorrect password",
+        shared_by: "Shared by: {owner}",
+        expires_at: "Expires at: {time}",
+        preview_failed: "Could not load preview"
+    }
+};
+
+let _currentLang = "ja"; // デフォルト
+
+function t(key, params = {}) {
+    const lang = _currentLang || "ja";
+    let text = (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || (TRANSLATIONS["ja"] && TRANSLATIONS["ja"][key]) || key;
+    for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`{${k}}`, "g"), v);
+    }
+    return text;
+}
+
+function applyLanguage(lang) {
+    _currentLang = lang;
+    try { localStorage.setItem("language", lang); } catch (_) {}
+
+    // ボタンの表示更新
+    const btn = document.getElementById("langBtn");
+    if (btn) btn.textContent = lang === "ja" ? "🌐 EN" : "🌐 JP";
+
+    // 1) 一般タグの書き換え (data-i18n)
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+            // HTML内のタグを保護するため、特定の要素にはinnerHTML、その他にはtextContentを使う
+            if (["mfa_instruction", "tray_zip_mode"].includes(key)) {
+                el.innerHTML = TRANSLATIONS[lang][key];
+            } else {
+                el.textContent = TRANSLATIONS[lang][key];
+            }
+        }
+    });
+
+    // 2) プレースホルダーの書き換え (data-i18n-placeholder)
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+        const key = el.getAttribute("data-i18n-placeholder");
+        if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+            el.setAttribute("placeholder", TRANSLATIONS[lang][key]);
+        }
+    });
+
+    // 3) ツールチップ/title属性の書き換え (data-i18n-title)
+    document.querySelectorAll("[data-i18n-title]").forEach(el => {
+        const key = el.getAttribute("data-i18n-title");
+        if (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) {
+            el.setAttribute("title", TRANSLATIONS[lang][key]);
+        }
+    });
+
+    // 4) 動的な要素（ダッシュボードのウェルカム文言）の更新
+    const welcome = document.getElementById("welcomeGreeting");
+    if (welcome) {
+        const nameEl = document.getElementById("heroUserName");
+        const name = nameEl ? nameEl.textContent : "ゲスト";
+        const template = TRANSLATIONS[lang]["welcome_greeting"];
+        welcome.innerHTML = template.replace("{name}", `<span id="heroUserName">${name}</span>`);
+    }
+
+    // 5) ページタイトルの翻訳
+    let titleKey = null;
+    if (document.getElementById("settingsUsername")) {
+        titleKey = "title_settings";
+    } else if (document.getElementById("fileList")) {
+        titleKey = "title_files";
+    } else if (document.getElementById("email") && document.getElementById("password") && document.getElementById("login-fields")) {
+        titleKey = "title_login";
+    } else if (document.getElementById("register-email") && document.getElementById("confirm-password")) {
+        titleKey = "title_register";
+    } else if (document.getElementById("reset-email") && document.getElementById("reset-code")) {
+        titleKey = "title_reset";
+    } else if (document.getElementById("shareLoading")) {
+        titleKey = "title_share";
+    }
+
+    if (titleKey && TRANSLATIONS[lang][titleKey]) {
+        document.title = TRANSLATIONS[lang][titleKey];
+    }
+}
+
+function toggleLanguage() {
+    const next = _currentLang === "ja" ? "en" : "ja";
+    applyLanguage(next);
+}
+
+// 画面表示時に即時に適用
+(function _restoreLanguageImmediately() {
+    try {
+        const saved = localStorage.getItem("language");
+        if (saved) {
+            _currentLang = saved;
+        }
+    } catch (_) {}
+    // DOM構築後またはスクリプトロード直後に実行
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => applyLanguage(_currentLang));
+    } else {
+        setTimeout(() => applyLanguage(_currentLang), 0);
+    }
+})();
+
+
 
 // =====================================
 // テーマ（ライト / ダーク）の即時復元
@@ -109,13 +733,17 @@ function _ensureToastRoot() {
 }
 
 function notify(message, type, durationMs) {
-    const s = String(message);
+    let s = String(message);
+    const lang = _currentLang || "ja";
+    if (TRANSLATIONS[lang] && TRANSLATIONS[lang][message]) {
+        s = TRANSLATIONS[lang][message];
+    }
 
     // type が指定されない場合は、メッセージ内容から色を自動判定
     if (!type) {
-        if (/失敗|エラー|違|接続できません|正しくありません|不正/.test(s)) type = "error";
-        else if (/成功|完了|しました|アカウントを作成/.test(s))         type = "success";
-        else if (/選択してください|入力してください|一致しません/.test(s)) type = "warning";
+        if (/失敗|エラー|違|接続できません|正しくありません|不正|error|fail|incorrect|cannot connect/i.test(s)) type = "error";
+        else if (/成功|完了|しました|アカウントを作成|success|completed|created/i.test(s))         type = "success";
+        else if (/選択してください|入力してください|一致しません|select|enter|mismatch|required/i.test(s)) type = "warning";
         else                                                            type = "info";
     }
 
@@ -190,8 +818,8 @@ function _ensurePreviewModal() {
             <div class="preview-head">
                 <span class="preview-title" id="preview-title"></span>
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <button class="preview-download-btn" id="preview-dl-btn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-download"></i>ダウンロード</button>
-                    <button class="image-modal-close" onclick="closePreview()" aria-label="閉じる" style="position:static; padding:0; background:none;">✕</button>
+                    <button class="preview-download-btn" id="preview-dl-btn" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:13px; font-weight:bold; display:flex; align-items:center; gap:6px;"><i class="fa-solid fa-download"></i>${t("download")}</button>
+                    <button class="image-modal-close" onclick="closePreview()" aria-label="${t('close')}" style="position:static; padding:0; background:none;">✕</button>
                 </div>
             </div>
             <div class="preview-body" id="preview-body"></div>
@@ -225,7 +853,7 @@ async function previewFile(filename) {
     }
     
     const body = document.getElementById("preview-body");
-    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
+    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">${t("loading")}</p>`;
 
     if (["jpg","jpeg","jfif","png","gif","webp","bmp","tif","tiff"].includes(ext)) {
         body.innerHTML = `<img class="preview-image" src="${url}" alt="${escapeHtml(filename)}" style="max-width:100%; max-height:70vh; object-fit:contain; display:block; margin:0 auto;">`;
@@ -246,14 +874,14 @@ async function previewFile(filename) {
             const esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
             body.innerHTML = `<pre class="preview-text" style="white-space:pre-wrap; word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; max-height:70vh; overflow-y:auto; color:#e2e8f0; text-align:left;">${esc}</pre>`;
         } catch (e) {
-            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">プレビューできませんでした</p>`;
+            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">${t("preview_failed")}</p>`;
         }
     } else {
         body.innerHTML = `
             <div class="preview-unsupported" style="text-align:center; padding:40px 20px; color:#94a3b8; display:flex; flex-direction:column; align-items:center; gap:16px;">
                 <i class="fa-solid fa-file-circle-question" style="font-size:48px; color:#64748b;"></i>
-                <p>この形式はプレビューできません</p>
-                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${encodeURIComponent(filename)}'))" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">↓ ダウンロード</button>
+                <p>${t("unsupported")}</p>
+                <button class="download-btn" onclick="downloadFile(decodeURIComponent('${encodeURIComponent(filename)}'))" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">${t("download_btn_text")}</button>
             </div>`;
     }
 
@@ -265,7 +893,7 @@ async function previewSharedFile(owner, filename, isProtected) {
     
     let password = null;
     if (isProtected) {
-        password = prompt(`「${filename}」はパスワードで保護されています。\nパスワードを入力:`);
+        password = prompt(t("password_required", { name: filename }));
         if (password === null) return;
     }
 
@@ -278,7 +906,7 @@ async function previewSharedFile(owner, filename, isProtected) {
     }
 
     const body = document.getElementById("preview-body");
-    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">読み込み中...</p>`;
+    body.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px">${t("loading")}</p>`;
 
     const url = `${API_BASE}/shared/preview/${encodeURIComponent(owner)}/${encodeURIComponent(filename)}` + (password ? `?p=${encodeURIComponent(password)}` : "");
 
@@ -306,14 +934,14 @@ async function previewSharedFile(owner, filename, isProtected) {
             const esc = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
             body.innerHTML = `<pre class="preview-text" style="white-space:pre-wrap; word-break:break-all; font-family:monospace; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); padding:16px; border-radius:8px; max-height:70vh; overflow-y:auto; color:#e2e8f0; text-align:left;">${esc}</pre>`;
         } catch (e) {
-            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">プレビューできませんでした（パスワードが違います）</p>`;
+            body.innerHTML = `<p style="color:#f87171;text-align:center;padding:20px">${t("preview_failed_pw")}</p>`;
         }
     } else {
         body.innerHTML = `
             <div class="preview-unsupported" style="text-align:center; padding:40px 20px; color:#94a3b8; display:flex; flex-direction:column; align-items:center; gap:16px;">
                 <i class="fa-solid fa-file-circle-question" style="font-size:48px; color:#64748b;"></i>
-                <p>この形式はプレビューできません</p>
-                <button class="download-btn" onclick="downloadShared(decodeURIComponent('${encodeURIComponent(owner)}'), decodeURIComponent('${encodeURIComponent(filename)}'), ${isProtected})" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">↓ ダウンロード</button>
+                <p>${t("unsupported")}</p>
+                <button class="download-btn" onclick="downloadShared(decodeURIComponent('${encodeURIComponent(owner)}'), decodeURIComponent('${encodeURIComponent(filename)}'), ${isProtected})" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">${t("download_btn_text")}</button>
             </div>`;
     }
 
@@ -591,10 +1219,10 @@ function toggleFavorite(filename) {
     let favs = _getFavorites();
     if (favs.includes(filename)) {
         favs = favs.filter(f => f !== filename);
-        notify(`★を外しました`);
+        notify("unstarred");
     } else {
         favs.push(filename);
-        notify(`★お気に入りに追加しました`);
+        notify("starred");
     }
     try { localStorage.setItem(_favKey(), JSON.stringify(favs)); } catch (_) {}
 
@@ -674,7 +1302,7 @@ async function login(e) {
     const password = document.getElementById("password").value;
 
     if (!email || !password) {
-        notify("入力してください");
+        notify("input_required");
         return;
     }
 
@@ -714,11 +1342,11 @@ async function login(e) {
 
         } else {
             const err = await res.json();
-            notify(err.detail || "ユーザー名またはパスワードが違います");
+            notify(err.detail || "wrong_credentials");
         }
 
     } catch (err) {
-        notify("サーバーに接続できません");
+        notify("cannot_connect");
     } finally {
         setLoading(btn, false);
     }
@@ -733,7 +1361,7 @@ async function verifyMFA(e) {
     const code = document.getElementById("mfa-code").value;
 
     if (!code || code.length !== 6) {
-        notify("6桁の認証コードを入力してください");
+        notify("input_mfa");
         return;
     }
 
@@ -766,7 +1394,7 @@ async function verifyMFA(e) {
         }
 
     } catch (err) {
-        notify("サーバーに接続できません");
+        notify("cannot_connect");
     } finally {
         setLoading(btn, false);
     }
@@ -785,12 +1413,12 @@ async function register(e) {
     const confirmPassword = document.getElementById("confirm-password").value;
 
     if (!username || !email || !password || !confirmPassword) {
-        notify("全て入力してください");
+        notify("all_fields_required");
         return;
     }
 
     if (password !== confirmPassword) {
-        notify("パスワードが一致しません");
+        notify("passwords_mismatch");
         return;
     }
 
@@ -806,15 +1434,15 @@ async function register(e) {
         );
 
         if (res.ok) {
-            notify("アカウントを作成しました！");
+            notify("account_created");
             location.href = "login.html";
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
 
     } catch (err) {
-        notify("サーバーに接続できません");
+        notify("cannot_connect");
     } finally {
         setLoading(btn, false);
     }
@@ -834,15 +1462,15 @@ async function resetPassword(e) {
     const newPw2    = document.getElementById("reset-new-password2").value;
 
     if (!email || !code || !newPw || !newPw2) {
-        notify("全て入力してください");
+        notify("all_fields_required");
         return;
     }
     if (newPw !== newPw2) {
-        notify("新しいパスワードが一致しません");
+        notify("new_passwords_mismatch");
         return;
     }
     if (code.length !== 6) {
-        notify("認証コードは6桁です");
+        notify("mfa_code_6_digits");
         return;
     }
 
@@ -856,7 +1484,7 @@ async function resetPassword(e) {
 
         if (res.ok) {
             const data = await res.json();
-            notify(data.message || "パスワードを変更しました");
+            notify(data.message || "password_changed");
             location.href = "login.html";
         } else {
             const err = await res.json();
@@ -864,7 +1492,7 @@ async function resetPassword(e) {
             notify(msg);
         }
     } catch (err) {
-        notify("サーバーに接続できません");
+        notify("cannot_connect");
     } finally {
         setLoading(btn, false);
     }
@@ -913,11 +1541,7 @@ async function loadFiles() {
         if (fileCountEl) fileCountEl.textContent = data.total;
 
         if (data.files.length === 0) {
-            fileList.innerHTML = _emptyStateHTML(
-                "fa-folder-open",
-                "ファイルがありません",
-                "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう"
-            );
+            fileList.innerHTML = _emptyStateHTML("fa-folder-open", t("no_files"), t("no_files_sub"));
             return;
         }
 
@@ -951,7 +1575,7 @@ async function loadFiles() {
             return `
             <div class="file-card ${starred ? 'is-favorite' : ''}" data-ctx="main" data-filename="${dispName}">
                 <input type="checkbox" class="file-check" value="${dispName}" style="margin-right: 12px;">
-                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り">${starred ? '★' : '☆'}</button>
+                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="${t('star_title')}">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}">
                     ${thumb}
                     <div>
@@ -1143,42 +1767,42 @@ function setupContextMenus() {
         if (ctx === "main") {
             const fav = isFavorite(name);
             items = [
-                { icon: "👁", label: "プレビュー",            action: () => previewFile(name) },
-                { icon: "⬇", label: "ダウンロード",          action: () => downloadFile(name) },
-                { icon: fav ? "★" : "☆", label: fav ? "お気に入りを外す" : "お気に入りに追加", action: () => toggleFavorite(name) },
+                { icon: "👁", label: t("menu_preview"),            action: () => previewFile(name) },
+                { icon: "⬇", label: t("menu_download"),          action: () => downloadFile(name) },
+                { icon: fav ? "★" : "☆", label: fav ? t("menu_unstar") : t("menu_star"), action: () => toggleFavorite(name) },
                 { divider: true },
-                { icon: "✏", label: "名前を変更",            action: () => renameFile(name) },
-                { icon: "🔗", label: "共有する",              action: () => shareFile(name) },
+                { icon: "✏", label: t("menu_rename"),            action: () => renameFile(name) },
+                { icon: "🔗", label: t("menu_share"),              action: () => shareFile(name) },
                 { divider: true },
-                { icon: "🗑", label: "削除（ゴミ箱へ）",      action: () => deleteFile(name), danger: true },
+                { icon: "🗑", label: t("menu_delete"),      action: () => deleteFile(name), danger: true },
             ];
         } else if (ctx === "trash") {
             items = [
-                { icon: "↩", label: "復元する",              action: () => restoreFile(name) },
+                { icon: "↩", label: t("menu_restore"),              action: () => restoreFile(name) },
                 { divider: true },
-                { icon: "✕", label: "完全に削除",            action: () => permanentDelete(name), danger: true },
+                { icon: "✕", label: t("menu_perm_delete"),            action: () => permanentDelete(name), danger: true },
             ];
         } else if (ctx === "shared") {
             const owner = card.dataset.owner;
             const prot  = card.dataset.protected === "true";
             const me    = sessionStorage.getItem("username");
             items = [
-                { icon: "👁", label: "プレビュー",            action: () => previewSharedFile(owner, name, prot) },
-                { icon: "⬇", label: "ダウンロード",          action: () => downloadShared(owner, name, prot) },
+                { icon: "👁", label: t("menu_preview"),            action: () => previewSharedFile(owner, name, prot) },
+                { icon: "⬇", label: t("menu_download"),          action: () => downloadShared(owner, name, prot) },
             ];
             if (owner === me) {
                 items.push({ divider: true });
-                items.push({ icon: "🔗", label: "リンク作成",  action: () => createShareLink(name) });
-                items.push({ icon: "✕", label: "共有を解除",  action: () => unshareFile(owner, name), danger: true });
+                items.push({ icon: "🔗", label: t("menu_create_link"),  action: () => createShareLink(name) });
+                items.push({ icon: "✕", label: t("menu_remove_share"),  action: () => unshareFile(owner, name), danger: true });
             }
         } else if (ctx === "link") {
             const url   = card.dataset.url;
             const token = card.dataset.token;
             items = [
-                { icon: "📋", label: "URLをコピー",           action: () => copyUrlText(url) },
-                { icon: "📱", label: "QRコードを表示",        action: () => showLinkQR(url, name) },
+                { icon: "📋", label: t("menu_copy_url"),           action: () => copyUrlText(url) },
+                { icon: "📱", label: t("menu_qr"),        action: () => showLinkQR(url, name) },
                 { divider: true },
-                { icon: "✕", label: "リンクを無効化",        action: () => deleteLink(token), danger: true },
+                { icon: "✕", label: t("menu_disable_link"),        action: () => deleteLink(token), danger: true },
             ];
         }
 
@@ -1240,7 +1864,7 @@ async function downloadSelectedZip(e) {
     const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
-        notify("ダウンロードするファイルを選択してください");
+        notify("select_file_download");
         return;
     }
 
@@ -1272,9 +1896,9 @@ async function downloadSelectedZip(e) {
         a.click();
 
         URL.revokeObjectURL(url);
-        notify(`${filenames.length}件をZIPでダウンロードしました`);
+        notify(t("zip_download_success", { count: filenames.length }));
     } catch (err) {
-        notify("ZIPのダウンロードに失敗しました");
+        notify("zip_download_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -1289,11 +1913,11 @@ async function deleteSelected(e) {
     const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
-        notify("削除するファイルを選択してください");
+        notify("select_file_delete");
         return;
     }
 
-    if (!confirm(`選択した ${filenames.length} 件をゴミ箱に移動しますか？`)) return;
+    if (!confirm(t("confirm_move_to_trash", { count: filenames.length }))) return;
 
     setLoading(btn, true);
     try {
@@ -1306,16 +1930,16 @@ async function deleteSelected(e) {
         if (res.ok) {
             const data = await res.json();
             if (data.failed.length > 0) {
-                notify(`${data.succeeded.length}件をゴミ箱に移動しました。\n失敗: ${data.failed.join(", ")}`);
+                notify(t("trash_move_success", { count: data.succeeded.length, failed: data.failed.join(", ") }));
             }
             await loadFiles();
             await loadStorage();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (err) {
-        notify("削除に失敗しました");
+        notify("delete_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -1330,20 +1954,24 @@ async function loadStorage() {
         const res  = await fetch(`${API_BASE}/storage`);
         const data = await res.json();
 
+        const usedNum = parseFloat(data.used);
+        const maxNum  = parseFloat(data.max);
+        let pct = 0;
+        if (maxNum > 0) pct = Math.min(100, Math.round((usedNum / maxNum) * 100));
+
         // 上部テキスト（ヒーロー内）
         const storageText = document.getElementById("storageText");
         if (storageText) {
-            storageText.textContent = `使用容量：${data.used} / ${data.max}`;
+            const template = TRANSLATIONS[_currentLang]["storage_status"] || "使用容量: {used} / {total} ({pct}%)";
+            storageText.textContent = template
+                .replace("{used}", data.used)
+                .replace("{total}", data.max)
+                .replace("{pct}", pct);
         }
 
         // ヒーローカードの数値・ゲージを反映
         const heroVal = document.getElementById("heroStorageText");
         if (heroVal) heroVal.textContent = data.used;
-
-        const usedNum = parseFloat(data.used);
-        const maxNum  = parseFloat(data.max);
-        let pct = 0;
-        if (maxNum > 0) pct = Math.min(100, Math.round((usedNum / maxNum) * 100));
 
         const fill = document.getElementById("heroStorageFill");
         if (fill) {
@@ -1351,8 +1979,14 @@ async function loadStorage() {
             // 80%超えたら赤系にする
             fill.classList.toggle("warning", pct >= 80);
         }
+        
+        const remainingGB = Math.max(0, maxNum - usedNum).toFixed(2);
         const pctEl = document.getElementById("heroStoragePct");
-        if (pctEl) pctEl.textContent = `${pct}%（残り ${Math.max(0, maxNum - usedNum).toFixed(2)}GB）`;
+        if (pctEl) {
+            pctEl.textContent = _currentLang === "ja"
+                ? `${pct}%（残り ${remainingGB}GB）`
+                : `${pct}% (${remainingGB}GB remaining)`;
+        }
 
     } catch (e) {
         // 取得失敗時は何もしない
@@ -1399,6 +2033,9 @@ function applyHeaderUser() {
         const ch = name.trim().charAt(0).toUpperCase();
         avatar.textContent = ch || "?";
     }
+
+    // 言語設定を適用してウェルカム文言などを更新
+    applyLanguage(_currentLang);
 }
 
 
@@ -1409,7 +2046,7 @@ async function uploadSelectedFile(e) {
     const btn = _btnFromEvent(e);
 
     if (_uploadQueue.length === 0) {
-        notify("ファイルを選択してください");
+        notify("select_file");
         return;
     }
 
@@ -1424,7 +2061,7 @@ async function uploadSelectedFile(e) {
 
     // ZIPモードなのにチェックが1つも無い → 警告
     if (zipOn && zipFiles.length === 0) {
-        notify("ZIPに入れるファイルにチェックを付けてください");
+        notify("check_zip_files");
         return;
     }
 
@@ -1446,7 +2083,7 @@ async function uploadSelectedFile(e) {
         }
 
         if (totalCount > 1) {
-            notify(`${okCount} / ${totalCount} 件のアップロードが完了しました`);
+            notify(t("upload_complete", { okCount, totalCount }));
         }
 
         clearAllSelected();   // キューを空にしてトレイを閉じる
@@ -1464,7 +2101,7 @@ async function uploadSelectedFile(e) {
 async function _uploadAsZip(files) {
     // JSZip が読み込まれているか確認
     if (typeof JSZip === "undefined") {
-        notify("ZIP機能の読み込みに失敗しました（個別アップロードをお使いください）");
+        notify("zip_load_failed");
         return false;
     }
 
@@ -1500,7 +2137,7 @@ async function _uploadAsZip(files) {
         );
     } catch (err) {
         if (bar) bar.style.display = "none";
-        notify("ZIPの作成に失敗しました");
+        notify("zip_creation_failed");
         return false;
     }
 
@@ -1510,7 +2147,7 @@ async function _uploadAsZip(files) {
 
     const done = await uploadFileData(zipFile);
     if (done) {
-        notify(`${files.length}個のファイルを ${zipName} にまとめました`);
+        notify(t("zip_archive_success", { count: files.length, zipName }));
     }
     return done;
 }
@@ -1554,7 +2191,7 @@ function uploadFileData(file, index, total) {
             if (xhr.status >= 200 && xhr.status < 300) {
                 // 単体アップロード時のみ個別トースト（複数時はまとめて出す）
                 if (!total || total === 1) {
-                    notify(`${file.name} をアップロードしました`);
+                    notify(t("upload_success", { name: file.name }));
                 }
                 await loadFiles();
                 await loadStorage();
@@ -1573,7 +2210,7 @@ function uploadFileData(file, index, total) {
         // ネットワークエラー
         xhr.addEventListener("error", () => {
             if (bar) bar.style.display = "none";
-            notify(`${file.name}: アップロードに失敗しました`);
+            notify(t("upload_failed", { name: file.name }));
             resolve(false);
         });
 
@@ -1590,7 +2227,7 @@ async function downloadFile(filename) {
         const res = await fetch(`${API_BASE}/download/${encodeURIComponent(filename)}`);
 
         if (!res.ok) {
-            notify("ダウンロードに失敗しました");
+            notify("download_failed");
             return;
         }
 
@@ -1604,7 +2241,7 @@ async function downloadFile(filename) {
 
         URL.revokeObjectURL(url);
     } catch (e) {
-        notify("ダウンロードに失敗しました");
+        notify("download_failed");
     }
 }
 
@@ -1613,7 +2250,7 @@ async function downloadFile(filename) {
 // ファイル削除
 // =====================================
 async function deleteFile(filename) {
-    if (!confirm(`「${filename}」を削除しますか？`)) return;
+    if (!confirm(t("confirm_delete_single", { name: filename }))) return;
 
     try {
         const res = await fetch(
@@ -1626,10 +2263,10 @@ async function deleteFile(filename) {
             await loadStorage();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("削除に失敗しました");
+        notify("delete_failed");
     }
 }
 
@@ -1668,15 +2305,12 @@ function closeLinkModal() {
 // リンク作成ボタン：有効期限だけ聞いてリンク発行
 // （パスワードは共有時に設定したものをそのまま使う）
 async function createShareLink(filename) {
-    const daysInput = prompt(
-        `「${filename}」の共有リンクを作成します。\n\n有効期限（日数）を入力してください。\n空欄なら無期限です。`,
-        "7"
-    );
+    const daysInput = prompt(t("create_link_prompt", { name: filename }), "7");
     if (daysInput === null) return;   // キャンセル
 
     const expire_days = daysInput.trim() ? parseInt(daysInput.trim(), 10) : null;
     if (daysInput.trim() && (isNaN(expire_days) || expire_days <= 0)) {
-        notify("有効期限は正の数で入力してください");
+        notify("expire_positive_num");
         return;
     }
 
@@ -1689,7 +2323,7 @@ async function createShareLink(filename) {
 
         if (!res.ok) {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
             return;
         }
 
@@ -1697,7 +2331,7 @@ async function createShareLink(filename) {
         showLinkModal(filename, data);
 
     } catch (e) {
-        notify("リンクの作成に失敗しました");
+        notify("link_creation_failed");
     }
 }
 
@@ -1754,12 +2388,12 @@ async function copyShareLink() {
 
     try {
         await navigator.clipboard.writeText(input.value);
-        notify("リンクをコピーしました");
+        notify("link_copied");
     } catch (e) {
         // フォールバック：選択してコピー
         input.select();
         document.execCommand("copy");
-        notify("リンクをコピーしました");
+        notify("link_copied");
     }
 }
 
@@ -1767,9 +2401,9 @@ async function copyShareLink() {
 async function copyUrlText(url) {
     try {
         await navigator.clipboard.writeText(url);
-        notify("リンクをコピーしました");
+        notify("link_copied");
     } catch (e) {
-        notify("コピーに失敗しました");
+        notify("copy_failed");
     }
 }
 
@@ -1830,11 +2464,7 @@ async function loadLinks() {
         const data = await res.json();
 
         if (data.links.length === 0) {
-            list.innerHTML = _emptyStateHTML(
-                "fa-link-slash",
-                "発行したリンクはありません",
-                "共有一覧のファイルから「🔗 リンク作成」で発行できます"
-            );
+            list.innerHTML = _emptyStateHTML("fa-link-slash", t("no_links"), t("no_links_sub"));
             return;
         }
 
@@ -1874,13 +2504,13 @@ async function loadLinks() {
         }).join("");
 
     } catch (e) {
-        list.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+        list.innerHTML = `<p style='color:#f87171'>${t("cannot_connect")}</p>`;
     }
 }
 
 // リンクを無効化（削除）
 async function deleteLink(token) {
-    if (!confirm("このリンクを無効化しますか？\nこのURLでのダウンロードができなくなります。")) return;
+    if (!confirm(t("confirm_disable_link"))) return;
 
     try {
         const res = await fetch(`${API_BASE}/link/${encodeURIComponent(token)}`, {
@@ -1888,14 +2518,14 @@ async function deleteLink(token) {
         });
 
         if (res.ok) {
-            notify("リンクを無効化しました");
+            notify("link_disabled");
             await loadLinks();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("無効化に失敗しました");
+        notify("disable_failed");
     }
 }
 
@@ -1907,9 +2537,7 @@ async function renameFile(filename) {
     const base = dotIdx > 0 ? filename.slice(0, dotIdx) : filename;
 
     // 入力プロンプトはベース名だけを編集対象に
-    const message = ext
-        ? `新しい名前を入力してください\n（拡張子 ${ext} はそのままです）`
-        : `新しい名前を入力してください`;
+    const message = ext ? t("rename_prompt_with_ext", { ext }) : t("rename_prompt_no_ext");
 
     const input = prompt(message, base);
     if (input === null) return;
@@ -1938,14 +2566,14 @@ async function renameFile(filename) {
 
         if (res.ok) {
             const data = await res.json();
-            notify(data.message || "名前を変更しました");
+            notify(data.message || "name_changed");
             await loadFiles();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("名前の変更に失敗しました");
+        notify("name_change_failed");
     }
 }
 
@@ -2062,11 +2690,7 @@ async function loadTrash() {
         const data = await res.json();
 
         if (data.files.length === 0) {
-            trashList.innerHTML = _emptyStateHTML(
-                "fa-trash-can",
-                "ゴミ箱は空です",
-                "ここから削除したファイルを復元できます"
-            );
+            trashList.innerHTML = _emptyStateHTML("fa-trash-can", t("trash_empty"), t("trash_empty_sub"));
             return;
         }
 
@@ -2118,10 +2742,10 @@ async function restoreFile(filename) {
             await loadStorage();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("復元に失敗しました");
+        notify("restore_failed");
     }
 }
 
@@ -2130,7 +2754,7 @@ async function restoreFile(filename) {
 // ゴミ箱内ファイルの完全削除（復元不可）
 // =====================================
 async function permanentDelete(filename) {
-    if (!confirm(`「${filename}」を完全に削除しますか？\nこの操作は元に戻せません。`)) return;
+    if (!confirm(t("confirm_permanent_delete", { name: filename }))) return;
 
     try {
         const res = await fetch(
@@ -2142,10 +2766,10 @@ async function permanentDelete(filename) {
             await loadTrash();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("完全削除に失敗しました");
+        notify("permanent_delete_failed");
     }
 }
 
@@ -2155,7 +2779,7 @@ async function permanentDelete(filename) {
 // =====================================
 async function emptyTrash(e) {
     const btn = _btnFromEvent(e);
-    if (!confirm("ゴミ箱を空にしますか？\nすべてのファイルが完全に削除され、元に戻せません。")) return;
+    if (!confirm(t("confirm_empty_trash"))) return;
 
     setLoading(btn, true);
     try {
@@ -2167,10 +2791,10 @@ async function emptyTrash(e) {
             await loadTrash();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (err) {
-        notify("ゴミ箱を空にできませんでした");
+        notify("empty_trash_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -2187,10 +2811,7 @@ async function emptyTrash(e) {
 // =====================================
 async function shareFile(filename) {
     // パスワードを尋ねる（空欄ならパスワードなし）
-    const password = prompt(
-        `「${filename}」を共有します。\nパスワードを付ける場合は入力（不要なら空欄でOK）:`,
-        ""
-    );
+    const password = prompt(t("share_prompt", { name: filename }), "");
 
     // prompt でキャンセルした場合は中止
     if (password === null) return;
@@ -2210,10 +2831,10 @@ async function shareFile(filename) {
             notify(data.message);
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("共有に失敗しました");
+        notify("share_failed");
     }
 }
 
@@ -2226,14 +2847,11 @@ async function shareSelected(e) {
     const filenames = _activeCheckedNames();
 
     if (filenames.length === 0) {
-        notify("共有するファイルを選択してください");
+        notify("select_file_share");
         return;
     }
 
-    const password = prompt(
-        `選択した ${filenames.length} 件を共有します。\n共通のパスワードを付ける場合は入力（不要なら空欄でOK）:`,
-        ""
-    );
+    const password = prompt(t("share_multiple_prompt", { count: filenames.length }), "");
 
     if (password === null) return;
 
@@ -2254,10 +2872,10 @@ async function shareSelected(e) {
             notify(msg);
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (err) {
-        notify("共有に失敗しました");
+        notify("share_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -2294,11 +2912,7 @@ async function loadShared() {
         const data = await res.json();
 
         if (data.files.length === 0) {
-            sharedList.innerHTML = _emptyStateHTML(
-                "fa-share-nodes",
-                "共有ファイルはありません",
-                "ファイル一覧の「🔗 共有」ボタンから共有できます"
-            );
+            sharedList.innerHTML = _emptyStateHTML("fa-share-nodes", t("no_shared_files"), t("no_shared_files_sub"));
             return;
         }
 
@@ -2367,7 +2981,7 @@ async function downloadShared(owner, filename, isProtected) {
 
     // パスワード保護ありなら入力を求める
     if (isProtected) {
-        const password = prompt(`「${filename}」はパスワードで保護されています。\nパスワードを入力:`);
+        const password = prompt(t("password_required", { name: filename }));
         if (password === null) return;  // キャンセル
         headers["X-Share-Password"] = password;
     }
@@ -2380,9 +2994,9 @@ async function downloadShared(owner, filename, isProtected) {
 
         if (!res.ok) {
             if (res.status === 401) {
-                notify("パスワードが違います（または必要です）");
+                notify("wrong_password_or_required");
             } else {
-                notify("ダウンロードに失敗しました");
+                notify("download_failed");
             }
             return;
         }
@@ -2397,7 +3011,7 @@ async function downloadShared(owner, filename, isProtected) {
 
         URL.revokeObjectURL(url);
     } catch (e) {
-        notify("ダウンロードに失敗しました");
+        notify("download_failed");
     }
 }
 
@@ -2406,7 +3020,7 @@ async function downloadShared(owner, filename, isProtected) {
 // 共有を解除（自分が共有したものだけ）
 // =====================================
 async function unshareFile(owner, filename) {
-    if (!confirm(`「${filename}」の共有を解除しますか？\n（あなたの個人ファイルは残ります）`)) return;
+    if (!confirm(t("confirm_remove_share", { name: filename }))) return;
 
     try {
         const res = await fetch(
@@ -2418,10 +3032,10 @@ async function unshareFile(owner, filename) {
             await loadShared();
         } else {
             const err = await res.json();
-            notify(`エラー: ${err.detail}`);
+            notify(t("error_prefix") + err.detail);
         }
     } catch (e) {
-        notify("共有の解除に失敗しました");
+        notify("share_removed_failed");
     }
 }
 
@@ -2436,7 +3050,7 @@ function setupDropArea() {
         const files = Array.from(fileList || []);
         if (files.length === 0) return;
         addFilesToQueue(files);
-        notify(`${files.length}件を選択に追加しました`);
+        notify(t("added_to_selection", { count: files.length }));
     }
 
     // --- 画面全体のドラッグ&ドロップ（どこに落としてもOK） ---
@@ -2522,7 +3136,7 @@ async function initSettingsPage() {
         if (res.ok) {
             const data = await res.json();
             const role = data.role || "user";
-            document.getElementById("settingsRole").textContent = `権限: ${role}`;
+            document.getElementById("settingsRole").textContent = t("role_label", { role });
             document.getElementById("infoRole").textContent = role;
 
             // 管理者の場合はバックアップ設定とWebhook設定を表示
@@ -2706,11 +3320,7 @@ function renderCategoryFileList() {
     const filtered = _allUploadedFiles.filter(file => getCategoryByFilename(file.name) === _currentCategory);
 
     if (filtered.length === 0) {
-        list.innerHTML = _emptyStateHTML(
-            "fa-folder-open",
-            "このカテゴリは空です",
-            "該当するファイルがアップロードされていません。"
-        );
+        list.innerHTML = _emptyStateHTML("fa-folder-open", t("category_empty"), t("category_empty_sub"));
         return;
     }
 
@@ -2736,7 +3346,7 @@ function renderCategoryFileList() {
         <div class="file-card" data-ctx="main" data-filename="${dispName}">
             <div class="file-info" style="display:flex; align-items:center; width:100%;">
                 <input type="checkbox" class="file-check" value="${dispName}" style="margin-right:12px;">
-                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="お気に入り" style="margin-right:12px;">${starred ? '★' : '☆'}</button>
+                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="${t('star_title')}" style="margin-right:12px;">${starred ? '★' : '☆'}</button>
                 <div class="file-info-clickable" onclick="${clickHandler}" style="display:flex; align-items:center; gap:12px; cursor:pointer; flex:1;">
                     ${thumb}
                     <div>
@@ -2777,7 +3387,7 @@ async function loadBackupSettings() {
             if (timeInput) timeInput.value = data.time || "00:00";
         }
     } catch (e) {
-        notify("バックアップ設定の取得に失敗しました");
+        notify("backup_get_settings_failed");
     }
 }
 
@@ -2792,12 +3402,12 @@ async function saveBackupSettings(e) {
 
     // 簡単な時刻バリデーション (HH:MM)
     if (!/^\d{2}:\d{2}$/.test(timeVal)) {
-        notify("実行時刻は '00:00' のような半角の形式で入力してください");
+        notify("backup_time_format_error");
         return;
     }
     const [h, m] = timeVal.split(":").map(Number);
     if (h < 0 || h > 23 || m < 0 || m > 59) {
-        notify("実行時刻が正しくありません (00:00 〜 23:59)");
+        notify("backup_time_invalid");
         return;
     }
 
@@ -2809,13 +3419,13 @@ async function saveBackupSettings(e) {
             body: JSON.stringify({ enabled, time: timeVal })
         });
         if (res.ok) {
-            notify("バックアップ設定を保存しました");
+            notify("backup_settings_saved");
         } else {
             const err = await res.json();
-            notify(`保存失敗: ${err.detail}`);
+            notify(t("backup_save_failed", { detail: err.detail }));
         }
     } catch (err) {
-        notify("サーバー通信に失敗しました");
+        notify("server_communication_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -2824,7 +3434,7 @@ async function saveBackupSettings(e) {
 async function runManualBackup(e) {
     if (e) e.preventDefault();
     const btn = document.getElementById("runBackupBtn");
-    if (!confirm("手動バックアップを作成しますか？\n（ファイル数によっては数十秒かかる場合があります）")) return;
+    if (!confirm(t("confirm_manual_backup"))) return;
 
     setLoading(btn, true);
     try {
@@ -2833,14 +3443,14 @@ async function runManualBackup(e) {
         });
         if (res.ok) {
             const data = await res.json();
-            notify(`バックアップを作成しました: ${data.filename}`);
+            notify(t("backup_created", { filename: data.filename }));
             await loadBackupHistory();
         } else {
             const err = await res.json();
-            notify(`作成失敗: ${err.detail}`);
+            notify(t("backup_create_failed", { detail: err.detail }));
         }
     } catch (err) {
-        notify("サーバー通信に失敗しました");
+        notify("server_communication_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -2855,7 +3465,7 @@ async function loadBackupHistory() {
     try {
         const res = await fetch(`${API_BASE}/backup/list`);
         if (!res.ok) {
-            list.innerHTML = "<p style='color:#f87171'>バックアップ履歴の取得に失敗しました</p>";
+            list.innerHTML = `<p style='color:#f87171'>${t("backup_history_get_failed")}</p>`;
             return;
         }
 
@@ -2882,23 +3492,23 @@ async function loadBackupHistory() {
                     </div>
                     <div>
                         <div class="file-name" title="${file.filename}">${file.filename}</div>
-                        <div class="file-detail">ZIP圧縮形式 ・ ${file.size} ・ 作成: ${file.created_at}</div>
+                        <div class="file-detail">${t("backup_detail", { size: file.size, date: file.created_at })}</div>
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="download-btn" onclick="window.open('${downloadUrl}', '_blank')" title="ダウンロード">↓ ダウンロード</button>
-                    <button class="delete-btn"   onclick="deleteBackup('${file.filename}')" title="削除"><i class="fa-solid fa-trash"></i></button>
+                    <button class="download-btn" onclick="window.open('${downloadUrl}', '_blank')" title="${t("download")}">${t("download_btn_text")}</button>
+                    <button class="delete-btn"   onclick="deleteBackup('${file.filename}')" title="${t("delete")}"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>`;
         }).join("");
 
     } catch (e) {
-        list.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
+        list.innerHTML = `<p style='color:#f87171'>${t("cannot_connect")}</p>`;
     }
 }
 
 async function deleteBackup(filename) {
-    if (!confirm(`バックアップ「${filename}」を削除しますか？\nこの操作は元に戻せません。`)) return;
+    if (!confirm(t("confirm_delete_backup", { name: filename }))) return;
 
     try {
         const res = await fetch(`${API_BASE}/backup/${encodeURIComponent(filename)}`, {
@@ -2906,14 +3516,14 @@ async function deleteBackup(filename) {
         });
 
         if (res.ok) {
-            notify("バックアップを削除しました");
+            notify("backup_deleted");
             await loadBackupHistory();
         } else {
             const err = await res.json();
-            notify(`削除失敗: ${err.detail}`);
+            notify(t("backup_delete_failed", { detail: err.detail }));
         }
     } catch (e) {
-        notify("削除に失敗しました");
+        notify("delete_failed");
     }
 }
 
@@ -2936,7 +3546,7 @@ async function loadWebhookSettings() {
             if (shareToggle) shareToggle.checked = data.notify_share !== false;
         }
     } catch (e) {
-        notify("Webhook設定の取得に失敗しました");
+        notify("webhook_get_settings_failed");
     }
 }
 
@@ -2954,7 +3564,7 @@ async function saveWebhookSettings(e) {
     const notify_share = shareToggle ? shareToggle.checked : false;
 
     if (webhook_url && !/^https?:\/\/.+/.test(webhook_url)) {
-        notify("有効な URL を入力してください (http:// または https://)");
+        notify("webhook_url_invalid");
         return;
     }
 
@@ -2971,13 +3581,13 @@ async function saveWebhookSettings(e) {
             })
         });
         if (res.ok) {
-            notify("Webhook設定を保存しました");
+            notify("webhook_settings_saved");
         } else {
             const err = await res.json();
-            notify(`保存失敗: ${err.detail}`);
+            notify(t("backup_save_failed", { detail: err.detail }));
         }
     } catch (err) {
-        notify("サーバー通信に失敗しました");
+        notify("server_communication_failed");
     } finally {
         setLoading(btn, false);
     }
@@ -2990,12 +3600,12 @@ async function testWebhookSettings(e) {
     const webhook_url = urlInput ? urlInput.value.trim() : "";
 
     if (!webhook_url) {
-        notify("テスト送信する Webhook URL を入力してください");
+        notify("webhook_test_url_required");
         return;
     }
 
     if (!/^https?:\/\/.+/.test(webhook_url)) {
-        notify("有効な URL を入力してください (http:// または https://)");
+        notify("webhook_url_invalid");
         return;
     }
 
@@ -3007,13 +3617,13 @@ async function testWebhookSettings(e) {
             body: JSON.stringify({ webhook_url })
         });
         if (res.ok) {
-            notify("テスト通知を送信しました。設定されたチャンネルを確認してください。");
+            notify("webhook_test_sent");
         } else {
             const err = await res.json();
-            notify(`テスト送信失敗: ${err.detail}`);
+            notify(t("webhook_test_failed", { detail: err.detail }));
         }
     } catch (err) {
-        notify("サーバー通信に失敗しました");
+        notify("server_communication_failed");
     } finally {
         setLoading(btn, false);
     }

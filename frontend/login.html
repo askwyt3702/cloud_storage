@@ -11,53 +11,57 @@
  
 <body>
  
+  <div class="floating-controls">
+    <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
+  </div>
+
 <div class="login-box login-enhanced">
-
-  <div class="login-brand">
-    <div class="login-brand-icon">☁</div>
-    <h1>Cloud Storage</h1>
-    <p class="login-tagline">あなたのファイルを、いつでも・どこでも・安全に</p>
-  </div>
-
-  <div id="login-fields">
-    <input type="email" id="email" placeholder="メールアドレス">
-    <input type="password" id="password" placeholder="パスワード">
-   
-    <button onclick="login(event)">
-      ログイン
-    </button>
-  </div>
  
-  <div id="mfa-fields" style="display: none;">
-    <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
-      スマートフォン認証アプリに表示されている<br>6桁の認証コードを入力してください。
-    </p>
-    <input type="text" id="mfa-code" placeholder="6桁の認証コード（例: 123456）" maxlength="6" style="text-align: center; letter-spacing: 2px;">
-   
-    <button onclick="verifyMFA(event)" style="background-color: #28a745;">
-      認証してログイン
-    </button>
-  </div>
+   <div class="login-brand">
+     <div class="login-brand-icon">☁</div>
+     <h1 data-i18n="login_brand">Cloud Storage</h1>
+     <p class="login-tagline" data-i18n="login_tagline">あなたのファイルを、いつでも・どこでも・安全に</p>
+   </div>
  
-  <p class="register-text">
-    アカウントをお持ちでない方は
-    <a href="register.html">アカウントを作成</a>
-  </p>
-
-  <p class="register-text">
-    <a href="reset.html">パスワードをお忘れですか？</a>
-  </p>
-
-  <div class="login-features">
-    <span class="login-feature">🔒 2段階認証</span>
-    <span class="login-feature">🔗 共有リンク</span>
-    <span class="login-feature">🗑 ゴミ箱復元</span>
-  </div>
-
-</div>
+   <div id="login-fields">
+     <input type="email" id="email" placeholder="メールアドレス" data-i18n-placeholder="email_placeholder">
+     <input type="password" id="password" placeholder="パスワード" data-i18n-placeholder="password_placeholder">
+    
+     <button onclick="login(event)" data-i18n="login_btn">
+       ログイン
+     </button>
+   </div>
+  
+   <div id="mfa-fields" style="display: none;">
+     <p style="font-size: 14px; color: #666; margin-bottom: 10px;" data-i18n="mfa_instruction">
+       スマートフォン認証アプリに表示されている<br>6桁の認証コードを入力してください。
+     </p>
+     <input type="text" id="mfa-code" placeholder="6桁の認証コード（例: 123456）" data-i18n-placeholder="mfa_code_placeholder" maxlength="6" style="text-align: center; letter-spacing: 2px;">
+    
+     <button onclick="verifyMFA(event)" style="background-color: #28a745;" data-i18n="verify_btn">
+       認証してログイン
+     </button>
+   </div>
+  
+   <p class="register-text">
+     <span data-i18n="no_account_prompt">アカウントをお持ちでない方は</span>
+     <a href="register.html" data-i18n="create_account_link">アカウントを作成</a>
+   </p>
  
-  <script src="script.js"></script>
+   <p class="register-text">
+     <a href="reset.html" data-i18n="forgot_password_link">パスワードをお忘れですか？</a>
+   </p>
  
-</body>
+   <div class="login-features">
+     <span class="login-feature" data-i18n="feature_mfa">🔒 2段階認証</span>
+     <span class="login-feature" data-i18n="feature_share">🔗 共有リンク</span>
+     <span class="login-feature" data-i18n="feature_trash">🗑 ゴミ箱復元</span>
+   </div>
+ 
+ </div>
+  
+   <script src="script.js"></script>
+ 
+ </body>
 </html>
  

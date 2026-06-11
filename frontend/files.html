@@ -23,16 +23,17 @@
         <div class="brand-icon">☁</div>
         <div>
           <h1>Cloud Storage</h1>
-          <p class="brand-sub">あなたのファイルをいつでもどこでも</p>
+          <p class="brand-sub" data-i18n="brand_sub">あなたのファイルをいつでもどこでも</p>
         </div>
       </div>
 
       <div class="user-pill">
         <div class="avatar" id="userAvatar">?</div>
         <div class="user-name" id="userName">ユーザー</div>
+        <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
         <button class="theme-toggle" onclick="toggleTheme()" aria-label="テーマ切替" title="テーマ切替">☀</button>
         <button class="settings-btn" onclick="location.href='settings.html'" title="設定">⚙</button>
-        <button class="logout-btn" onclick="logout()">
+        <button class="logout-btn" onclick="logout()" data-i18n="logout_btn">
           ログアウト
         </button>
       </div>
@@ -42,10 +43,10 @@
     <!-- タブナビゲーション（横スクロール対応・下線がスライド） -->
     <!-- ※「カテゴリ別」タブは「マイファイル」のカテゴリフィルタに統合（uploadedListViewのコードは temporarily 非表示で保持） -->
     <div class="tab-bar" id="tabBar">
-      <button class="tab active" data-view="main"   onclick="switchTab('main')">📊 マイファイル</button>
-      <button class="tab"        data-view="shared" onclick="switchTab('shared')">📂 共有</button>
-      <button class="tab"        data-view="links"  onclick="switchTab('links')">🔗 リンク</button>
-      <button class="tab"        data-view="trash"  onclick="switchTab('trash')">🗑 ゴミ箱</button>
+      <button class="tab active" data-view="main"   onclick="switchTab('main')" data-i18n="tab_my_files">📊 マイファイル</button>
+      <button class="tab"        data-view="shared" onclick="switchTab('shared')" data-i18n="tab_shared">📂 共有</button>
+      <button class="tab"        data-view="links"  onclick="switchTab('links')" data-i18n="tab_links">🔗 リンク</button>
+      <button class="tab"        data-view="trash"  onclick="switchTab('trash')" data-i18n="tab_trash">🗑 ゴミ箱</button>
       <span class="tab-indicator" id="tabIndicator"></span>
     </div>
 
@@ -54,167 +55,167 @@
 
       <!-- ダッシュボード（ようこそ＋容量＋統計） -->
       <div class="hero-card" id="heroCard">
-
+ 
         <div class="hero-welcome">
-          <h2>おかえりなさい、<span id="heroUserName">ゲスト</span> さん</h2>
-          <p id="storageText">使用容量を取得中...</p>
+          <h2 id="welcomeGreeting">おかえりなさい、<span id="heroUserName">ゲスト</span> さん</h2>
+          <p id="storageText" data-i18n="storage_text">使用容量を取得中...</p>
         </div>
-
+ 
         <div class="hero-stats">
-
+ 
           <div class="hero-stat">
-            <div class="hero-stat-label">使用容量</div>
+            <div class="hero-stat-label" data-i18n="stat_storage">使用容量</div>
             <div class="hero-stat-value" id="heroStorageText">--</div>
             <div class="storage-gauge">
               <div class="storage-gauge-fill" id="heroStorageFill"></div>
             </div>
             <div class="hero-stat-sub" id="heroStoragePct">0%</div>
           </div>
-
+ 
           <div class="hero-stat">
-            <div class="hero-stat-label">マイファイル</div>
+            <div class="hero-stat-label" data-i18n="stat_my_files">マイファイル</div>
             <div class="hero-stat-value" id="heroFileCount">--</div>
-            <div class="hero-stat-sub">件</div>
+            <div class="hero-stat-sub" data-i18n="unit_items">件</div>
           </div>
-
+ 
           <div class="hero-stat">
-            <div class="hero-stat-label">あなたが共有中</div>
+            <div class="hero-stat-label" data-i18n="stat_sharing">あなたが共有中</div>
             <div class="hero-stat-value" id="heroSharedCount">--</div>
-            <div class="hero-stat-sub">件</div>
+            <div class="hero-stat-sub" data-i18n="unit_items">件</div>
           </div>
-
+ 
         </div>
-
+ 
       </div>
-
+ 
       <div class="upload-buttons">
-
+ 
         <input type="file" id="fileInput" hidden multiple>
-
-        <button onclick="document.getElementById('fileInput').click()">
+ 
+        <button onclick="document.getElementById('fileInput').click()" data-i18n="btn_add_files">
           📁 ファイルを追加
         </button>
-
-        <button onclick="uploadSelectedFile(event)">
+ 
+        <button onclick="uploadSelectedFile(event)" data-i18n="btn_upload">
           ⬆ アップロード
         </button>
-
+ 
       </div>
-
+ 
       <!-- 選択中のファイルリスト（選ぶまでは非表示） -->
       <div id="uploadTray" class="upload-tray" hidden>
-
+ 
         <div class="upload-tray-head">
-          <span id="uploadTraySummary">選択中のファイル</span>
-          <button class="tray-clear-all" onclick="clearAllSelected()">すべてクリア</button>
+          <span id="uploadTraySummary" data-i18n="tray_selected">選択中のファイル</span>
+          <button class="tray-clear-all" onclick="clearAllSelected()" data-i18n="tray_clear_all">すべてクリア</button>
         </div>
-
+ 
         <div id="uploadTrayList" class="upload-tray-list">
           <!-- ファイル行が動的に追加される -->
         </div>
-
+ 
         <div class="upload-tray-foot">
           <label class="zip-toggle">
             <input type="checkbox" id="zipModeToggle" onchange="renderUploadTray()">
-            チェックしたファイルを <b>1つのZIP</b> にまとめる
+            <span data-i18n="tray_zip_mode">チェックしたファイルを <b>1つのZIP</b> にまとめる</span>
           </label>
           <span class="zip-hint" id="zipHint"></span>
         </div>
-
+ 
       </div>
-
+ 
       <div class="drop-area">
-        <p class="drop-title">
+        <p class="drop-title" data-i18n="drop_title">
           ファイルをドラッグ＆ドロップ
         </p>
-        <p class="drop-sub">
+        <p class="drop-sub" data-i18n="drop_sub">
           またはファイルを選択
         </p>
       </div>
-
+ 
       <!-- 検索バー -->
       <div class="search-bar">
         <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="fileSearch" placeholder="ファイル名で絞り込み..." oninput="filterFiles()">
+        <input type="text" id="fileSearch" placeholder="ファイル名で絞り込み..." data-i18n-placeholder="search_placeholder" oninput="filterFiles()">
         <button class="search-clear" id="searchClear" onclick="clearFileSearch()" style="display:none">✕</button>
       </div>
 
       <!-- カテゴリフィルタチップ（旧カテゴリ別タブの機能を統合） -->
       <div class="filter-chips" id="categoryChips">
-        <button class="chip active" data-cat="all"      onclick="setCategoryFilter('all', this)">すべて</button>
-        <button class="chip"        data-cat="image"    onclick="setCategoryFilter('image', this)">🖼 画像</button>
-        <button class="chip"        data-cat="document" onclick="setCategoryFilter('document', this)">📄 文書</button>
-        <button class="chip"        data-cat="media"    onclick="setCategoryFilter('media', this)">🎬 メディア</button>
-        <button class="chip"        data-cat="other"    onclick="setCategoryFilter('other', this)">📦 その他</button>
+        <button class="chip active" data-cat="all"      onclick="setCategoryFilter('all', this)" data-i18n="cat_all">すべて</button>
+        <button class="chip"        data-cat="image"    onclick="setCategoryFilter('image', this)" data-i18n="cat_image">🖼 画像</button>
+        <button class="chip"        data-cat="document" onclick="setCategoryFilter('document', this)" data-i18n="cat_document">📄 文書</button>
+        <button class="chip"        data-cat="media"    onclick="setCategoryFilter('media', this)" data-i18n="cat_media">🎬 メディア</button>
+        <button class="chip"        data-cat="other"    onclick="setCategoryFilter('other', this)" data-i18n="cat_other">📦 その他</button>
       </div>
-
+ 
       <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
       <div class="toolbar">
-
+ 
         <div class="toolbar-left">
           <select id="sortSelect" class="sort-select" onchange="loadFiles()">
-            <option value="name_asc">名前順（A→Z）</option>
-            <option value="name_desc">名前順（Z→A）</option>
-            <option value="date_desc">新しい順</option>
-            <option value="date_asc">古い順</option>
-            <option value="size_desc">サイズ大きい順</option>
-            <option value="size_asc">サイズ小さい順</option>
+            <option value="name_asc" data-i18n="sort_name_asc">名前順（A→Z）</option>
+            <option value="name_desc" data-i18n="sort_name_desc">名前順（Z→A）</option>
+            <option value="date_desc" data-i18n="sort_date_desc">新しい順</option>
+            <option value="date_asc" data-i18n="sort_date_asc">古い順</option>
+            <option value="size_desc" data-i18n="sort_size_desc">サイズ大きい順</option>
+            <option value="size_asc" data-i18n="sort_size_asc">サイズ小さい順</option>
           </select>
-
+ 
           <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleViewMode()" title="表示切替">
-            <i class="fa-solid fa-table-cells"></i> タイル
+            <i class="fa-solid fa-table-cells"></i> <span data-i18n="view_tile">タイル</span>
           </button>
         </div>
-
+ 
         <div class="toolbar-right">
-          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
-          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
-          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
-          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+          <button onclick="toggleSelectAll(this)" data-i18n="btn_select_all">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)" data-i18n="btn_zip_download">📦 ZIP取得</button>
+          <button class="share-btn" onclick="shareSelected(event)" data-i18n="btn_share">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)" data-i18n="btn_delete">🗑 選択削除</button>
         </div>
-
+ 
       </div>
-
+ 
       <div class="file-list" id="fileList">
         <!-- ここに動的に追加される -->
       </div>
-
+ 
     </div>
     <!-- ゴミ箱ビュー（最初は非表示） -->
     <div id="trashView" style="display:none">
-
+ 
       <div class="toolbar">
         <select id="trashSort" class="sort-select" onchange="loadTrash()">
-          <option value="name_asc">名前順（A→Z）</option>
-          <option value="name_desc">名前順（Z→A）</option>
-          <option value="date_desc">削除が新しい順</option>
-          <option value="date_asc">削除が古い順</option>
-          <option value="size_desc">サイズ大きい順</option>
-          <option value="size_asc">サイズ小さい順</option>
+          <option value="name_asc" data-i18n="sort_name_asc">名前順（A→Z）</option>
+          <option value="name_desc" data-i18n="sort_name_desc">名前順（Z→A）</option>
+          <option value="date_desc" data-i18n="sort_trash_date_desc">削除が新しい順</option>
+          <option value="date_asc" data-i18n="sort_trash_date_asc">削除が古い順</option>
+          <option value="size_desc" data-i18n="sort_size_desc">サイズ大きい順</option>
+          <option value="size_asc" data-i18n="sort_size_asc">サイズ小さい順</option>
         </select>
-        <button class="delete-btn" onclick="emptyTrash(event)">ゴミ箱を空にする</button>
+        <button class="delete-btn" onclick="emptyTrash(event)" data-i18n="btn_empty_trash">ゴミ箱を空にする</button>
       </div>
-
+ 
       <div class="file-list" id="trashList">
         <!-- ゴミ箱の中身が動的に追加される -->
       </div>
-
+ 
     </div>
-
+ 
     <!-- 共有ビュー（最初は非表示） -->
     <div id="sharedView" style="display:none">
-
+ 
       <div class="toolbar">
         <select id="sharedSort" class="sort-select" onchange="loadShared()">
-          <option value="name_asc">名前順（A→Z）</option>
-          <option value="name_desc">名前順（Z→A）</option>
-          <option value="date_desc">共有が新しい順</option>
-          <option value="date_asc">共有が古い順</option>
-          <option value="size_desc">サイズ大きい順</option>
-          <option value="size_asc">サイズ小さい順</option>
-          <option value="owner_asc">共有者順</option>
+          <option value="name_asc" data-i18n="sort_name_asc">名前順（A→Z）</option>
+          <option value="name_desc" data-i18n="sort_name_desc">名前順（Z→A）</option>
+          <option value="date_desc" data-i18n="sort_shared_date_desc">共有が新しい順</option>
+          <option value="date_asc" data-i18n="sort_shared_date_asc">共有が古い順</option>
+          <option value="size_desc" data-i18n="sort_size_desc">サイズ大きい順</option>
+          <option value="size_asc" data-i18n="sort_size_asc">サイズ小さい順</option>
+          <option value="owner_asc" data-i18n="sort_owner_asc">共有者順</option>
         </select>
-        <p class="storage-text">みんなが共有したファイル</p>
+        <p class="storage-text" data-i18n="shared_info_text">みんなが共有したファイル</p>
       </div>
 
       <div class="file-list" id="sharedList">
@@ -225,44 +226,44 @@
 
     <!-- アップロードしたファイル一覧ビュー（カテゴリ別・最初は非表示） -->
     <div id="uploadedListView" style="display:none">
-
+ 
       <div class="toolbar">
-        <p class="storage-text">自動分類されたファイル一覧</p>
+        <p class="storage-text" data-i18n="cat_title_text">自動分類されたファイル一覧</p>
       </div>
-
+ 
       <!-- カテゴリ概要グリッド -->
       <div class="category-grid" id="categoryGrid">
         <!-- JSで動的に構築：画像、文書、メディア、その他 -->
       </div>
-
+ 
       <!-- カテゴリ内の一括操作バー -->
       <div class="toolbar">
         <div class="toolbar-right">
-          <button onclick="toggleSelectAll(this)">☑ 全選択</button>
-          <button class="download-btn" onclick="downloadSelectedZip(event)">📦 ZIP取得</button>
-          <button class="share-btn" onclick="shareSelected(event)">🔗 選択を共有</button>
-          <button class="delete-btn" onclick="deleteSelected(event)">🗑 選択削除</button>
+          <button onclick="toggleSelectAll(this)" data-i18n="btn_select_all">☑ 全選択</button>
+          <button class="download-btn" onclick="downloadSelectedZip(event)" data-i18n="btn_zip_download">📦 ZIP取得</button>
+          <button class="share-btn" onclick="shareSelected(event)" data-i18n="btn_share">🔗 選択を共有</button>
+          <button class="delete-btn" onclick="deleteSelected(event)" data-i18n="btn_delete">🗑 選択削除</button>
         </div>
       </div>
-
+ 
       <!-- 選択中カテゴリのファイルリスト -->
       <div class="file-list" id="categoryFileList">
         <!-- JSで動的に構築 -->
       </div>
-
+ 
     </div>
-
+ 
     <!-- リンク管理ビュー（最初は非表示） -->
     <div id="linksView" style="display:none">
-
+ 
       <div class="toolbar">
-        <p class="storage-text">あなたが発行した共有リンク</p>
+        <p class="storage-text" data-i18n="links_info_text">あなたが発行した共有リンク</p>
       </div>
-
+ 
       <div class="file-list" id="linksList">
         <!-- 発行したリンクが動的に追加される -->
       </div>
-
+ 
     </div>
 
   </div>

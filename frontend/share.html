@@ -15,18 +15,22 @@
 
 <body>
 
+  <div class="floating-controls">
+    <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
+  </div>
+
   <div class="login-box" style="max-width:460px;">
 
     <div class="brand" style="justify-content:center; margin-bottom:10px;">
       <div class="brand-icon">☁</div>
       <div>
         <h1 style="font-size:22px;">Cloud Storage</h1>
-        <p class="brand-sub">共有ファイル</p>
+        <p class="brand-sub" data-i18n="share_title">共有ファイル</p>
       </div>
     </div>
 
     <!-- 読み込み中 -->
-    <div id="shareLoading" style="text-align:center; color:#cbd5e1; padding:20px;">
+    <div id="shareLoading" style="text-align:center; color:#cbd5e1; padding:20px;" data-i18n="share_loading">
       読み込み中...
     </div>
 
@@ -37,16 +41,16 @@
         <div class="file-icon default-bg" id="shareIcon" style="width:70px;height:70px;font-size:32px;">
           <i class="fa-solid fa-file"></i>
         </div>
-        <div class="share-file-name" id="shareFileName">ファイル名</div>
-        <div class="share-file-meta" id="shareFileMeta">サイズ・種類</div>
+        <div class="share-file-name" id="shareFileName" data-i18n="select_file">ファイル名</div>
+        <div class="share-file-meta" id="shareFileMeta" data-i18n="share_loading">サイズ・種類</div>
       </div>
 
       <!-- パスワード入力（保護されている場合のみ表示） -->
       <div id="sharePasswordArea" style="display:none;">
-        <input type="password" id="sharePassword" placeholder="このファイルのパスワード">
+        <input type="password" id="sharePassword" placeholder="このファイルのパスワード" data-i18n-placeholder="share_password_placeholder">
       </div>
 
-      <button id="shareDownloadBtn" onclick="doShareDownload()">
+      <button id="shareDownloadBtn" onclick="doShareDownload()" data-i18n="share_download_btn">
         ⬇ ダウンロード
       </button>
 
@@ -57,11 +61,12 @@
     <!-- エラー表示 -->
     <div id="shareError" style="display:none; text-align:center; padding:20px;">
       <i class="fa-solid fa-triangle-exclamation" style="font-size:48px; color:#f59e0b;"></i>
-      <p id="shareErrorMsg" style="color:#e2e8f0; margin-top:16px;">エラー</p>
+      <p id="shareErrorMsg" style="color:#e2e8f0; margin-top:16px;" data-i18n="share_error_header">エラー</p>
     </div>
 
   </div>
 
+  <script src="script.js"></script>
   <script src="share.js"></script>
 
 </body>

@@ -15,49 +15,48 @@
 
 <body>
 
-  <div class="cloud-box">
-
-    <div class="top-area">
+  <div class="cloud-box">    <div class="top-area">
 
       <div class="brand">
         <div class="brand-icon">⚙</div>
         <div>
-          <h1>設定</h1>
-          <p class="brand-sub">アカウント情報</p>
+          <h1 data-i18n="settings_header">設定</h1>
+          <p class="brand-sub" data-i18n="settings_sub">アカウント情報</p>
         </div>
       </div>
 
       <div class="user-pill">
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="テーマ切替" title="テーマ切替">☀</button>
-        <button onclick="location.href='files.html'">← ファイルに戻る</button>
-        <button class="logout-btn" onclick="logout()">ログアウト</button>
+        <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
+        <button class="theme-toggle" onclick="toggleTheme()" data-i18n-title="theme_toggle_title" aria-label="テーマ切替" title="テーマ切替">☀</button>
+        <button onclick="location.href='files.html'" data-i18n="back_to_files">← ファイルに戻る</button>
+        <button class="logout-btn" onclick="logout()" data-i18n="logout_btn">ログアウト</button>
       </div>
 
     </div>
 
     <!-- プロフィールカード -->
     <div class="settings-section">
-      <h2 class="settings-title">👤 プロフィール</h2>
+      <h2 class="settings-title" data-i18n="profile_section">👤 プロフィール</h2>
 
       <div class="settings-profile">
         <div class="avatar" id="settingsAvatar" style="width:64px;height:64px;font-size:28px;">?</div>
         <div>
-          <div class="settings-username" id="settingsUsername">読み込み中...</div>
+          <div class="settings-username" id="settingsUsername" data-i18n="share_loading">読み込み中...</div>
           <div class="settings-role" id="settingsRole"></div>
         </div>
       </div>
 
       <div class="settings-rows">
         <div class="settings-row">
-          <span class="settings-label">ユーザー名</span>
+          <span class="settings-label" data-i18n="label_username">ユーザー名</span>
           <span class="settings-value" id="infoUsername">--</span>
         </div>
         <div class="settings-row">
-          <span class="settings-label">権限（ロール）</span>
+          <span class="settings-label" data-i18n="label_role">権限（ロール）</span>
           <span class="settings-value" id="infoRole">--</span>
         </div>
         <div class="settings-row">
-          <span class="settings-label">使用容量</span>
+          <span class="settings-label" data-i18n="label_storage">使用容量</span>
           <span class="settings-value" id="infoStorage">--</span>
         </div>
       </div>
@@ -65,35 +64,35 @@
 
     <!-- セキュリティカード（準備中） -->
     <div class="settings-section">
-      <h2 class="settings-title">🔒 セキュリティ</h2>
+      <h2 class="settings-title" data-i18n="security_section">🔒 セキュリティ</h2>
 
       <div class="settings-rows">
         <div class="settings-row">
           <div>
-            <div class="settings-label">パスワード変更</div>
-            <div class="settings-sub">パスワードを変更します</div>
+            <div class="settings-label" data-i18n="label_change_password">パスワード変更</div>
+            <div class="settings-sub" data-i18n="sub_change_password">パスワードを変更します</div>
           </div>
-          <button disabled title="認証担当と連携して実装予定">準備中</button>
+          <button disabled title="認証担当と連携して実装予定" data-i18n="btn_preparing">準備中</button>
         </div>
         <div class="settings-row">
           <div>
-            <div class="settings-label">2段階認証（MFA）</div>
-            <div class="settings-sub">認証アプリでログインを保護</div>
+            <div class="settings-label" data-i18n="label_mfa">2段階認証（MFA）</div>
+            <div class="settings-sub" data-i18n="sub_mfa">認証アプリでログインを保護</div>
           </div>
-          <button disabled title="認証担当と連携して実装予定">準備中</button>
+          <button disabled title="認証担当と連携して実装予定" data-i18n="btn_preparing">準備中</button>
         </div>
       </div>
     </div>
 
     <!-- バックアップ設定（管理者限定、一般ユーザーは非表示） -->
     <div class="settings-section" id="backupSettingsSection" style="display: none;">
-      <h2 class="settings-title">💾 自動バックアップ設定</h2>
+      <h2 class="settings-title" data-i18n="backup_section">💾 自動バックアップ設定</h2>
       
       <div class="settings-rows">
         <div class="settings-row" style="align-items: center;">
           <div>
-            <div class="settings-label">自動バックアップ</div>
-            <div class="settings-sub">毎日指定した時刻に自動でバックアップを実行します</div>
+            <div class="settings-label" data-i18n="label_backup">自動バックアップ</div>
+            <div class="settings-sub" data-i18n="sub_backup">毎日指定した時刻に自動でバックアップを実行します</div>
           </div>
           <label class="switch">
             <input type="checkbox" id="backupToggle">
@@ -103,20 +102,20 @@
         
         <div class="settings-row" style="align-items: center;">
           <div>
-            <div class="settings-label">実行時刻 (24時間表記)</div>
-            <div class="settings-sub">自動バックアップを実行する時刻 (例: 00:00)</div>
+            <div class="settings-label" data-i18n="label_backup_time">実行時刻 (24時間表記)</div>
+            <div class="settings-sub" data-i18n="sub_backup_time">自動バックアップを実行する時刻 (例: 00:00)</div>
           </div>
           <input type="text" id="backupTime" class="settings-time-input" placeholder="00:00" style="width: 100px; text-align: center;">
         </div>
 
         <div class="settings-row" style="justify-content: flex-end; gap: 10px; border-bottom: none; padding-bottom: 0;">
-          <button class="save-settings-btn" id="saveBackupBtn" onclick="saveBackupSettings(event)" style="background: #2563eb; padding: 10px 18px; border-radius: 12px; font-weight: bold;">💾 設定を保存</button>
-          <button class="run-backup-btn" id="runBackupBtn" onclick="runManualBackup(event)" style="background: #10b981; padding: 10px 18px; border-radius: 12px; font-weight: bold;">⚡ 今すぐバックアップ</button>
+          <button class="save-settings-btn" id="saveBackupBtn" onclick="saveBackupSettings(event)" style="background: #2563eb; padding: 10px 18px; border-radius: 12px; font-weight: bold;" data-i18n="btn_save_settings">💾 設定を保存</button>
+          <button class="run-backup-btn" id="runBackupBtn" onclick="runManualBackup(event)" style="background: #10b981; padding: 10px 18px; border-radius: 12px; font-weight: bold;" data-i18n="btn_run_backup">⚡ 今すぐバックアップ</button>
         </div>
       </div>
 
       <div class="backup-history-section" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
-        <h3 class="settings-sub-title" style="color: white; font-size: 15px; margin-bottom: 12px; font-weight: bold;">📁 バックアップ履歴</h3>
+        <h3 class="settings-sub-title" style="color: white; font-size: 15px; margin-bottom: 12px; font-weight: bold;" data-i18n="backup_history_title">📁 バックアップ履歴</h3>
         <div class="file-list" id="backupList">
           <!-- JSで動的に構築 -->
         </div>
@@ -125,41 +124,41 @@
 
     <!-- 外部サービス連携 (Webhook) 設定（管理者限定） -->
     <div class="settings-section" id="webhookSettingsSection" style="display: none;">
-      <h2 class="settings-title">🚀 外部サービス連携 (Webhook)</h2>
+      <h2 class="settings-title" data-i18n="webhook_section">🚀 外部サービス連携 (Webhook)</h2>
       
       <div class="settings-rows">
-        <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 8px;">
-          <div>
-            <div class="settings-label">Webhook URL</div>
-            <div class="settings-sub">DiscordまたはSlackのWebhook URLを入力します</div>
+        <div class="settings-row" style="margin-bottom: 0; padding-bottom: 8px;">
+          <div style="width: 100%;">
+            <div class="settings-label" data-i18n="label_webhook_url">Webhook URL</div>
+            <div class="settings-sub" data-i18n="sub_webhook_url" style="margin-bottom: 8px;">DiscordまたはSlackのWebhook URLを入力します</div>
+            <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/..." style="width: 100%; box-sizing: border-box; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
           </div>
-          <input type="text" id="webhookUrl" placeholder="https://discord.com/api/webhooks/..." style="width: 100%; box-sizing: border-box; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white;">
         </div>
 
         <div class="settings-row" style="flex-direction: column; align-items: stretch; gap: 12px;">
           <div>
-            <div class="settings-label">通知するイベント</div>
-            <div class="settings-sub">通知を送信する操作を選択してください</div>
+            <div class="settings-label" data-i18n="label_notify_events">通知するイベント</div>
+            <div class="settings-sub" data-i18n="sub_notify_events">通知を送信する操作を選択してください</div>
           </div>
           <div style="display: flex; flex-direction: column; gap: 10px; padding: 4px 0;">
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #ccc;">
               <input type="checkbox" id="notifyUpload" style="width: 18px; height: 18px; cursor: pointer;">
-              <span>📥 ファイルのアップロード時</span>
+              <span data-i18n="event_upload">📥 ファイルのアップロード時</span>
             </label>
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #ccc;">
               <input type="checkbox" id="notifyDelete" style="width: 18px; height: 18px; cursor: pointer;">
-              <span>🗑️ ファイルの削除時（ゴミ箱移動・完全削除）</span>
+              <span data-i18n="event_delete">🗑️ ファイルの削除時（ゴミ箱移動・完全削除）</span>
             </label>
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #ccc;">
               <input type="checkbox" id="notifyShare" style="width: 18px; height: 18px; cursor: pointer;">
-              <span>🔗 共有リンクの作成時</span>
+              <span data-i18n="event_share">🔗 共有リンクの作成時</span>
             </label>
           </div>
         </div>
 
         <div class="settings-row" style="justify-content: flex-end; gap: 10px; border-bottom: none; padding-bottom: 0; margin-top: 10px;">
-          <button class="save-settings-btn" id="saveWebhookBtn" onclick="saveWebhookSettings(event)" style="background: #2563eb; padding: 10px 18px; border-radius: 12px; font-weight: bold; color: white; border: none; cursor: pointer;">💾 設定を保存</button>
-          <button class="run-backup-btn" id="testWebhookBtn" onclick="testWebhookSettings(event)" style="background: #8b5cf6; padding: 10px 18px; border-radius: 12px; font-weight: bold; color: white; border: none; cursor: pointer;">🔔 テスト送信</button>
+          <button class="save-settings-btn" id="saveWebhookBtn" onclick="saveWebhookSettings(event)" style="background: #2563eb; padding: 10px 18px; border-radius: 12px; font-weight: bold; color: white; border: none; cursor: pointer;" data-i18n="btn_save_settings">💾 設定を保存</button>
+          <button class="run-backup-btn" id="testWebhookBtn" onclick="testWebhookSettings(event)" style="background: #8b5cf6; padding: 10px 18px; border-radius: 12px; font-weight: bold; color: white; border: none; cursor: pointer;" data-i18n="btn_test_send">🔔 テスト送信</button>
         </div>
       </div>
     </div>

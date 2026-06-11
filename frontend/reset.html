@@ -11,30 +11,34 @@
 
 <body>
 
+  <div class="floating-controls">
+    <button class="lang-toggle" onclick="toggleLanguage()" id="langBtn" title="Language/言語">🌐 EN</button>
+  </div>
+
 <div class="login-box">
 
-  <h1>パスワード再設定</h1>
+  <h1 data-i18n="reset_title">パスワード再設定</h1>
 
-  <p class="register-text" style="margin-bottom:6px;">
+  <p class="register-text" style="margin-bottom:6px;" data-i18n="reset_instruction">
     登録メールアドレスと、認証アプリの6桁コードで本人確認します
   </p>
 
-  <input type="email" id="reset-email" placeholder="メールアドレス">
+  <input type="email" id="reset-email" placeholder="メールアドレス" data-i18n-placeholder="email_placeholder">
 
-  <input type="text" id="reset-code" placeholder="認証コード（6桁）" maxlength="6"
+  <input type="text" id="reset-code" placeholder="認証コード（6桁）" data-i18n-placeholder="reset_code_placeholder" maxlength="6"
          style="text-align:center; letter-spacing:2px;">
 
   <input type="password" id="reset-new-password"
-         placeholder="新しいパスワード（8文字以上・大文字・数字・記号）">
+         placeholder="新しいパスワード（8文字以上・大文字・数字・記号）" data-i18n-placeholder="reset_new_password_placeholder">
 
-  <input type="password" id="reset-new-password2" placeholder="新しいパスワード（確認）">
+  <input type="password" id="reset-new-password2" placeholder="新しいパスワード（確認）" data-i18n-placeholder="reset_new_password_confirm_placeholder">
 
-  <button onclick="resetPassword(event)">
+  <button onclick="resetPassword(event)" data-i18n="reset_btn">
     パスワードを変更
   </button>
 
   <p class="register-text">
-    <a href="login.html">← ログインに戻る</a>
+    <a href="login.html" data-i18n="back_to_login">← ログインに戻る</a>
   </p>
 
 </div>
