@@ -34,6 +34,17 @@ const TRANSLATIONS = {
         sort_size_desc: "サイズ大きい順",
         sort_size_asc: "サイズ小さい順",
         view_tile: "タイル",
+        view_list: "リスト",
+        view_toggle_title: "表示切替",
+        cat_all: "すべて",
+        cat_image: "🖼 画像",
+        cat_document: "📄 文書",
+        cat_media: "🎬 メディア",
+        cat_other: "📦 その他",
+        cat_image_title: "画像ファイル",
+        cat_document_title: "文書・書類",
+        cat_media_title: "動画・音楽",
+        cat_other_title: "その他・圧縮",
         btn_select_all: "☑ 全選択",
         btn_zip_download: "📦 ZIP取得",
         btn_share: "🔗 選択を共有",
@@ -307,6 +318,17 @@ const TRANSLATIONS = {
         sort_size_desc: "Size (Largest)",
         sort_size_asc: "Size (Smallest)",
         view_tile: "Grid",
+        view_list: "List",
+        view_toggle_title: "Toggle View Mode",
+        cat_all: "All",
+        cat_image: "🖼 Images",
+        cat_document: "📄 Documents",
+        cat_media: "🎬 Media",
+        cat_other: "📦 Others",
+        cat_image_title: "Image Files",
+        cat_document_title: "Documents",
+        cat_media_title: "Videos & Music",
+        cat_other_title: "Others & ZIPs",
         btn_select_all: "☑ Select All",
         btn_zip_download: "📦 Get ZIP",
         btn_share: "🔗 Share Selection",
@@ -628,6 +650,13 @@ function applyLanguage(lang) {
         }
     } else if (document.getElementById("fileList")) {
         titleKey = "title_files";
+        // Dynamic re-render for category grids and category list when language changes
+        if (typeof renderCategoryGrid === "function" && document.getElementById("categoryGrid")) {
+            renderCategoryGrid();
+        }
+        if (typeof renderCategoryFileList === "function" && document.getElementById("categoryFileList")) {
+            renderCategoryFileList();
+        }
     } else if (document.getElementById("email") && document.getElementById("password") && document.getElementById("login-fields")) {
         titleKey = "title_login";
     } else if (document.getElementById("register-email") && document.getElementById("confirm-password")) {
@@ -644,6 +673,11 @@ function applyLanguage(lang) {
 
     if (titleKey && TRANSLATIONS[lang][titleKey]) {
         document.title = TRANSLATIONS[lang][titleKey];
+    }
+
+    // Refresh view mode toggle button text in the new language
+    if (typeof applyViewMode === "function") {
+        applyViewMode();
     }
 }
 
@@ -721,8 +755,8 @@ function applyViewMode() {
     const btn = document.getElementById("viewToggleBtn");
     if (btn) {
         btn.innerHTML = grid
-            ? '<i class="fa-solid fa-list"></i> リスト'
-            : '<i class="fa-solid fa-table-cells"></i> タイル';
+            ? `<i class="fa-solid fa-list"></i> ${t("view_list")}`
+            : `<i class="fa-solid fa-table-cells"></i> ${t("view_tile")}`;
     }
 }
 
@@ -3313,10 +3347,10 @@ function renderCategoryGrid() {
     if (!grid) return;
 
     const categories = {
-        image:    { title: "画像ファイル", icon: "fa-file-image", count: 0, bytes: 0 },
-        document: { title: "文書・書類",   icon: "fa-file-word",  count: 0, bytes: 0 },
-        media:    { title: "動画・音楽",   icon: "fa-file-video", count: 0, bytes: 0 },
-        other:    { title: "その他・圧縮", icon: "fa-file-zipper", count: 0, bytes: 0 },
+        image:    { title: t("cat_image_title"), icon: "fa-file-image", count: 0, bytes: 0 },
+        document: { title: t("cat_document_title"),   icon: "fa-file-word",  count: 0, bytes: 0 },
+        media:    { title: t("cat_media_title"),   icon: "fa-file-video", count: 0, bytes: 0 },
+        other:    { title: t("cat_other_title"), icon: "fa-file-zipper", count: 0, bytes: 0 },
     };
 
     _allUploadedFiles.forEach(file => {
