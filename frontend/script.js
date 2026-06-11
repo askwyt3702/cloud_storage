@@ -588,6 +588,16 @@ function applyLanguage(lang) {
     let titleKey = null;
     if (document.getElementById("settingsUsername")) {
         titleKey = "title_settings";
+        // 設定ページの動的表示更新
+        const roleEl = document.getElementById("infoRole");
+        const role = roleEl ? roleEl.textContent : "user";
+        const settingsRoleEl = document.getElementById("settingsRole");
+        if (settingsRoleEl && role !== "--" && role !== "") {
+            settingsRoleEl.textContent = t("role_label", { role });
+        }
+        if (typeof loadBackupHistory === "function" && role === "admin") {
+            loadBackupHistory();
+        }
     } else if (document.getElementById("fileList")) {
         titleKey = "title_files";
     } else if (document.getElementById("email") && document.getElementById("password") && document.getElementById("login-fields")) {
@@ -598,6 +608,10 @@ function applyLanguage(lang) {
         titleKey = "title_reset";
     } else if (document.getElementById("shareLoading")) {
         titleKey = "title_share";
+        // 共有ページの動的表示更新
+        if (typeof renderShareContent === "function") {
+            renderShareContent();
+        }
     }
 
     if (titleKey && TRANSLATIONS[lang][titleKey]) {
@@ -3474,8 +3488,8 @@ async function loadBackupHistory() {
         if (backups.length === 0) {
             list.innerHTML = _emptyStateHTML(
                 "fa-file-zipper",
-                "バックアップ履歴はありません",
-                "設定時刻になるか、「今すぐバックアップ」で作成できます"
+                t("backup_no_history"),
+                t("backup_no_history_sub")
             );
             return;
         }
