@@ -1,0 +1,1034 @@
+{
+  "brand_sub": {
+    "ja": "あなたのファイルをいつでもどこでも",
+    "en": "brand_sub"
+  },
+  "logout_btn": {
+    "ja": "ログアウト",
+    "en": "logout_btn"
+  },
+  "tab_my_files": {
+    "ja": "📊 マイファイル",
+    "en": "tab_my_files"
+  },
+  "tab_shared": {
+    "ja": "📂 共有",
+    "en": "tab_shared"
+  },
+  "tab_links": {
+    "ja": "🔗 リンク",
+    "en": "tab_links"
+  },
+  "tab_trash": {
+    "ja": "🗑 ゴミ箱",
+    "en": "tab_trash"
+  },
+  "storage_text": {
+    "ja": "使用容量を取得中...",
+    "en": "storage_text"
+  },
+  "stat_storage": {
+    "ja": "使用容量",
+    "en": "stat_storage"
+  },
+  "stat_my_files": {
+    "ja": "マイファイル",
+    "en": "stat_my_files"
+  },
+  "stat_sharing": {
+    "ja": "あなたが共有中",
+    "en": "stat_sharing"
+  },
+  "unit_items": {
+    "ja": "件",
+    "en": "unit_items"
+  },
+  "btn_add_files": {
+    "ja": "📁 ファイルを追加",
+    "en": "btn_add_files"
+  },
+  "btn_upload": {
+    "ja": "⬆ アップロード",
+    "en": "btn_upload"
+  },
+  "tray_selected": {
+    "ja": "選択中のファイル",
+    "en": "tray_selected"
+  },
+  "tray_clear_all": {
+    "ja": "すべてクリア",
+    "en": "tray_clear_all"
+  },
+  "tray_zip_mode": {
+    "ja": "チェックしたファイルを 1つのZIP にまとめる",
+    "en": "tray_zip_mode"
+  },
+  "drop_title": {
+    "ja": "ファイルをドラッグ＆ドロップ",
+    "en": "drop_title"
+  },
+  "drop_sub": {
+    "ja": "またはファイルを選択",
+    "en": "drop_sub"
+  },
+  "search_placeholder": {
+    "ja": "ファイル名で絞り込み...",
+    "en": "search_placeholder"
+  },
+  "sort_name_asc": {
+    "ja": "名前順（A→Z）",
+    "en": "sort_name_asc"
+  },
+  "sort_name_desc": {
+    "ja": "名前順（Z→A）",
+    "en": "sort_name_desc"
+  },
+  "sort_date_desc": {
+    "ja": "新しい順",
+    "en": "sort_date_desc"
+  },
+  "sort_date_asc": {
+    "ja": "古い順",
+    "en": "sort_date_asc"
+  },
+  "sort_size_desc": {
+    "ja": "サイズ大きい順",
+    "en": "sort_size_desc"
+  },
+  "sort_size_asc": {
+    "ja": "サイズ小さい順",
+    "en": "sort_size_asc"
+  },
+  "view_tile": {
+    "ja": "タイル",
+    "en": "view_tile"
+  },
+  "view_list": {
+    "ja": "リスト",
+    "en": "view_list"
+  },
+  "view_toggle_title": {
+    "ja": "表示切替",
+    "en": "view_toggle_title"
+  },
+  "cat_all": {
+    "ja": "すべて",
+    "en": "cat_all"
+  },
+  "cat_image": {
+    "ja": "🖼 画像",
+    "en": "cat_image"
+  },
+  "cat_document": {
+    "ja": "📄 文書",
+    "en": "cat_document"
+  },
+  "cat_media": {
+    "ja": "🎬 メディア",
+    "en": "cat_media"
+  },
+  "cat_other": {
+    "ja": "📦 その他",
+    "en": "cat_other"
+  },
+  "cat_image_title": {
+    "ja": "画像ファイル",
+    "en": "cat_image_title"
+  },
+  "cat_document_title": {
+    "ja": "文書・書類",
+    "en": "cat_document_title"
+  },
+  "cat_media_title": {
+    "ja": "動画・音楽",
+    "en": "cat_media_title"
+  },
+  "cat_other_title": {
+    "ja": "その他・圧縮",
+    "en": "cat_other_title"
+  },
+  "btn_select_all": {
+    "ja": "☑ 全選択",
+    "en": "btn_select_all"
+  },
+  "btn_zip_download": {
+    "ja": "📦 ZIP取得",
+    "en": "btn_zip_download"
+  },
+  "btn_share": {
+    "ja": "🔗 選択を共有",
+    "en": "btn_share"
+  },
+  "btn_delete": {
+    "ja": "🗑 選択削除",
+    "en": "btn_delete"
+  },
+  "sort_trash_date_desc": {
+    "ja": "削除が新しい順",
+    "en": "sort_trash_date_desc"
+  },
+  "sort_trash_date_asc": {
+    "ja": "削除が古い順",
+    "en": "sort_trash_date_asc"
+  },
+  "btn_empty_trash": {
+    "ja": "ゴミ箱を空にする",
+    "en": "btn_empty_trash"
+  },
+  "sort_shared_date_desc": {
+    "ja": "共有が新しい順",
+    "en": "sort_shared_date_desc"
+  },
+  "sort_shared_date_asc": {
+    "ja": "共有が古い順",
+    "en": "sort_shared_date_asc"
+  },
+  "sort_owner_asc": {
+    "ja": "共有者順",
+    "en": "sort_owner_asc"
+  },
+  "shared_info_text": {
+    "ja": "みんなが共有したファイル",
+    "en": "shared_info_text"
+  },
+  "cat_title_text": {
+    "ja": "自動分類されたファイル一覧",
+    "en": "cat_title_text"
+  },
+  "links_info_text": {
+    "ja": "あなたが発行した共有リンク",
+    "en": "links_info_text"
+  },
+  "login_brand": {
+    "ja": "Cloud Storage",
+    "en": "login_brand"
+  },
+  "login_tagline": {
+    "ja": "あなたのファイルを、いつでも・どこでも・安全に",
+    "en": "login_tagline"
+  },
+  "email_placeholder": {
+    "ja": "メールアドレス",
+    "en": "email_placeholder"
+  },
+  "password_placeholder": {
+    "ja": "パスワード",
+    "en": "password_placeholder"
+  },
+  "login_btn": {
+    "ja": "ログイン",
+    "en": "login_btn"
+  },
+  "mfa_instruction": {
+    "ja": "スマートフォン認証アプリに表示されている<br>6桁の認証コードを入力してください。",
+    "en": "mfa_instruction"
+  },
+  "mfa_code_placeholder": {
+    "ja": "6桁の認証コード（例: 123456）",
+    "en": "mfa_code_placeholder"
+  },
+  "verify_btn": {
+    "ja": "認証してログイン",
+    "en": "verify_btn"
+  },
+  "no_account_prompt": {
+    "ja": "アカウントをお持ちでない方は",
+    "en": "no_account_prompt"
+  },
+  "create_account_link": {
+    "ja": "アカウントを作成",
+    "en": "create_account_link"
+  },
+  "forgot_password_link": {
+    "ja": "パスワードをお忘れですか？",
+    "en": "forgot_password_link"
+  },
+  "feature_mfa": {
+    "ja": "🔒 2段階認証",
+    "en": "feature_mfa"
+  },
+  "feature_share": {
+    "ja": "🔗 共有リンク",
+    "en": "feature_share"
+  },
+  "feature_trash": {
+    "ja": "🗑 ゴミ箱復元",
+    "en": "feature_trash"
+  },
+  "register_title": {
+    "ja": "アカウント作成",
+    "en": "register_title"
+  },
+  "username_placeholder": {
+    "ja": "ユーザー名",
+    "en": "username_placeholder"
+  },
+  "confirm_password_placeholder": {
+    "ja": "パスワード確認",
+    "en": "confirm_password_placeholder"
+  },
+  "register_btn": {
+    "ja": "アカウントを作成",
+    "en": "register_btn"
+  },
+  "already_have_account": {
+    "ja": "既にアカウントをお持ちの方は",
+    "en": "already_have_account"
+  },
+  "login_link": {
+    "ja": "ログイン",
+    "en": "login_link"
+  },
+  "welcome_greeting": {
+    "ja": "おかえりなさい、{name} さん",
+    "en": "welcome_greeting"
+  },
+  "storage_status": {
+    "ja": "使用容量: {used} / {total} ({pct}%)",
+    "en": "storage_status"
+  },
+  "unsupported_preview": {
+    "ja": "この形式はプレビューできません",
+    "en": "unsupported_preview"
+  },
+  "download_btn_text": {
+    "ja": "↓ ダウンロード",
+    "en": "download_btn_text"
+  },
+  "preview_failed_pw": {
+    "ja": "プレビューできませんでした（パスワードが違います）",
+    "en": "preview_failed_pw"
+  },
+  "title_login": {
+    "ja": "ログイン",
+    "en": "title_login"
+  },
+  "title_register": {
+    "ja": "新規登録",
+    "en": "title_register"
+  },
+  "title_reset": {
+    "ja": "パスワードの再設定",
+    "en": "title_reset"
+  },
+  "title_files": {
+    "ja": "マイファイル - Cloud Storage",
+    "en": "title_files"
+  },
+  "title_settings": {
+    "ja": "設定 - Cloud Storage",
+    "en": "title_settings"
+  },
+  "title_share": {
+    "ja": "共有ファイル - Cloud Storage",
+    "en": "title_share"
+  },
+  "copy_url_btn": {
+    "ja": "URLコピー",
+    "en": "copy_url_btn"
+  },
+  "disable_btn": {
+    "ja": "無効化",
+    "en": "disable_btn"
+  },
+  "qr_btn": {
+    "ja": "QR",
+    "en": "qr_btn"
+  },
+  "restore": {
+    "ja": "復元",
+    "en": "restore"
+  },
+  "expires_none": {
+    "ja": "有効期限: なし（無期限）",
+    "en": "expires_none"
+  },
+  "expires_none_brief": {
+    "ja": "有効期限: なし",
+    "en": "expires_none_brief"
+  },
+  "password_protected": {
+    "ja": "🔒 パスワード保護あり",
+    "en": "password_protected"
+  },
+  "password_none": {
+    "ja": "パスワード: なし",
+    "en": "password_none"
+  },
+  "share_link_created": {
+    "ja": "🔗 共有リンクを作成しました",
+    "en": "share_link_created"
+  },
+  "share_link_qr": {
+    "ja": "🔗 共有リンクのQRコード",
+    "en": "share_link_qr"
+  },
+  "qr_hint": {
+    "ja": "スマホのカメラで読み取ってアクセスできます",
+    "en": "qr_hint"
+  },
+  "copy": {
+    "ja": "コピー",
+    "en": "copy"
+  },
+  "share_hint": {
+    "ja": "このURLを知っている人なら、ログインなしでダウンロードできます。",
+    "en": "share_hint"
+  },
+  "expired": {
+    "ja": "期限切れ",
+    "en": "expired"
+  },
+  "menu_preview": {
+    "ja": "プレビュー",
+    "en": "menu_preview"
+  },
+  "menu_download": {
+    "ja": "ダウンロード",
+    "en": "menu_download"
+  },
+  "menu_unstar": {
+    "ja": "お気に入りを外す",
+    "en": "menu_unstar"
+  },
+  "menu_star": {
+    "ja": "お気に入りに追加",
+    "en": "menu_star"
+  },
+  "menu_rename": {
+    "ja": "名前を変更",
+    "en": "menu_rename"
+  },
+  "menu_share": {
+    "ja": "共有する",
+    "en": "menu_share"
+  },
+  "menu_delete": {
+    "ja": "削除（ゴミ箱へ）",
+    "en": "menu_delete"
+  },
+  "menu_restore": {
+    "ja": "復元する",
+    "en": "menu_restore"
+  },
+  "menu_perm_delete": {
+    "ja": "完全に削除",
+    "en": "menu_perm_delete"
+  },
+  "menu_create_link": {
+    "ja": "リンク作成",
+    "en": "menu_create_link"
+  },
+  "menu_remove_share": {
+    "ja": "共有を解除",
+    "en": "menu_remove_share"
+  },
+  "menu_copy_url": {
+    "ja": "URLをコピー",
+    "en": "menu_copy_url"
+  },
+  "menu_qr": {
+    "ja": "QRコードを表示",
+    "en": "menu_qr"
+  },
+  "menu_disable_link": {
+    "ja": "リンクを無効化",
+    "en": "menu_disable_link"
+  },
+  "star_title": {
+    "ja": "お気に入り",
+    "en": "star_title"
+  },
+  "wrong_password_or_required": {
+    "ja": "パスワードが違います（または必要です）",
+    "en": "wrong_password_or_required"
+  },
+  "loading": {
+    "ja": "読み込み中...",
+    "en": "loading"
+  },
+  "delete": {
+    "ja": "削除",
+    "en": "delete"
+  },
+  "unsupported": {
+    "ja": "この形式はプレビューできません",
+    "en": "unsupported"
+  },
+  "reset_title": {
+    "ja": "パスワード再設定",
+    "en": "reset_title"
+  },
+  "reset_instruction": {
+    "ja": "登録メールアドレスと、認証アプリの6桁コードで本人確認します",
+    "en": "reset_instruction"
+  },
+  "reset_code_placeholder": {
+    "ja": "認証コード（6桁）",
+    "en": "reset_code_placeholder"
+  },
+  "reset_new_password_placeholder": {
+    "ja": "新しいパスワード（8文字以上・大文字・数字・記号）",
+    "en": "reset_new_password_placeholder"
+  },
+  "reset_new_password_confirm_placeholder": {
+    "ja": "新しいパスワード（確認）",
+    "en": "reset_new_password_confirm_placeholder"
+  },
+  "reset_btn": {
+    "ja": "パスワードを変更",
+    "en": "reset_btn"
+  },
+  "back_to_login": {
+    "ja": "← ログインに戻る",
+    "en": "back_to_login"
+  },
+  "settings_header": {
+    "ja": "設定",
+    "en": "settings_header"
+  },
+  "settings_sub": {
+    "ja": "アカウント情報",
+    "en": "settings_sub"
+  },
+  "back_to_files": {
+    "ja": "← ファイルに戻る",
+    "en": "back_to_files"
+  },
+  "profile_section": {
+    "ja": "👤 プロフィール",
+    "en": "profile_section"
+  },
+  "label_username": {
+    "ja": "ユーザー名",
+    "en": "label_username"
+  },
+  "label_role": {
+    "ja": "権限（ロール）",
+    "en": "label_role"
+  },
+  "label_storage": {
+    "ja": "使用容量",
+    "en": "label_storage"
+  },
+  "security_section": {
+    "ja": "🔒 セキュリティ",
+    "en": "security_section"
+  },
+  "label_change_password": {
+    "ja": "パスワード変更",
+    "en": "label_change_password"
+  },
+  "sub_change_password": {
+    "ja": "パスワードを変更します",
+    "en": "sub_change_password"
+  },
+  "label_mfa": {
+    "ja": "2段階認証（MFA）",
+    "en": "label_mfa"
+  },
+  "sub_mfa": {
+    "ja": "認証アプリでログインを保護",
+    "en": "sub_mfa"
+  },
+  "btn_preparing": {
+    "ja": "準備中",
+    "en": "btn_preparing"
+  },
+  "backup_section": {
+    "ja": "💾 自動バックアップ設定",
+    "en": "backup_section"
+  },
+  "label_backup": {
+    "ja": "自動バックアップ",
+    "en": "label_backup"
+  },
+  "sub_backup": {
+    "ja": "毎日指定した時刻に自動でバックアップを実行します",
+    "en": "sub_backup"
+  },
+  "label_backup_time": {
+    "ja": "実行時刻 (24時間表記)",
+    "en": "label_backup_time"
+  },
+  "sub_backup_time": {
+    "ja": "自動バックアップを実行する時刻 (例: 00:00)",
+    "en": "sub_backup_time"
+  },
+  "btn_save_settings": {
+    "ja": "💾 設定を保存",
+    "en": "btn_save_settings"
+  },
+  "btn_run_backup": {
+    "ja": "⚡ 今すぐバックアップ",
+    "en": "btn_run_backup"
+  },
+  "backup_history_title": {
+    "ja": "📁 バックアップ履歴",
+    "en": "backup_history_title"
+  },
+  "webhook_section": {
+    "ja": "🚀 外部サービス連携 (Webhook)",
+    "en": "webhook_section"
+  },
+  "label_webhook_url": {
+    "ja": "Webhook URL",
+    "en": "label_webhook_url"
+  },
+  "sub_webhook_url": {
+    "ja": "DiscordまたはSlackのWebhook URLを入力します",
+    "en": "sub_webhook_url"
+  },
+  "label_notify_events": {
+    "ja": "通知するイベント",
+    "en": "label_notify_events"
+  },
+  "sub_notify_events": {
+    "ja": "通知を送信する操作を選択してください",
+    "en": "sub_notify_events"
+  },
+  "event_upload": {
+    "ja": "📥 ファイルのアップロード時",
+    "en": "event_upload"
+  },
+  "event_delete": {
+    "ja": "🗑️ ファイルの削除時（ゴミ箱移動・完全削除）",
+    "en": "event_delete"
+  },
+  "event_share": {
+    "ja": "🔗 共有リンクの作成時",
+    "en": "event_share"
+  },
+  "btn_test_send": {
+    "ja": "🔔 テスト送信",
+    "en": "btn_test_send"
+  },
+  "share_title": {
+    "ja": "共有ファイル",
+    "en": "share_title"
+  },
+  "share_loading": {
+    "ja": "読み込み中...",
+    "en": "share_loading"
+  },
+  "share_password_placeholder": {
+    "ja": "このファイルのパスワード",
+    "en": "share_password_placeholder"
+  },
+  "share_download_btn": {
+    "ja": "⬇ ダウンロード",
+    "en": "share_download_btn"
+  },
+  "share_error_header": {
+    "ja": "エラー",
+    "en": "share_error_header"
+  },
+  "no_files": {
+    "ja": "ファイルがありません",
+    "en": "no_files"
+  },
+  "no_files_sub": {
+    "ja": "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう",
+    "en": "no_files_sub"
+  },
+  "no_links": {
+    "ja": "発行したリンクはありません",
+    "en": "no_links"
+  },
+  "no_links_sub": {
+    "ja": "共上一覧のファイルから「🔗 リンク作成」で発行できます",
+    "en": "no_links_sub"
+  },
+  "trash_empty": {
+    "ja": "ゴミ箱は空です",
+    "en": "trash_empty"
+  },
+  "trash_empty_sub": {
+    "ja": "ここから削除したファイルを復元できます",
+    "en": "trash_empty_sub"
+  },
+  "no_shared_files": {
+    "ja": "共有ファイルはありません",
+    "en": "no_shared_files"
+  },
+  "no_shared_files_sub": {
+    "ja": "ファイル一覧の「🔗 共有」ボタンから共有できます",
+    "en": "no_shared_files_sub"
+  },
+  "category_empty": {
+    "ja": "このカテゴリは空です",
+    "en": "category_empty"
+  },
+  "category_empty_sub": {
+    "ja": "該当するファイルがアップロードされていません。",
+    "en": "category_empty_sub"
+  },
+  "backup_no_history": {
+    "ja": "バックアップ履歴はありません",
+    "en": "backup_no_history"
+  },
+  "backup_no_history_sub": {
+    "ja": "設定時刻になるか、「今すぐバックアップ」で作成できます",
+    "en": "backup_no_history_sub"
+  },
+  "unstarred": {
+    "ja": "★を外しました",
+    "en": "unstarred"
+  },
+  "starred": {
+    "ja": "★お気に入りに追加しました",
+    "en": "starred"
+  },
+  "input_required": {
+    "ja": "入力してください",
+    "en": "input_required"
+  },
+  "wrong_credentials": {
+    "ja": "ユーザー名またはパスワードが違います",
+    "en": "wrong_credentials"
+  },
+  "cannot_connect": {
+    "ja": "サーバーに接続できません",
+    "en": "cannot_connect"
+  },
+  "input_mfa": {
+    "ja": "6桁の認証コードを入力してください",
+    "en": "input_mfa"
+  },
+  "all_fields_required": {
+    "ja": "全て入力してください",
+    "en": "all_fields_required"
+  },
+  "passwords_mismatch": {
+    "ja": "パスワードが一致しません",
+    "en": "passwords_mismatch"
+  },
+  "account_created": {
+    "ja": "アカウントを作成しました！",
+    "en": "account_created"
+  },
+  "error_prefix": {
+    "ja": "エラー: ",
+    "en": "error_prefix"
+  },
+  "new_passwords_mismatch": {
+    "ja": "新しいパスワードが一致しません",
+    "en": "new_passwords_mismatch"
+  },
+  "mfa_code_6_digits": {
+    "ja": "認証コードは6桁です",
+    "en": "mfa_code_6_digits"
+  },
+  "password_changed": {
+    "ja": "パスワードを変更しました",
+    "en": "password_changed"
+  },
+  "select_file_download": {
+    "ja": "ダウンロードするファイルを選択してください",
+    "en": "select_file_download"
+  },
+  "zip_download_success": {
+    "ja": "{count}件をZIPでダウンロードしました",
+    "en": "zip_download_success"
+  },
+  "zip_download_failed": {
+    "ja": "ZIPのダウンロードに失敗しました",
+    "en": "zip_download_failed"
+  },
+  "select_file_delete": {
+    "ja": "削除するファイルを選択してください",
+    "en": "select_file_delete"
+  },
+  "trash_move_success": {
+    "ja": "{count}件をゴミ箱に移動しました。\\n失敗: {failed}",
+    "en": "trash_move_success"
+  },
+  "delete_failed": {
+    "ja": "削除に失敗しました",
+    "en": "delete_failed"
+  },
+  "select_file": {
+    "ja": "ファイルを選択してください",
+    "en": "select_file"
+  },
+  "check_zip_files": {
+    "ja": "ZIPに入れるファイルにチェックを付けてください",
+    "en": "check_zip_files"
+  },
+  "upload_complete": {
+    "ja": "{okCount} / {totalCount} 件のアップロードが完了しました",
+    "en": "upload_complete"
+  },
+  "zip_load_failed": {
+    "ja": "ZIP機能の読み込みに失敗しました（個別アップロードをお使いください）",
+    "en": "zip_load_failed"
+  },
+  "zip_creation_failed": {
+    "ja": "ZIPの作成に失敗しました",
+    "en": "zip_creation_failed"
+  },
+  "zip_archive_success": {
+    "ja": "{count}個のファイルを {zipName} にまとめました",
+    "en": "zip_archive_success"
+  },
+  "upload_success": {
+    "ja": "{name} をアップロードしました",
+    "en": "upload_success"
+  },
+  "upload_failed": {
+    "ja": "{name}: アップロードに失敗しました",
+    "en": "upload_failed"
+  },
+  "download_failed": {
+    "ja": "ダウンロードに失敗しました",
+    "en": "download_failed"
+  },
+  "expire_positive_num": {
+    "ja": "有効期限は正の数で入力してください",
+    "en": "expire_positive_num"
+  },
+  "link_creation_failed": {
+    "ja": "リンクの作成に失敗しました",
+    "en": "link_creation_failed"
+  },
+  "link_copied": {
+    "ja": "リンクをコピーしました",
+    "en": "link_copied"
+  },
+  "copy_failed": {
+    "ja": "コピーに失敗しました",
+    "en": "copy_failed"
+  },
+  "link_disabled": {
+    "ja": "リンクを無効化しました",
+    "en": "link_disabled"
+  },
+  "disable_failed": {
+    "ja": "無効化に失敗しました",
+    "en": "disable_failed"
+  },
+  "name_changed": {
+    "ja": "名前を変更しました",
+    "en": "name_changed"
+  },
+  "name_change_failed": {
+    "ja": "名前の変更に失敗しました",
+    "en": "name_change_failed"
+  },
+  "restore_failed": {
+    "ja": "復元に失敗しました",
+    "en": "restore_failed"
+  },
+  "permanent_delete_failed": {
+    "ja": "完全削除に失敗しました",
+    "en": "permanent_delete_failed"
+  },
+  "empty_trash_failed": {
+    "ja": "ゴミ箱を空にできませんでした",
+    "en": "empty_trash_failed"
+  },
+  "share_failed": {
+    "ja": "共有に失敗しました",
+    "en": "share_failed"
+  },
+  "select_file_share": {
+    "ja": "共有するファイルを選択してください",
+    "en": "select_file_share"
+  },
+  "share_removed_failed": {
+    "ja": "共有の解除に失敗しました",
+    "en": "share_removed_failed"
+  },
+  "added_to_selection": {
+    "ja": "{count}件を選択に追加しました",
+    "en": "added_to_selection"
+  },
+  "backup_get_settings_failed": {
+    "ja": "バックアップ設定の取得に失敗しました",
+    "en": "backup_get_settings_failed"
+  },
+  "backup_time_format_error": {
+    "ja": "実行時刻は '00:00' のような半角の形式で入力してください",
+    "en": "backup_time_format_error"
+  },
+  "backup_time_invalid": {
+    "ja": "実行時刻が正しくありません (00:00 〜 23:59)",
+    "en": "backup_time_invalid"
+  },
+  "backup_settings_saved": {
+    "ja": "バックアップ設定を保存しました",
+    "en": "backup_settings_saved"
+  },
+  "backup_save_failed": {
+    "ja": "保存失敗: {detail}",
+    "en": "backup_save_failed"
+  },
+  "server_communication_failed": {
+    "ja": "サーバー通信に失敗しました",
+    "en": "server_communication_failed"
+  },
+  "backup_created": {
+    "ja": "バックアップを作成しました: {filename}",
+    "en": "backup_created"
+  },
+  "backup_create_failed": {
+    "ja": "作成失敗: {detail}",
+    "en": "backup_create_failed"
+  },
+  "backup_deleted": {
+    "ja": "バックアップを削除しました",
+    "en": "backup_deleted"
+  },
+  "backup_delete_failed": {
+    "ja": "削除失敗: {detail}",
+    "en": "backup_delete_failed"
+  },
+  "webhook_get_settings_failed": {
+    "ja": "Webhook設定の取得に失敗しました",
+    "en": "webhook_get_settings_failed"
+  },
+  "webhook_url_invalid": {
+    "ja": "有効な URL を入力してください (http:// または https://)",
+    "en": "webhook_url_invalid"
+  },
+  "webhook_settings_saved": {
+    "ja": "Webhook設定を保存しました",
+    "en": "webhook_settings_saved"
+  },
+  "webhook_test_url_required": {
+    "ja": "テスト送信する Webhook URL を入力してください",
+    "en": "webhook_test_url_required"
+  },
+  "webhook_test_sent": {
+    "ja": "テスト通知を送信しました。設定されたチャンネルを確認してください。",
+    "en": "webhook_test_sent"
+  },
+  "webhook_test_failed": {
+    "ja": "テスト送信失敗: {detail}",
+    "en": "webhook_test_failed"
+  },
+  "role_label": {
+    "ja": "権限: {role}",
+    "en": "role_label"
+  },
+  "backup_history_get_failed": {
+    "ja": "バックアップ履歴の取得に失敗しました",
+    "en": "backup_history_get_failed"
+  },
+  "backup_detail": {
+    "ja": "ZIP圧縮形式 ・ {size} ・ 作成: {date}",
+    "en": "backup_detail"
+  },
+  "download": {
+    "ja": "ダウンロード",
+    "en": "download"
+  },
+  "close": {
+    "ja": "閉じる",
+    "en": "close"
+  },
+  "theme_toggle_title": {
+    "ja": "テーマ切替",
+    "en": "theme_toggle_title"
+  },
+  "password_required": {
+    "ja": "「{name}」はパスワードで保護されています。\\nパスワードを入力:",
+    "en": "password_required"
+  },
+  "create_link_prompt": {
+    "ja": "「{name}」の共有リンクを作成します。\\n\\n有効期限（日数）を入力してください。\\n空欄なら無期限です。",
+    "en": "create_link_prompt"
+  },
+  "rename_prompt_with_ext": {
+    "ja": "新しい名前を入力してください\\n（拡張子 {ext} はそのままです）",
+    "en": "rename_prompt_with_ext"
+  },
+  "rename_prompt_no_ext": {
+    "ja": "新しい名前を入力してください",
+    "en": "rename_prompt_no_ext"
+  },
+  "share_prompt": {
+    "ja": "「{name}」を共有します。\\nパスワードを付ける場合は入力（不要なら空欄でOK）:",
+    "en": "share_prompt"
+  },
+  "share_multiple_prompt": {
+    "ja": "選択した {count} 件を共有します。\\n共通のパスワードを付ける場合は入力（不要なら空欄でOK）:",
+    "en": "share_multiple_prompt"
+  },
+  "confirm_move_to_trash": {
+    "ja": "選択した {count} 件をゴミ箱に移動しますか？",
+    "en": "confirm_move_to_trash"
+  },
+  "confirm_delete_single": {
+    "ja": "「{name}」を削除しますか？",
+    "en": "confirm_delete_single"
+  },
+  "confirm_disable_link": {
+    "ja": "このリンクを無効化しますか？\\nこのURLでのダウンロードができなくなります。",
+    "en": "confirm_disable_link"
+  },
+  "confirm_permanent_delete": {
+    "ja": "「{name}」を完全に削除しますか？\\nこの操作は元に戻せません。",
+    "en": "confirm_permanent_delete"
+  },
+  "confirm_empty_trash": {
+    "ja": "ゴミ箱を空にしますか？\\nすべてのファイルが完全に削除され、元に戻せません。",
+    "en": "confirm_empty_trash"
+  },
+  "confirm_remove_share": {
+    "ja": "「{name}」の共有を解除しますか？\\n（あなたの個人ファイルは残ります）",
+    "en": "confirm_remove_share"
+  },
+  "confirm_manual_backup": {
+    "ja": "手動バックアップを作成しますか？\\n（ファイル数によっては数十秒かかる場合があります）",
+    "en": "confirm_manual_backup"
+  },
+  "confirm_delete_backup": {
+    "ja": "バックアップ「{name}」を削除しますか？\\nこの操作は元に戻せません。",
+    "en": "confirm_delete_backup"
+  },
+  "invalid_token": {
+    "ja": "無効なリンクです（トークンがありません）",
+    "en": "invalid_token"
+  },
+  "expired_link": {
+    "ja": "このリンクは有効期限が切れています",
+    "en": "expired_link"
+  },
+  "link_not_found": {
+    "ja": "リンクが見つかりません（削除されたか、URLが間違っています）",
+    "en": "link_not_found"
+  },
+  "failed_get_info": {
+    "ja": "ファイル情報の取得に失敗しました",
+    "en": "failed_get_info"
+  },
+  "cannot_connect_server": {
+    "ja": "サーバーに接続できません",
+    "en": "cannot_connect_server"
+  },
+  "input_password": {
+    "ja": "パスワードを入力してください",
+    "en": "input_password"
+  },
+  "downloading": {
+    "ja": "ダウンロード中...",
+    "en": "downloading"
+  },
+  "wrong_password": {
+    "ja": "パスワードが違います",
+    "en": "wrong_password"
+  },
+  "shared_by": {
+    "ja": "提供者: {owner}",
+    "en": "shared_by"
+  },
+  "expires_at": {
+    "ja": "有効期限: {time}",
+    "en": "expires_at"
+  },
+  "preview_failed": {
+    "ja": "プレビューできませんでした",
+    "en": "preview_failed"
+  }
+}
