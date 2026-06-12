@@ -1857,7 +1857,8 @@ async function loadFiles() {
     const [sortBy, order] = sortValue.split("_");
 
     try {
-        const res = await fetch(`${API_BASE}/files?sort_by=${sortBy}&order=${order}`);
+        // per_page未指定だとデフォルト20件で切られ、21件目以降が一覧・検索・一括操作から消えるため大きめに指定
+        const res = await fetch(`${API_BASE}/files?sort_by=${sortBy}&order=${order}&per_page=1000`);
 
         if (!res.ok) {
             fileList.innerHTML = "<p style='color:#f87171'>ファイルの取得に失敗しました</p>";
