@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from backend.schemas import (
     FileInfo,
+    FolderInfo,            # ← フォルダ情報
     FileListResponse,
     MessageResponse,
     RenameRequest,
@@ -22,14 +23,27 @@ from backend.schemas import (
     SharedListResponse,    # ← 共有ファイル一覧レスポンス
     ShareRequest,          # ← 共有リクエスト（パスワード任意）
     BulkShareRequest,      # ← 一括共有リクエスト
-    BulkDownloadRequest    # ← 一括ダウンロード（ZIP）リクエスト
+    BulkDownloadRequest,   # ← 一括ダウンロード（ZIP）リクエスト
+    CreateFolderRequest,   # ← フォルダ作成リクエスト
+    RenameFolderRequest,   # ← フォルダ名変更リクエスト
+    MoveFileRequest        # ← ファイル移動リクエスト
 )
 
 from backend.services.file_service import (
     get_file_path,
     file_exists,
     sanitize_filename,     # ← ファイル名の無害化
+    sanitize_path,         # ← フォルダパスの無害化
+    sanitize_folder_name,  # ← フォルダ名の無害化
     list_files,            # ← ファイル一覧取得
+    list_folders,          # ← フォルダ一覧取得
+    get_folder_metadata,   # ← フォルダのメタデータ
+    folder_exists,         # ← フォルダ存在チェック
+    create_folder,         # ← フォルダ作成
+    rename_folder,         # ← フォルダ名変更
+    delete_folder_permanent,  # ← フォルダ完全削除
+    move_file,             # ← ファイル移動
+    get_user_dir,          # ← ユーザーフォルダのパス取得
     get_file_size,         # ← ファイルサイズ取得
     get_file_mtime,        # ← 更新日時取得（並び替え用）
     get_file_metadata,     # ← メタデータ取得
@@ -120,7 +134,8 @@ def get_files(
     page: int = 1,
     per_page: int = 20,
     sort_by: str = "name",
-    order: str = "asc"
+    order: str = "asc",
+    path: str = ""
 ):
 
     # ① 認証チェック
@@ -133,28 +148,50 @@ def get_files(
             detail="ログインが必要です"
         )
 
-
-    # ② 全ファイル取得
     current_user = get_current_user()
-    all_files = list_files(current_user)
+
+    # ② 表示するフォルダパスの無害化
+    safe_path = sanitize_path(path)
+
+    if safe_path is None:
+
+        log_failed(current_user, "LIST", f"不正なパス: {path}")
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダパスが不正です"
+        )
+
+    # 存在しないフォルダを指定された場合は404
+    if safe_path and not folder_exists(current_user, safe_path):
+
+        raise HTTPException(
+            status_code=404,
+            detail="フォルダが見つかりません"
+        )
+
+
+    # ③ そのフォルダ直下のファイル・フォルダを取得
+    all_files = list_files(current_user, safe_path)
+    folder_names = list_folders(current_user, safe_path)
     total = len(all_files)
 
 
-    # ③ 並び替え
+    # ④ 並び替え（ファイル）
     #    desc（降順）かどうか
     reverse = (order == "desc")
 
     if sort_by == "size":
         # サイズ順
         all_files.sort(
-            key=lambda f: get_file_size(current_user, f),
+            key=lambda f: get_file_size(current_user, f, safe_path),
             reverse=reverse
         )
 
     elif sort_by == "date":
         # 更新日時順
         all_files.sort(
-            key=lambda f: get_file_mtime(current_user, f),
+            key=lambda f: get_file_mtime(current_user, f, safe_path),
             reverse=reverse
         )
 
@@ -165,30 +202,43 @@ def get_files(
             reverse=reverse
         )
 
+    # フォルダは常に名前順（昇順）で上に並べる
+    folder_names.sort(key=lambda f: f.lower())
 
-    # ④ ページネーション
+
+    # ⑤ ページネーション（ファイルのみ。フォルダは全件返す）
     #    例: page=2, per_page=20 → 21件目〜40件目
     start = (page - 1) * per_page
     end = start + per_page
     paged_files = all_files[start:end]
 
 
-    # ⑤ メタデータ付きで整形
+    # ⑥ メタデータ付きで整形
     files_info = [
         FileInfo(
             name=f,
-            size=_format_size(get_file_size(current_user, f)),
-            **get_file_metadata(current_user, f)
+            size=_format_size(get_file_size(current_user, f, safe_path)),
+            **get_file_metadata(current_user, f, safe_path)
         )
         for f in paged_files
     ]
 
-    log_success(current_user, "LIST")
+    folders_info = [
+        FolderInfo(
+            name=d,
+            **get_folder_metadata(current_user, safe_path, d)
+        )
+        for d in folder_names
+    ]
+
+    log_success(current_user, f"LIST: {safe_path or '(root)'}")
 
     return FileListResponse(
         success=True,
         user=current_user,
         files=files_info,
+        folders=folders_info,
+        path=safe_path,
         total=total,
         page=page,
         per_page=per_page
@@ -211,7 +261,7 @@ def get_files(
 #   404 : ファイルが存在しない
 # =====================================
 @router.get("/download/{filename}")
-def download_file(filename: str):
+def download_file(filename: str, path: str = ""):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -238,12 +288,13 @@ def download_file(filename: str):
         )
 
 
-    # ③ ファイル名の無害化
+    # ③ ファイル名・パスの無害化
     safe_name = sanitize_filename(filename)
+    safe_path = sanitize_path(path)
 
-    if not safe_name:
+    if not safe_name or safe_path is None:
 
-        log_failed(current_user, "DOWNLOAD", f"不正なファイル名: {filename}")
+        log_failed(current_user, "DOWNLOAD", f"不正なファイル名/パス: {path}/{filename}")
 
         raise HTTPException(
             status_code=400,
@@ -252,9 +303,9 @@ def download_file(filename: str):
 
 
     # ④ ファイルの存在チェック
-    if not file_exists(current_user, safe_name):
+    if not file_exists(current_user, safe_name, safe_path):
 
-        log_failed(current_user, "DOWNLOAD", f"ファイルなし: {safe_name}")
+        log_failed(current_user, "DOWNLOAD", f"ファイルなし: {safe_path}/{safe_name}")
 
         raise HTTPException(
             status_code=404,
@@ -263,7 +314,7 @@ def download_file(filename: str):
 
 
     # ⑤ ダウンロード実行
-    file_path = get_file_path(current_user, safe_name)
+    file_path = get_file_path(current_user, safe_name, safe_path)
 
     log_success(current_user, f"DOWNLOAD: {safe_name}")
 
@@ -328,6 +379,16 @@ def download_zip(body: BulkDownloadRequest):
             detail="ダウンロードするファイルを選択してください"
         )
 
+    # 対象フォルダの無害化
+    safe_path = sanitize_path(body.path)
+
+    if safe_path is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダパスが不正です"
+        )
+
 
     # ④ メモリ上でZIPを構築
     buffer = io.BytesIO()
@@ -340,10 +401,10 @@ def download_zip(body: BulkDownloadRequest):
             safe_name = sanitize_filename(name)
 
             # 不正な名前・存在しないファイルはスキップ
-            if not safe_name or not file_exists(current_user, safe_name):
+            if not safe_name or not file_exists(current_user, safe_name, safe_path):
                 continue
 
-            file_path = get_file_path(current_user, safe_name)
+            file_path = get_file_path(current_user, safe_name, safe_path)
             zf.write(file_path, arcname=safe_name)
             added += 1
 
@@ -392,7 +453,7 @@ def download_zip(body: BulkDownloadRequest):
 #   500 : 削除処理に失敗した場合
 # =====================================
 @router.delete("/delete/{filename}", response_model=MessageResponse)
-def delete_file(filename: str):
+def delete_file(filename: str, path: str = ""):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -419,12 +480,13 @@ def delete_file(filename: str):
         )
 
 
-    # ③ ファイル名の無害化
+    # ③ ファイル名・パスの無害化
     safe_name = sanitize_filename(filename)
+    safe_path = sanitize_path(path)
 
-    if not safe_name:
+    if not safe_name or safe_path is None:
 
-        log_failed(current_user, "DELETE", f"不正なファイル名: {filename}")
+        log_failed(current_user, "DELETE", f"不正なファイル名/パス: {path}/{filename}")
 
         raise HTTPException(
             status_code=400,
@@ -433,9 +495,9 @@ def delete_file(filename: str):
 
 
     # ④ ファイルの存在チェック
-    if not file_exists(current_user, safe_name):
+    if not file_exists(current_user, safe_name, safe_path):
 
-        log_failed(current_user, "DELETE", f"ファイルなし: {safe_name}")
+        log_failed(current_user, "DELETE", f"ファイルなし: {safe_path}/{safe_name}")
 
         raise HTTPException(
             status_code=404,
@@ -444,7 +506,9 @@ def delete_file(filename: str):
 
 
     # ⑤ ゴミ箱へ移動
-    success = move_to_trash(current_user, safe_name)
+    #    ※ サブフォルダ内のファイルもゴミ箱直下に移動する。
+    #      復元すると元の階層ではなくルートに戻る点に注意（MVP仕様）。
+    success = move_to_trash(current_user, safe_name, safe_path)
 
     if not success:
 
@@ -518,6 +582,17 @@ def delete_multiple(body: BulkDeleteRequest):
         )
 
 
+    # 対象フォルダの無害化
+    safe_path = sanitize_path(body.path)
+
+    if safe_path is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダパスが不正です"
+        )
+
+
     # ③ 1件ずつゴミ箱へ移動
     succeeded = []
     failed = []
@@ -527,12 +602,12 @@ def delete_multiple(body: BulkDeleteRequest):
         safe_name = sanitize_filename(name)
 
         # 名前が不正、または存在しないものは失敗扱い
-        if not safe_name or not file_exists(current_user, safe_name):
+        if not safe_name or not file_exists(current_user, safe_name, safe_path):
 
             failed.append(name)
             continue
 
-        if move_to_trash(current_user, safe_name):
+        if move_to_trash(current_user, safe_name, safe_path):
             succeeded.append(safe_name)
         else:
             failed.append(name)
@@ -579,7 +654,7 @@ def delete_multiple(body: BulkDeleteRequest):
 #   500 : リネーム処理に失敗した場合
 # =====================================
 @router.patch("/rename/{filename}", response_model=MessageResponse)
-def rename_file(filename: str, body: RenameRequest):
+def rename_file(filename: str, body: RenameRequest, path: str = ""):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -605,10 +680,11 @@ def rename_file(filename: str, body: RenameRequest):
         )
 
 
-    # ② 変更前ファイル名の無害化
+    # ② 変更前ファイル名・パスの無害化
     safe_old = sanitize_filename(filename)
+    safe_path = sanitize_path(path)
 
-    if not safe_old:
+    if not safe_old or safe_path is None:
 
         raise HTTPException(
             status_code=400,
@@ -644,7 +720,7 @@ def rename_file(filename: str, body: RenameRequest):
 
 
     # ④ 変更前ファイルの存在チェック
-    if not file_exists(current_user, safe_old):
+    if not file_exists(current_user, safe_old, safe_path):
 
         raise HTTPException(
             status_code=404,
@@ -653,7 +729,7 @@ def rename_file(filename: str, body: RenameRequest):
 
 
     # ⑤ 変更後ファイル名の重複チェック
-    if file_exists(current_user, safe_new):
+    if file_exists(current_user, safe_new, safe_path):
 
         raise HTTPException(
             status_code=409,
@@ -664,8 +740,8 @@ def rename_file(filename: str, body: RenameRequest):
     # ⑥ リネーム実行
     try:
 
-        old_path = get_file_path(current_user, safe_old)
-        new_path = get_file_path(current_user, safe_new)
+        old_path = get_file_path(current_user, safe_old, safe_path)
+        new_path = get_file_path(current_user, safe_new, safe_path)
         os.rename(old_path, new_path)
 
     except Exception as e:
@@ -684,6 +760,391 @@ def rename_file(filename: str, body: RenameRequest):
         success=True,
         user=current_user,
         message=f"{safe_old} を {safe_new} に変更しました"
+    )
+
+
+# =====================================================
+# ここから下：フォルダ操作API（担当B：フォルダ階層）
+# =====================================================
+
+
+# =====================================
+# 内部関数：ログイン＆書き込み権限を確認して
+#           ユーザー名を返す（フォルダ操作で共通）
+#
+# 失敗時は HTTPException を投げる。
+# =====================================
+def _require_write_user(action: str) -> str:
+
+    if not is_logged_in():
+
+        log_failed("不明", action, "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "write"):
+
+        log_failed(current_user, action, "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="この操作を行う権限がありません"
+        )
+
+    return current_user
+
+
+# =====================================
+# フォルダ作成API
+#
+# URL:
+# POST /folders
+#
+# リクエストボディ:
+#   { "path": "親フォルダ（ルートは空）", "name": "新規フォルダ名" }
+#
+# エラー:
+#   401 : 未ログイン
+#   403 : 権限なし
+#   400 : パス／フォルダ名が不正
+#   409 : 同名のフォルダ／ファイルが既に存在
+#   500 : 作成失敗
+# =====================================
+@router.post("/folders", response_model=MessageResponse)
+def create_folder_api(body: CreateFolderRequest):
+
+    current_user = _require_write_user("CREATE_FOLDER")
+
+    # パスとフォルダ名の無害化
+    safe_path = sanitize_path(body.path)
+    safe_name = sanitize_folder_name(body.name)
+
+    if safe_path is None or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダ名またはパスが不正です"
+        )
+
+    # 親フォルダが存在しない場合はエラー（ルートは常にOK）
+    if safe_path and not folder_exists(current_user, safe_path):
+
+        raise HTTPException(
+            status_code=404,
+            detail="作成先のフォルダが見つかりません"
+        )
+
+    # 既に同名が存在するか
+    target = os.path.join(get_user_dir(current_user, safe_path), safe_name)
+
+    if os.path.exists(target):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のフォルダ／ファイルが既に存在します: {safe_name}"
+        )
+
+    if not create_folder(current_user, safe_path, safe_name):
+
+        raise HTTPException(
+            status_code=500,
+            detail="フォルダの作成に失敗しました"
+        )
+
+    log_success(current_user, f"CREATE_FOLDER: {safe_path}/{safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"フォルダ「{safe_name}」を作成しました"
+    )
+
+
+# =====================================
+# フォルダ名変更API
+#
+# URL:
+# PATCH /folders/rename
+#
+# リクエストボディ:
+#   { "path": "親フォルダ", "old_name": "現在名", "new_name": "新しい名前" }
+#
+# エラー:
+#   401 / 403 / 400 / 404 / 409 / 500
+# =====================================
+@router.patch("/folders/rename", response_model=MessageResponse)
+def rename_folder_api(body: RenameFolderRequest):
+
+    current_user = _require_write_user("RENAME_FOLDER")
+
+    safe_path = sanitize_path(body.path)
+    safe_old = sanitize_folder_name(body.old_name)
+    safe_new = sanitize_folder_name(body.new_name)
+
+    if safe_path is None or not safe_old or not safe_new:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダ名またはパスが不正です"
+        )
+
+    parent = get_user_dir(current_user, safe_path)
+
+    # 変更元フォルダの存在チェック
+    if not os.path.isdir(os.path.join(parent, safe_old)):
+
+        raise HTTPException(
+            status_code=404,
+            detail="フォルダが見つかりません"
+        )
+
+    # 変更先の重複チェック
+    if os.path.exists(os.path.join(parent, safe_new)):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"同名のフォルダ／ファイルが既に存在します: {safe_new}"
+        )
+
+    if not rename_folder(current_user, safe_path, safe_old, safe_new):
+
+        raise HTTPException(
+            status_code=500,
+            detail="フォルダ名の変更に失敗しました"
+        )
+
+    log_success(current_user, f"RENAME_FOLDER: {safe_path}/{safe_old} → {safe_new}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"フォルダ名を「{safe_new}」に変更しました"
+    )
+
+
+# =====================================
+# フォルダ完全削除API
+#
+# ※ ゴミ箱には入らず、中身ごと完全に消える（復元不可）。
+#    フロント側で必ず確認ダイアログを出すこと。
+#
+# URL:
+# DELETE /folders?path=親フォルダ&name=削除するフォルダ名
+#
+# エラー:
+#   401 / 403 / 400 / 404 / 500
+# =====================================
+@router.delete("/folders", response_model=MessageResponse)
+def delete_folder_api(name: str, path: str = ""):
+
+    current_user = _require_write_user("DELETE_FOLDER")
+
+    safe_path = sanitize_path(path)
+    safe_name = sanitize_folder_name(name)
+
+    if safe_path is None or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダ名またはパスが不正です"
+        )
+
+    if not os.path.isdir(os.path.join(get_user_dir(current_user, safe_path), safe_name)):
+
+        raise HTTPException(
+            status_code=404,
+            detail="フォルダが見つかりません"
+        )
+
+    if not delete_folder_permanent(current_user, safe_path, safe_name):
+
+        raise HTTPException(
+            status_code=500,
+            detail="フォルダの削除に失敗しました"
+        )
+
+    log_success(current_user, f"DELETE_FOLDER: {safe_path}/{safe_name}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"フォルダ「{safe_name}」を完全に削除しました"
+    )
+
+
+# =====================================
+# ファイル移動API（別フォルダへ移動）
+#
+# URL:
+# POST /move
+#
+# リクエストボディ:
+#   { "filename": "ファイル名", "src_path": "移動元", "dest_path": "移動先" }
+#
+# エラー:
+#   401 / 403 / 400 / 404 / 409 / 500
+# =====================================
+@router.post("/move", response_model=MessageResponse)
+def move_file_api(body: MoveFileRequest):
+
+    current_user = _require_write_user("MOVE")
+
+    safe_name = sanitize_filename(body.filename)
+    safe_src = sanitize_path(body.src_path)
+    safe_dest = sanitize_path(body.dest_path)
+
+    if not safe_name or safe_src is None or safe_dest is None:
+
+        raise HTTPException(
+            status_code=400,
+            detail="ファイル名またはパスが不正です"
+        )
+
+    # 同じ場所への移動は何もしない
+    if safe_src == safe_dest:
+
+        raise HTTPException(
+            status_code=400,
+            detail="移動元と移動先が同じです"
+        )
+
+    # 移動元ファイルの存在チェック
+    if not file_exists(current_user, safe_name, safe_src):
+
+        raise HTTPException(
+            status_code=404,
+            detail=f"ファイルが見つかりません: {safe_name}"
+        )
+
+    # 移動先フォルダの存在チェック（ルートは常にOK）
+    if safe_dest and not folder_exists(current_user, safe_dest):
+
+        raise HTTPException(
+            status_code=404,
+            detail="移動先のフォルダが見つかりません"
+        )
+
+    # 移動先に同名ファイルがあれば拒否
+    if file_exists(current_user, safe_name, safe_dest):
+
+        raise HTTPException(
+            status_code=409,
+            detail=f"移動先に同名のファイルが既に存在します: {safe_name}"
+        )
+
+    if not move_file(current_user, safe_src, safe_name, safe_dest):
+
+        raise HTTPException(
+            status_code=500,
+            detail="ファイルの移動に失敗しました"
+        )
+
+    log_success(current_user, f"MOVE: {safe_src}/{safe_name} → {safe_dest}")
+
+    return MessageResponse(
+        success=True,
+        user=current_user,
+        message=f"{safe_name} を移動しました"
+    )
+
+
+# =====================================
+# フォルダごとZIPダウンロードAPI
+#
+# 指定フォルダの中身（サブフォルダ含む）を1つのZIPにまとめて返す。
+#
+# URL:
+# GET /download-folder?path=親フォルダ&name=フォルダ名
+#
+# エラー:
+#   401 / 403 / 400 / 404
+# =====================================
+@router.get("/download-folder")
+def download_folder(name: str, path: str = ""):
+
+    # 認証チェック
+    if not is_logged_in():
+
+        log_failed("不明", "DOWNLOAD_FOLDER", "未ログイン")
+
+        raise HTTPException(
+            status_code=401,
+            detail="ログインが必要です"
+        )
+
+    current_user = get_current_user()
+    role = get_current_role()
+
+    if not can_access(role, "read"):
+
+        log_failed(current_user, "DOWNLOAD_FOLDER", "権限なし")
+
+        raise HTTPException(
+            status_code=403,
+            detail="ダウンロードする権限がありません"
+        )
+
+    safe_path = sanitize_path(path)
+    safe_name = sanitize_folder_name(name)
+
+    if safe_path is None or not safe_name:
+
+        raise HTTPException(
+            status_code=400,
+            detail="フォルダ名またはパスが不正です"
+        )
+
+    folder_dir = os.path.join(get_user_dir(current_user, safe_path), safe_name)
+
+    if not os.path.isdir(folder_dir):
+
+        raise HTTPException(
+            status_code=404,
+            detail="フォルダが見つかりません"
+        )
+
+    # メモリ上でZIPを構築（フォルダ構造を保ったまま再帰的に追加）
+    buffer = io.BytesIO()
+
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        for root, dirs, files in os.walk(folder_dir):
+
+            # ゴミ箱など隠しフォルダは含めない
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+            for f in files:
+
+                if f.startswith("."):
+                    continue
+
+                full = os.path.join(root, f)
+                # ZIP内のパスはフォルダ名を基点にした相対パスにする
+                arcname = os.path.join(
+                    safe_name,
+                    os.path.relpath(full, folder_dir)
+                )
+                zf.write(full, arcname=arcname)
+
+    buffer.seek(0)
+
+    zip_name = f"{safe_name}.zip"
+    encoded = urllib.parse.quote(zip_name)
+
+    log_success(current_user, f"DOWNLOAD_FOLDER: {safe_path}/{safe_name}")
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"
+        }
     )
 
 
@@ -1421,7 +1882,7 @@ def unshare_my_file(owner: str, filename: str):
 
 
 @router.get("/preview/{filename}")
-def preview_file(filename: str):
+def preview_file(filename: str, path: str = ""):
     # ① 認証チェック
     if not is_logged_in():
         raise HTTPException(status_code=401, detail="ログインが必要です")
@@ -1432,17 +1893,18 @@ def preview_file(filename: str):
     if not can_access(role, "read"):
         raise HTTPException(status_code=403, detail="このファイルにアクセスする権限がありません")
 
-    # ③ ファイル名の無害化
+    # ③ ファイル名・パスの無害化
     safe_name = sanitize_filename(filename)
-    if not safe_name:
+    safe_path = sanitize_path(path)
+    if not safe_name or safe_path is None:
         raise HTTPException(status_code=400, detail="ファイル名が不正です")
 
     # ④ ファイルの存在チェック
-    if not file_exists(current_user, safe_name):
+    if not file_exists(current_user, safe_name, safe_path):
         raise HTTPException(status_code=404, detail=f"ファイルが見つかりません: {safe_name}")
 
     # ⑤ インライン返却
-    file_path = get_file_path(current_user, safe_name)
+    file_path = get_file_path(current_user, safe_name, safe_path)
     
     mime_type, _ = mimetypes.guess_type(file_path)
     if not mime_type:

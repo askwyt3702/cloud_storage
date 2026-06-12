@@ -1,6 +1,8 @@
+import os
+
 from backend.services.file_service import (
-    list_files,       # ← ファイル一覧
-    get_file_size     # ← ファイルサイズ取得
+    get_user_dir,     # ← ユーザーフォルダのパス取得
+    TRASH_DIRNAME     # ← ゴミ箱フォルダ名（集計から除外する）
 )
 
 
@@ -31,12 +33,29 @@ MAX_STORAGE_GB = 10
 # =====================================
 def get_used_bytes(username: str) -> int:
 
-    files = list_files(username)
+    user_dir = get_user_dir(username)
 
-    return sum(
-        get_file_size(username, f)
-        for f in files
-    )
+    if not os.path.exists(user_dir):
+        return 0
+
+    total = 0
+
+    # サブフォルダの中身も含めて再帰的に集計する。
+    # ただしゴミ箱（.trash）は「使用量」に含めない。
+    for root, dirs, files in os.walk(user_dir):
+
+        # ゴミ箱フォルダ以下は走査しない
+        if TRASH_DIRNAME in dirs:
+            dirs.remove(TRASH_DIRNAME)
+
+        for f in files:
+            try:
+                total += os.path.getsize(os.path.join(root, f))
+            except OSError:
+                # 集計中にファイルが消えた等は無視
+                continue
+
+    return total
 
 
 def calculate_storage(username: str) -> dict:
