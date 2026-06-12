@@ -13,12 +13,23 @@ class FileInfo(BaseModel):
 
 
 # =====================================
+# フォルダ情報
+# =====================================
+class FolderInfo(BaseModel):
+    name: str              # フォルダ名
+    item_count: int        # 直下のフォルダ＋ファイル数
+    modified_at: str       # 更新日時 例: "2026-05-28 12:00"
+
+
+# =====================================
 # ファイル一覧レスポンス
 # =====================================
 class FileListResponse(BaseModel):
     success: bool
     user: str
     files: List[FileInfo]
+    folders: List[FolderInfo] = []   # 現在フォルダ内のサブフォルダ
+    path: str = ""                   # 現在表示中のフォルダパス（ルートは ""）
     total: int         # 全ファイル数
     page: int          # 現在のページ
     per_page: int      # 1ページあたりの件数
@@ -55,14 +66,42 @@ class StorageResponse(BaseModel):
 # 一括削除リクエスト
 # =====================================
 class BulkDeleteRequest(BaseModel):
-    filenames: List[str]   # 削除するファイル名のリスト
+    filenames: List[str]       # 削除するファイル名のリスト
+    path: Optional[str] = ""   # 対象ファイルがあるフォルダ（ルートは ""）
 
 
 # =====================================
 # 一括ダウンロード（ZIP）リクエスト
 # =====================================
 class BulkDownloadRequest(BaseModel):
-    filenames: List[str]   # ZIPにまとめるファイル名のリスト
+    filenames: List[str]       # ZIPにまとめるファイル名のリスト
+    path: Optional[str] = ""   # 対象ファイルがあるフォルダ（ルートは ""）
+
+
+# =====================================
+# フォルダ作成リクエスト
+# =====================================
+class CreateFolderRequest(BaseModel):
+    path: Optional[str] = ""   # 作成先の親フォルダ（ルートは ""）
+    name: str                  # 作る新しいフォルダ名
+
+
+# =====================================
+# フォルダ名変更リクエスト
+# =====================================
+class RenameFolderRequest(BaseModel):
+    path: Optional[str] = ""   # フォルダがある親フォルダ
+    old_name: str              # 現在のフォルダ名
+    new_name: str              # 変更後のフォルダ名
+
+
+# =====================================
+# ファイル移動リクエスト
+# =====================================
+class MoveFileRequest(BaseModel):
+    filename: str                  # 移動するファイル名
+    src_path: Optional[str] = ""   # 移動元フォルダ
+    dest_path: Optional[str] = ""  # 移動先フォルダ
 
 
 # =====================================

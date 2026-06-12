@@ -1,11 +1,13 @@
 import os
 
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 
 from backend.schemas import MessageResponse
 
 from backend.services.file_service import (
     sanitize_filename,     # ← ファイル名の無害化
+    sanitize_path,         # ← フォルダパスの無害化
+    folder_exists,         # ← フォルダ存在チェック
     save_file,             # ← ファイル保存
     file_exists            # ← 上書き防止チェック
 )
@@ -83,7 +85,10 @@ router = APIRouter()
 #   500 : 保存処理に失敗した場合
 # =====================================
 @router.post("/upload", response_model=MessageResponse)
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = Form("")
+):
 
     # ① 認証チェック
     if not is_logged_in():
@@ -108,17 +113,28 @@ async def upload_file(file: UploadFile = File(...)):
             detail="ファイルをアップロードする権限がありません"
         )
 
-    # ② ファイル名の無害化
+    # ② ファイル名・アップロード先パスの無害化
     #    例: "../../etc/passwd" → "passwd" に変換
     safe_name = sanitize_filename(file.filename)
+    safe_path = sanitize_path(path)
 
-    if not safe_name:
+    if not safe_name or safe_path is None:
 
-        log_failed(username, "UPLOAD", f"不正なファイル名: {file.filename}")
+        log_failed(username, "UPLOAD", f"不正なファイル名/パス: {path}/{file.filename}")
 
         raise HTTPException(
             status_code=400,
             detail="ファイル名が不正です"
+        )
+
+    # ②-2 アップロード先フォルダが存在するか（ルートは常にOK）
+    if safe_path and not folder_exists(username, safe_path):
+
+        log_failed(username, "UPLOAD", f"アップロード先フォルダなし: {safe_path}")
+
+        raise HTTPException(
+            status_code=404,
+            detail="アップロード先のフォルダが見つかりません"
         )
 
 
@@ -138,7 +154,7 @@ async def upload_file(file: UploadFile = File(...)):
 
     # ④ 上書き防止チェック
     #    同名ファイルが既にある場合は拒否
-    if file_exists(username, safe_name):
+    if file_exists(username, safe_name, safe_path):
 
         log_failed(username, "UPLOAD", f"同名ファイルあり: {safe_name}")
 
@@ -177,7 +193,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 
     # ⑧ ファイルの保存
-    success = save_file(username, safe_name, data)
+    success = save_file(username, safe_name, data, safe_path)
 
     if not success:
 

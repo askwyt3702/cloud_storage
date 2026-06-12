@@ -30,6 +30,12 @@ SHARED_DIRNAME = "_shared"
 # { "ファイル名": {"password_hash": "..."} } の形で保存する
 SHARED_META_FILENAME = ".shared_meta.json"
 
+# フォルダ階層で「使ってはいけない予約名」
+# これらの名前のフォルダは作れないし、一覧にも出さない。
+# ・.trash   : ゴミ箱（隠しフォルダ）
+# ・_shared  : 共有フォルダ
+RESERVED_NAMES = {TRASH_DIRNAME, SHARED_DIRNAME}
+
 
 # =====================================
 # ファイル名の無害化（サニタイズ）
@@ -64,21 +70,118 @@ def sanitize_filename(filename: str) -> str | None:
 
 
 # =====================================
+# フォルダパスの無害化（サニタイズ）
+#
+# 目的:
+#   サブフォルダの指定（例: "docs/2026"）を許可しつつ、
+#   パストラバーサルや予約フォルダへの侵入を防ぐ。
+#
+# 引数:
+#   path : ユーザーから受け取った相対フォルダパス
+#          （例: "docs/2026"、ルートは "" や None）
+#
+# 戻り値:
+#   安全な相対パス（スラッシュ区切り、ルートは ""）
+#   危険と判断した場合は None
+# =====================================
+def sanitize_path(path: str | None) -> str | None:
+
+    # 未指定（ルート）は空文字として扱う
+    if not path:
+        return ""
+
+    # 区切り文字を "/" に統一
+    normalized = path.replace("\\", "/")
+
+    segments = []
+
+    for part in normalized.split("/"):
+
+        # 空セグメント（"a//b" や 先頭/末尾スラッシュ）はスキップ
+        if part == "" or part == ".":
+            continue
+
+        # ".." や 予約名はパストラバーサル/侵入の恐れがあるので拒否
+        if part == ".." or part in RESERVED_NAMES:
+            return None
+
+        # 念のため、各セグメントにパス区切りが残っていないか確認
+        if os.path.basename(part) != part:
+            return None
+
+        segments.append(part)
+
+    # スラッシュ区切りで結合（ルートは ""）
+    return "/".join(segments)
+
+
+# =====================================
+# フォルダ名の無害化（単一セグメント用）
+#
+# 新規フォルダ作成・リネーム時に使う。
+# スラッシュを含む名前や予約名・".."などを拒否する。
+#
+# 戻り値:
+#   安全なフォルダ名、不正なら None
+# =====================================
+def sanitize_folder_name(name: str | None) -> str | None:
+
+    if not name:
+        return None
+
+    # スラッシュは含めない（1階層分の名前のみ許可）
+    if "/" in name or "\\" in name:
+        return None
+
+    if name in (".", "..") or name in RESERVED_NAMES:
+        return None
+
+    # 隠しフォルダ（先頭ドット）はシステム用なので禁止
+    if name.startswith("."):
+        return None
+
+    if os.path.basename(name) != name:
+        return None
+
+    return name
+
+
+# =====================================
+# ユーザーフォルダ（任意の階層）のフルパス取得
+#
+# 例:
+#   get_user_dir("admin")            → uploads/admin
+#   get_user_dir("admin", "docs")    → uploads/admin/docs
+#   get_user_dir("admin", "a/b")     → uploads/admin/a/b
+#
+# ※ path は sanitize_path 済みの相対パスを渡すこと
+# =====================================
+def get_user_dir(username: str, path: str = "") -> str:
+
+    if path:
+        return os.path.join(UPLOAD_DIR, username, *path.split("/"))
+
+    return os.path.join(UPLOAD_DIR, username)
+
+
+# =====================================
 # ファイルパス取得
 #
 # ユーザーごとのフォルダにファイルを保存
 # 例: uploads/admin/test.txt
+#     uploads/admin/docs/test.txt （path="docs" のとき）
 #
 # 引数:
 #   username : ユーザー名
 #   filename : ファイル名（sanitize済み）
+#   path     : サブフォルダの相対パス（sanitize済み、ルートは ""）
 #
 # 戻り値:
 #   ファイルのフルパス（文字列）
 # =====================================
-def get_file_path(username: str, filename: str) -> str:
+def get_file_path(username: str, filename: str, path: str = "") -> str:
 
-    return os.path.join(UPLOAD_DIR, username, filename)
+    return os.path.join(get_user_dir(username, path), filename)
 
 
 # =====================================
@@ -92,9 +195,9 @@ def get_file_path(username: str, filename: str) -> str:
 #   True  : ファイルが存在する
 #   False : ファイルが存在しない
 # =====================================
-def file_exists(username: str, filename: str) -> bool:
+def file_exists(username: str, filename: str, path: str = "") -> bool:
 
-    file_path = get_file_path(username, filename)
+    file_path = get_file_path(username, filename, path)
 
     return os.path.isfile(file_path)
 
@@ -108,9 +211,9 @@ def file_exists(username: str, filename: str) -> bool:
 # 戻り値:
 #   ファイル名のリスト（存在しない場合は空リスト）
 # =====================================
-def list_files(username: str) -> list:
+def list_files(username: str, path: str = "") -> list:
 
-    user_dir = os.path.join(UPLOAD_DIR, username)
+    user_dir = get_user_dir(username, path)
 
     if not os.path.exists(user_dir):
 
@@ -127,6 +230,226 @@ def list_files(username: str) -> list:
 
 
 # =====================================
+# フォルダ（サブディレクトリ）一覧取得
+#
+# 指定した階層にある「フォルダ」だけを返す。
+# 予約フォルダ（.trash / _shared）と隠しフォルダは除外。
+#
+# 引数:
+#   username : ユーザー名
+#   path     : 見たい階層の相対パス（sanitize済み、ルートは ""）
+#
+# 戻り値:
+#   フォルダ名のリスト（無ければ空リスト）
+# =====================================
+def list_folders(username: str, path: str = "") -> list:
+
+    user_dir = get_user_dir(username, path)
+
+    if not os.path.exists(user_dir):
+
+        return []
+
+    folders = []
+
+    for name in os.listdir(user_dir):
+
+        full = os.path.join(user_dir, name)
+
+        if not os.path.isdir(full):
+            continue
+
+        # 予約フォルダ・隠しフォルダは一覧に出さない
+        if name in RESERVED_NAMES or name.startswith("."):
+            continue
+
+        folders.append(name)
+
+    return folders
+
+
+# =====================================
+# フォルダのメタデータ取得
+#
+# 戻り値:
+#   item_count : 直下のフォルダ＋ファイル数
+#   modified_at: 更新日時（文字列）
+# =====================================
+def get_folder_metadata(username: str, path: str, name: str) -> dict:
+
+    folder_path = os.path.join(get_user_dir(username, path), name)
+
+    try:
+        mtime = os.path.getmtime(folder_path)
+        modified_at = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
+    except OSError:
+        modified_at = ""
+
+    # 直下の要素数（隠しファイルは数えない）
+    try:
+        item_count = sum(
+            1 for e in os.listdir(folder_path)
+            if not e.startswith(".")
+        )
+    except OSError:
+        item_count = 0
+
+    return {
+        "item_count": item_count,
+        "modified_at": modified_at,
+    }
+
+
+# =====================================
+# フォルダが存在するか
+# =====================================
+def folder_exists(username: str, path: str) -> bool:
+
+    # ルート("")はフォルダ扱いしない（呼び出し側の判定用）
+    if not path:
+        return False
+
+    return os.path.isdir(get_user_dir(username, path))
+
+
+# =====================================
+# 新規フォルダ作成
+#
+# 引数:
+#   username : ユーザー名
+#   path     : 作成先の親フォルダ（sanitize済み、ルートは ""）
+#   name     : 作る新しいフォルダ名（sanitize_folder_name 済み）
+#
+# 戻り値:
+#   True  : 作成成功
+#   False : 失敗（既に存在する等）
+# =====================================
+def create_folder(username: str, path: str, name: str) -> bool:
+
+    try:
+
+        target = os.path.join(get_user_dir(username, path), name)
+
+        # 既に同名のフォルダ／ファイルがあれば失敗扱い
+        if os.path.exists(target):
+            return False
+
+        os.makedirs(target)
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"フォルダ作成失敗: {username}/{path}/{name} - {e}")
+
+        return False
+
+
+# =====================================
+# フォルダのリネーム
+#
+# 戻り値:
+#   True  : 成功
+#   False : 失敗（移動先が既に存在する等）
+# =====================================
+def rename_folder(username: str, path: str, old_name: str, new_name: str) -> bool:
+
+    try:
+
+        parent = get_user_dir(username, path)
+        src = os.path.join(parent, old_name)
+        dest = os.path.join(parent, new_name)
+
+        if not os.path.isdir(src):
+            return False
+
+        if os.path.exists(dest):
+            return False
+
+        os.rename(src, dest)
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"フォルダ名変更失敗: {username}/{path}/{old_name} - {e}")
+
+        return False
+
+
+# =====================================
+# フォルダの完全削除（中身ごと・復元不可）
+#
+# ※ ゴミ箱には入らない。中のファイルも一緒に消える。
+#    呼び出し側で必ず確認を取ること。
+#
+# 戻り値:
+#   True  : 成功
+#   False : 失敗
+# =====================================
+def delete_folder_permanent(username: str, path: str, name: str) -> bool:
+
+    try:
+
+        target = os.path.join(get_user_dir(username, path), name)
+
+        if not os.path.isdir(target):
+            return False
+
+        shutil.rmtree(target)
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"フォルダ削除失敗: {username}/{path}/{name} - {e}")
+
+        return False
+
+
+# =====================================
+# ファイルを別フォルダへ移動
+#
+# 引数:
+#   username  : ユーザー名
+#   src_path  : 移動元の階層（sanitize済み）
+#   filename  : 移動するファイル名（sanitize済み）
+#   dest_path : 移動先の階層（sanitize済み、ルートは ""）
+#
+# 戻り値:
+#   True  : 成功
+#   False : 失敗（移動先に同名がある／元ファイルが無い等）
+# =====================================
+def move_file(username: str, src_path: str, filename: str, dest_path: str) -> bool:
+
+    try:
+
+        src = get_file_path(username, filename, src_path)
+        dest_dir = get_user_dir(username, dest_path)
+        dest = os.path.join(dest_dir, filename)
+
+        if not os.path.isfile(src):
+            return False
+
+        # 移動先フォルダが無ければ作る
+        os.makedirs(dest_dir, exist_ok=True)
+
+        # 上書き防止
+        if os.path.exists(dest):
+            return False
+
+        os.rename(src, dest)
+
+        return True
+
+    except Exception as e:
+
+        log_error(f"ファイル移動失敗: {username}/{src_path}/{filename} → {dest_path} - {e}")
+
+        return False
+
+
+# =====================================
 # ファイルサイズ取得（バイト）
 #
 # 引数:
@@ -136,9 +459,9 @@ def list_files(username: str) -> list:
 # 戻り値:
 #   ファイルサイズ（バイト）、存在しない場合は 0
 # =====================================
-def get_file_size(username: str, filename: str) -> int:
+def get_file_size(username: str, filename: str, path: str = "") -> int:
 
-    file_path = get_file_path(username, filename)
+    file_path = get_file_path(username, filename, path)
 
     if not os.path.isfile(file_path):
 
@@ -157,9 +480,9 @@ def get_file_size(username: str, filename: str) -> int:
 # 戻り値:
 #   更新日時のタイムスタンプ（float）、存在しない場合は 0
 # =====================================
-def get_file_mtime(username: str, filename: str) -> float:
+def get_file_mtime(username: str, filename: str, path: str = "") -> float:
 
-    file_path = get_file_path(username, filename)
+    file_path = get_file_path(username, filename, path)
 
     if not os.path.isfile(file_path):
 
@@ -179,9 +502,9 @@ def get_file_mtime(username: str, filename: str) -> float:
 #   uploaded_at : アップロード日時（文字列）
 #   file_type   : 拡張子（例: ".pdf"）
 # =====================================
-def get_file_metadata(username: str, filename: str) -> dict:
+def get_file_metadata(username: str, filename: str, path: str = "") -> dict:
 
-    file_path = get_file_path(username, filename)
+    file_path = get_file_path(username, filename, path)
 
     # アップロード日時（ファイルの更新日時を使用）
     mtime = os.path.getmtime(file_path)
@@ -211,16 +534,16 @@ def get_file_metadata(username: str, filename: str) -> dict:
 #   True  : 保存成功
 #   False : 保存失敗
 # =====================================
-def save_file(username: str, filename: str, data: bytes) -> bool:
+def save_file(username: str, filename: str, data: bytes, path: str = "") -> bool:
 
     try:
 
-        # ユーザーフォルダを作成（なければ）
-        # 例: uploads/admin/
-        user_dir = os.path.join(UPLOAD_DIR, username)
+        # 保存先フォルダを作成（なければ）
+        # 例: uploads/admin/ または uploads/admin/docs/
+        user_dir = get_user_dir(username, path)
         os.makedirs(user_dir, exist_ok=True)
 
-        file_path = get_file_path(username, filename)
+        file_path = get_file_path(username, filename, path)
 
         with open(file_path, "wb") as f:
             f.write(data)
@@ -343,14 +666,14 @@ def get_trash_file_metadata(username: str, filename: str) -> dict:
 #   True  : 成功
 #   False : 失敗
 # =====================================
-def move_to_trash(username: str, filename: str) -> bool:
+def move_to_trash(username: str, filename: str, path: str = "") -> bool:
 
     try:
 
         trash_dir = get_trash_dir(username)
         os.makedirs(trash_dir, exist_ok=True)
 
-        src = get_file_path(username, filename)
+        src = get_file_path(username, filename, path)
         dest = os.path.join(trash_dir, filename)
 
         # ゴミ箱に同名がある場合は名前を変えて衝突を回避
