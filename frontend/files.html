@@ -99,7 +99,11 @@
         <button onclick="uploadSelectedFile(event)" data-i18n="btn_upload">
           ⬆ アップロード
         </button>
- 
+
+        <button class="new-folder-btn" onclick="createFolderPrompt()" data-i18n="folder_new">
+          🗂 新規フォルダ
+        </button>
+
       </div>
  
       <!-- 選択中のファイルリスト（選ぶまでは非表示） -->
@@ -149,6 +153,9 @@
         <button class="chip"        data-cat="other"    onclick="setCategoryFilter('other', this)" data-i18n="cat_other">📦 その他</button>
       </div>
  
+      <!-- パンくずリスト（フォルダ階層のナビ。ルート以外のときだけ表示） -->
+      <nav class="breadcrumb" id="breadcrumb" style="display:none"></nav>
+
       <!-- 操作バー：並び替え・一括削除・ゴミ箱 -->
       <div class="toolbar">
  

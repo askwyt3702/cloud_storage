@@ -183,6 +183,23 @@ const TRANSLATIONS = {
         // 空画面表示 (empty state)
         no_files: "ファイルがありません",
         no_files_sub: "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう",
+        folder_new: "新規フォルダ",
+        folder_prompt_name: "新しいフォルダ名を入力してください",
+        folder_rename_prompt: "新しいフォルダ名",
+        folder_label: "フォルダ",
+        unit_count: "個",
+        bc_root: "マイファイル",
+        menu_open: "開く",
+        menu_move: "移動",
+        menu_folder_dl: "フォルダをZIPでDL",
+        menu_folder_rename: "フォルダ名を変更",
+        menu_folder_delete: "フォルダを削除",
+        folder_delete_confirm: "「{name}」をフォルダごと完全に削除します。\n中のファイルも消え、元に戻せません。よろしいですか？",
+        move_title: "移動先のフォルダを選択",
+        move_to_root: "🏠 マイファイル（ルート）",
+        move_done: "{name} を移動しました",
+        move_no_dest: "移動できるフォルダがありません。先にフォルダを作成してください",
+        share_blocked_subfolder: "サブフォルダ内のファイルは共有できません。ルートに移動してから共有してください",
         no_links: "発行したリンクはありません",
         no_links_sub: "共上一覧のファイルから「🔗 リンク作成」で発行できます",
         trash_empty: "ゴミ箱は空です",
@@ -468,6 +485,23 @@ const TRANSLATIONS = {
         // Empty states
         no_files: "No files found",
         no_files_sub: "Try uploading files by clicking 'Add Files' or dragging them here",
+        folder_new: "New Folder",
+        folder_prompt_name: "Enter a name for the new folder",
+        folder_rename_prompt: "New folder name",
+        folder_label: "Folder",
+        unit_count: "items",
+        bc_root: "My Files",
+        menu_open: "Open",
+        menu_move: "Move",
+        menu_folder_dl: "Download folder as ZIP",
+        menu_folder_rename: "Rename folder",
+        menu_folder_delete: "Delete folder",
+        folder_delete_confirm: "Permanently delete the folder \"{name}\" and everything inside it.\nThis cannot be undone. Continue?",
+        move_title: "Choose a destination folder",
+        move_to_root: "🏠 My Files (root)",
+        move_done: "Moved {name}",
+        move_no_dest: "No folders available. Create a folder first.",
+        share_blocked_subfolder: "Files inside subfolders can't be shared. Move it to the root first.",
         no_links: "No links have been created",
         no_links_sub: "You can create links from shared files by clicking '🔗 Create Link'",
         trash_empty: "Trash is empty",
@@ -734,6 +768,23 @@ const TRANSLATIONS = {
         no_account_prompt: "Chưa có tài khoản?",
         no_files: "Không tìm thấy tệp nào",
         no_files_sub: "Tải lên tệp bằng cách kéo thả vào đây hoặc nhấp Thêm tệp.",
+        folder_new: "Thư mục mới",
+        folder_prompt_name: "Nhập tên thư mục mới",
+        folder_rename_prompt: "Tên thư mục mới",
+        folder_label: "Thư mục",
+        unit_count: "mục",
+        bc_root: "Tệp của tôi",
+        menu_open: "Mở",
+        menu_move: "Di chuyển",
+        menu_folder_dl: "Tải thư mục dạng ZIP",
+        menu_folder_rename: "Đổi tên thư mục",
+        menu_folder_delete: "Xóa thư mục",
+        folder_delete_confirm: "Xóa vĩnh viễn thư mục \"{name}\" và toàn bộ nội dung bên trong.\nKhông thể hoàn tác. Tiếp tục?",
+        move_title: "Chọn thư mục đích",
+        move_to_root: "🏠 Tệp của tôi (gốc)",
+        move_done: "Đã di chuyển {name}",
+        move_no_dest: "Không có thư mục nào. Hãy tạo thư mục trước.",
+        share_blocked_subfolder: "Không thể chia sẻ tệp trong thư mục con. Hãy di chuyển ra thư mục gốc trước.",
         no_links: "Không tìm thấy liên kết chia sẻ nào",
         no_links_sub: "Bạn có thể tạo liên kết chia sẻ từ Danh sách tệp.",
         no_shared_files: "Không có tệp chia sẻ",
@@ -1205,7 +1256,7 @@ function closePreview() {
 
 async function previewFile(filename) {
     const ext = (filename.split(".").pop() || "").toLowerCase();
-    const url = `${API_BASE}/preview/${encodeURIComponent(filename)}`;
+    const url = `${API_BASE}/preview/${encodeURIComponent(filename)}${_pathParam(false)}`;
 
     _ensurePreviewModal();
     document.getElementById("preview-title").textContent = filename;
@@ -1877,12 +1928,74 @@ async function logout() {
 
 
 // =====================================
+// フォルダ階層の状態
+//   _currentPath : 今表示しているフォルダの相対パス（ルートは ""）
+//   例: "docs"、"docs/2026"
+// =====================================
+let _currentPath = "";
+
+// 現在のパスを ?path=... のクエリ文字列にする（ルートなら空文字）
+// alreadyHasQuery=true なら "&path=..."、false なら "?path=..." を返す
+function _pathParam(alreadyHasQuery) {
+    if (!_currentPath) return "";
+    const sep = alreadyHasQuery ? "&" : "?";
+    return `${sep}path=${encodeURIComponent(_currentPath)}`;
+}
+
+// フォルダの中に入る（1階層下へ）
+function navigateInto(folderName) {
+    _currentPath = _currentPath ? `${_currentPath}/${folderName}` : folderName;
+    loadFiles();
+}
+
+// 指定パスへ直接移動（パンくずクリック用。ルートは ""）
+function navigateToPath(path) {
+    _currentPath = path || "";
+    loadFiles();
+}
+
+// パンくずリストを描画する
+function renderBreadcrumb() {
+    const bc = document.getElementById("breadcrumb");
+    if (!bc) return;
+
+    // ルート直下なら非表示（階層に入ったときだけ出す）
+    if (!_currentPath) {
+        bc.style.display = "none";
+        bc.innerHTML = "";
+        return;
+    }
+
+    const segments = _currentPath.split("/");
+    let acc = "";
+    const parts = [`<button class="bc-item" onclick="navigateToPath('')">🏠 ${escapeHtml(t("bc_root"))}</button>`];
+
+    segments.forEach((seg, i) => {
+        acc = acc ? `${acc}/${seg}` : seg;
+        const safeAcc = acc.replace(/'/g, "\\'");
+        parts.push(`<span class="bc-sep">/</span>`);
+        if (i === segments.length - 1) {
+            // 末尾（今いるフォルダ）はリンクにしない
+            parts.push(`<span class="bc-current">${escapeHtml(seg)}</span>`);
+        } else {
+            parts.push(`<button class="bc-item" onclick="navigateToPath('${safeAcc}')">${escapeHtml(seg)}</button>`);
+        }
+    });
+
+    bc.innerHTML = parts.join("");
+    bc.style.display = "flex";
+}
+
+// =====================================
 // ファイル一覧を取得して表示
 // 並び替え（sortSelect）の値に応じて取得する
+// フォルダ階層対応：_currentPath のフォルダ／ファイルを表示する
 // =====================================
 async function loadFiles() {
     const fileList = document.getElementById("fileList");
     fileList.innerHTML = _skeletonHTML(4);
+
+    renderBreadcrumb();
 
     // 並び替えの値を取得（例: "date_desc" → sort_by=date, order=desc）
     const sortSelect = document.getElementById("sortSelect");
@@ -1891,23 +2004,53 @@ async function loadFiles() {
 
     try {
         // per_page未指定だとデフォルト20件で切られ、21件目以降が一覧・検索・一括操作から消えるため大きめに指定
-        const res = await fetch(`${API_BASE}/files?sort_by=${sortBy}&order=${order}&per_page=1000`);
+        const res = await fetch(`${API_BASE}/files?sort_by=${sortBy}&order=${order}&per_page=1000${_pathParam(true)}`);
 
         if (!res.ok) {
+            // 存在しないフォルダ等に来てしまったらルートへ戻す
+            if (res.status === 404 && _currentPath) {
+                _currentPath = "";
+                return loadFiles();
+            }
             fileList.innerHTML = "<p style='color:#f87171'>ファイルの取得に失敗しました</p>";
             return;
         }
 
         const data = await res.json();
+        const folders = data.folders || [];
 
-        // ダッシュボードの「マイファイル件数」を更新
+        // ダッシュボードの「マイファイル件数」を更新（ルート表示時のみ全体件数として扱う）
         const fileCountEl = document.getElementById("heroFileCount");
-        if (fileCountEl) fileCountEl.textContent = data.total;
+        if (fileCountEl && !_currentPath) fileCountEl.textContent = data.total;
 
-        if (data.files.length === 0) {
+        // フォルダもファイルも無いときだけ空状態を表示
+        if (data.files.length === 0 && folders.length === 0) {
             fileList.innerHTML = _emptyStateHTML("fa-folder-open", t("no_files"), t("no_files_sub"));
             return;
         }
+
+        // --- フォルダカード（常に上に並べる） ---
+        const folderHTML = folders.map(folder => {
+            const safe = encodeURIComponent(folder.name);
+            const disp = escapeHtml(folder.name);
+            const count = folder.item_count;
+            const modified = escapeHtml(folder.modified_at || "");
+            return `
+            <div class="file-card folder-card" data-ctx="folder" data-filename="${disp}">
+                <div class="file-info-clickable" onclick="navigateInto(decodeURIComponent('${safe}'))">
+                    <div class="file-icon folder-bg"><i class="fa-solid fa-folder"></i></div>
+                    <div>
+                        <div class="file-name" title="${disp}">${disp}</div>
+                        <div class="file-detail">${escapeHtml(t("folder_label"))} ・ ${count} ${escapeHtml(t("unit_count"))} ・ ${modified}</div>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <button class="download-btn" onclick="downloadFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_dl"))}"><i class="fa-solid fa-file-zipper"></i></button>
+                    <button class="rename-btn"   onclick="renameFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_rename"))}"><i class="fa-solid fa-pen"></i></button>
+                    <button class="delete-btn"   onclick="deleteFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_delete"))}"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            </div>`;
+        }).join("");
 
         // お気に入りを上部に固定（サーバーの並び順は各グループ内で維持）
         const favs = _getFavorites();
@@ -1916,7 +2059,7 @@ async function loadFiles() {
             ...data.files.filter(f => !favs.includes(f.name)),
         ];
 
-        fileList.innerHTML = orderedFiles.map(file => {
+        const fileHTML = orderedFiles.map(file => {
             const { icon, bg } = getFileIcon(file.name);
             const safeName = encodeURIComponent(file.name);   // onclick/URL用（安全）
             const dispName = escapeHtml(file.name);            // 画面表示用（XSS対策）
@@ -1927,7 +2070,7 @@ async function loadFiles() {
             //   - クリックでフルサイズプレビュー（モーダル）が開く
             //   - 画像が壊れていたら色付きアイコンにフォールバック
             const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
-            const imgUrl = `${API_BASE}/preview/${safeName}`;
+            const imgUrl = `${API_BASE}/preview/${safeName}${_pathParam(false)}`;
             const thumb = isImg
                 ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
                         onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
@@ -1956,6 +2099,9 @@ async function loadFiles() {
                 </div>
             </div>`;
         }).join("");
+
+        // フォルダ（上）→ ファイル（下）の順でまとめて描画
+        fileList.innerHTML = folderHTML + fileHTML;
 
         // 検索バーに入力があれば、再描画後も絞り込みを保つ
         filterFiles();
@@ -2026,10 +2172,13 @@ function filterFiles() {
     cards.forEach(card => {
         const nameEl = card.querySelector(".file-name");
         const name = nameEl ? (nameEl.getAttribute("title") || nameEl.textContent).toLowerCase() : "";
+        const isFolder = card.classList.contains("folder-card");
 
-        // 検索文字列とカテゴリの両方に一致したものだけ表示
+        // 検索文字列で絞り込み（フォルダも対象）
         const matchText = name.includes(q);
-        const matchCat  = (_categoryFilter === "all")
+        // カテゴリ絞り込みはファイルのみに適用（フォルダは常に対象）
+        const matchCat  = isFolder
+            || (_categoryFilter === "all")
             || (getCategoryByFilename(name) === _categoryFilter);
 
         const match = matchText && matchCat;
@@ -2128,7 +2277,15 @@ function setupContextMenus() {
         const name = card.dataset.filename;
         let items = [];
 
-        if (ctx === "main") {
+        if (ctx === "folder") {
+            items = [
+                { icon: "📂", label: t("menu_open"),               action: () => navigateInto(name) },
+                { icon: "⬇", label: t("menu_folder_dl"),          action: () => downloadFolder(name) },
+                { divider: true },
+                { icon: "✏", label: t("menu_folder_rename"),      action: () => renameFolder(name) },
+                { icon: "🗑", label: t("menu_folder_delete"),     action: () => deleteFolder(name), danger: true },
+            ];
+        } else if (ctx === "main") {
             const fav = isFavorite(name);
             items = [
                 { icon: "👁", label: t("menu_preview"),            action: () => previewFile(name) },
@@ -2136,6 +2293,7 @@ function setupContextMenus() {
                 { icon: fav ? "★" : "☆", label: fav ? t("menu_unstar") : t("menu_star"), action: () => toggleFavorite(name) },
                 { divider: true },
                 { icon: "✏", label: t("menu_rename"),            action: () => renameFile(name) },
+                { icon: "📂", label: t("menu_move"),               action: () => moveFilePrompt(name) },
                 { icon: "🔗", label: t("menu_share"),              action: () => shareFile(name) },
                 { divider: true },
                 { icon: "🗑", label: t("menu_delete"),      action: () => deleteFile(name), danger: true },
@@ -2239,7 +2397,7 @@ async function downloadSelectedZip(e) {
         const res = await fetch(`${API_BASE}/download-zip`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filenames })
+            body: JSON.stringify({ filenames, path: _currentPath })
         });
 
         if (!res.ok) {
@@ -2290,7 +2448,7 @@ async function deleteSelected(e) {
         const res = await fetch(`${API_BASE}/delete-multiple`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filenames })
+            body: JSON.stringify({ filenames, path: _currentPath })
         });
 
         if (res.ok) {
@@ -2527,6 +2685,8 @@ async function _uploadAsZip(files) {
 function uploadFileData(file, index, total) {
     const formData = new FormData();
     formData.append("file", file);
+    // 今いるフォルダにアップロードする（ルートなら空文字）
+    formData.append("path", _currentPath);
 
     _ensureUploadProgressUI();
     const bar   = document.getElementById("uploadProgress");
@@ -2590,7 +2750,7 @@ function uploadFileData(file, index, total) {
 // =====================================
 async function downloadFile(filename) {
     try {
-        const res = await fetch(`${API_BASE}/download/${encodeURIComponent(filename)}`);
+        const res = await fetch(`${API_BASE}/download/${encodeURIComponent(filename)}${_pathParam(false)}`);
 
         if (!res.ok) {
             notify("download_failed");
@@ -2620,7 +2780,7 @@ async function deleteFile(filename) {
 
     try {
         const res = await fetch(
-            `${API_BASE}/delete/${encodeURIComponent(filename)}`,
+            `${API_BASE}/delete/${encodeURIComponent(filename)}${_pathParam(false)}`,
             { method: "DELETE" }
         );
 
@@ -2922,7 +3082,7 @@ async function renameFile(filename) {
 
     try {
         const res = await fetch(
-            `${API_BASE}/rename/${encodeURIComponent(filename)}`,
+            `${API_BASE}/rename/${encodeURIComponent(filename)}${_pathParam(false)}`,
             {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
@@ -2940,6 +3100,208 @@ async function renameFile(filename) {
         }
     } catch (e) {
         notify("name_change_failed");
+    }
+}
+
+
+// =====================================================
+// ここから下：フォルダ操作（作成・名前変更・削除・DL・移動）
+// =====================================================
+
+
+// 新規フォルダを作成（今いる階層に作る）
+async function createFolderPrompt() {
+    const name = prompt(t("folder_prompt_name"), "");
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/folders`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path: _currentPath, name: trimmed })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            notify(data.message);
+            await loadFiles();
+        } else {
+            const err = await res.json();
+            notify(t("error_prefix") + err.detail);
+        }
+    } catch (e) {
+        notify("cannot_connect");
+    }
+}
+
+
+// フォルダをZIPでダウンロード
+async function downloadFolder(folderName) {
+    try {
+        const res = await fetch(
+            `${API_BASE}/download-folder?name=${encodeURIComponent(folderName)}${_pathParam(true)}`
+        );
+
+        if (!res.ok) {
+            notify("download_failed");
+            return;
+        }
+
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url;
+        a.download = `${folderName}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (e) {
+        notify("download_failed");
+    }
+}
+
+
+// フォルダ名を変更
+async function renameFolder(folderName) {
+    const input = prompt(t("folder_rename_prompt"), folderName);
+    if (input === null) return;
+    const newName = input.trim();
+    if (!newName || newName === folderName) return;
+
+    try {
+        const res = await fetch(`${API_BASE}/folders/rename`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ path: _currentPath, old_name: folderName, new_name: newName })
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            notify(data.message);
+            await loadFiles();
+        } else {
+            const err = await res.json();
+            notify(t("error_prefix") + err.detail);
+        }
+    } catch (e) {
+        notify("name_change_failed");
+    }
+}
+
+
+// フォルダを完全削除（中身ごと・復元不可なので確認必須）
+async function deleteFolder(folderName) {
+    if (!confirm(t("folder_delete_confirm", { name: folderName }))) return;
+
+    try {
+        const res = await fetch(
+            `${API_BASE}/folders?name=${encodeURIComponent(folderName)}${_pathParam(true)}`,
+            { method: "DELETE" }
+        );
+
+        if (res.ok) {
+            const data = await res.json();
+            notify(data.message);
+            await loadFiles();
+            await loadStorage();
+        } else {
+            const err = await res.json();
+            notify(t("error_prefix") + err.detail);
+        }
+    } catch (e) {
+        notify("delete_failed");
+    }
+}
+
+
+// =====================================
+// ファイルを別フォルダへ移動
+//   移動先候補は「ルート直下のフォルダ一覧」＋「ルート」。
+//   現在地は候補から除外する。
+// =====================================
+async function moveFilePrompt(filename) {
+    // ルート直下のフォルダ一覧を取得
+    let folders = [];
+    try {
+        const res = await fetch(`${API_BASE}/files?per_page=1000`);
+        if (res.ok) {
+            const data = await res.json();
+            folders = (data.folders || []).map(f => f.name);
+        }
+    } catch (_) {}
+
+    // 移動先候補（現在地は除く）
+    const dests = [];
+    if (_currentPath !== "") dests.push({ label: t("move_to_root"), path: "" });
+    folders.forEach(name => {
+        if (name !== _currentPath) dests.push({ label: "🗂 " + name, path: name });
+    });
+
+    if (dests.length === 0) {
+        notify(t("move_no_dest"));
+        return;
+    }
+
+    _showMoveModal(filename, dests);
+}
+
+// 移動先選択モーダルを表示
+function _showMoveModal(filename, dests) {
+    let modal = document.getElementById("move-modal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "move-modal";
+        modal.className = "modal-overlay";
+        modal.hidden = true;
+        document.body.appendChild(modal);
+        // 背景クリックで閉じる
+        modal.addEventListener("click", (e) => { if (e.target === modal) modal.hidden = true; });
+    }
+
+    const list = dests.map((d, i) =>
+        `<button class="move-dest-btn" data-idx="${i}">${escapeHtml(d.label)}</button>`
+    ).join("");
+
+    modal.innerHTML = `
+        <div class="modal-box move-box">
+            <div class="modal-head">
+                <h3>${escapeHtml(t("move_title"))}</h3>
+                <button class="modal-close" onclick="document.getElementById('move-modal').hidden=true">✕</button>
+            </div>
+            <p class="move-target" title="${escapeHtml(filename)}">📄 ${escapeHtml(filename)}</p>
+            <div class="move-dest-list">${list}</div>
+        </div>`;
+
+    modal.querySelectorAll(".move-dest-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const dest = dests[parseInt(btn.dataset.idx, 10)];
+            modal.hidden = true;
+            _doMove(filename, dest.path);
+        });
+    });
+
+    modal.hidden = false;
+}
+
+// 実際の移動APIを叩く
+async function _doMove(filename, destPath) {
+    try {
+        const res = await fetch(`${API_BASE}/move`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename, src_path: _currentPath, dest_path: destPath })
+        });
+
+        if (res.ok) {
+            notify(t("move_done", { name: filename }));
+            await loadFiles();
+        } else {
+            const err = await res.json();
+            notify(t("error_prefix") + err.detail);
+        }
+    } catch (e) {
+        notify("cannot_connect");
     }
 }
 
@@ -3176,6 +3538,12 @@ async function emptyTrash(e) {
 // 自分のファイルを共有する（パスワード任意）
 // =====================================
 async function shareFile(filename) {
+    // MVP仕様：共有はルート直下のファイルのみ対応（サブフォルダ内は不可）
+    if (_currentPath) {
+        notify(t("share_blocked_subfolder"));
+        return;
+    }
+
     // パスワードを尋ねる（空欄ならパスワードなし）
     const password = prompt(t("share_prompt", { name: filename }), "");
 
@@ -3214,6 +3582,12 @@ async function shareSelected(e) {
 
     if (filenames.length === 0) {
         notify("select_file_share");
+        return;
+    }
+
+    // MVP仕様：共有はルート直下のファイルのみ対応
+    if (_currentPath) {
+        notify(t("share_blocked_subfolder"));
         return;
     }
 

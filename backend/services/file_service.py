@@ -1,6 +1,8 @@
 import os
 import json
 import shutil
+import stat
+import time
 import bcrypt
 from datetime import datetime
 
@@ -389,22 +391,50 @@ def rename_folder(username: str, path: str, old_name: str, new_name: str) -> boo
 # =====================================
 def delete_folder_permanent(username: str, path: str, name: str) -> bool:
 
-    try:
+    target = os.path.join(get_user_dir(username, path), name)
 
-        target = os.path.join(get_user_dir(username, path), name)
-
-        if not os.path.isdir(target):
-            return False
-
-        shutil.rmtree(target)
-
-        return True
-
-    except Exception as e:
-
-        log_error(f"フォルダ削除失敗: {username}/{path}/{name} - {e}")
-
+    if not os.path.isdir(target):
         return False
+
+    return _robust_rmtree(target, f"{username}/{path}/{name}")
+
+
+# =====================================
+# Windows / OneDrive 対応の堅牢な再帰削除
+#
+# shutil.rmtree は Windows + OneDrive 環境だと、読み取り専用属性や
+# 同期中の一時的なロックで [WinError 5] アクセス拒否になることがある。
+#   ・読み取り専用ファイルは書き込み可に変えてから消す（onerror）
+#   ・一時的なロックは少し待って数回リトライする
+# =====================================
+def _robust_rmtree(target: str, label: str = "") -> bool:
+
+    # rmtree がファイルを消せなかったとき、読み取り専用属性を外して再試行する
+    def _on_error(func, p, exc_info):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            func(p)
+        except Exception:
+            # ここで消せなくても、後段のリトライに任せる
+            pass
+
+    last_error = None
+
+    for attempt in range(3):
+        try:
+            shutil.rmtree(target, onerror=_on_error)
+        except Exception as e:
+            last_error = e
+
+        # 消えていれば成功
+        if not os.path.exists(target):
+            return True
+
+        # 同期ロック等の一時的要因に備えて少し待ってからリトライ
+        time.sleep(0.3)
+
+    log_error(f"フォルダ削除失敗: {label} - {last_error}")
+    return False
 
 
 # =====================================
