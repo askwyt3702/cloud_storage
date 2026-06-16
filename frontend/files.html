@@ -104,6 +104,13 @@
           🗂 新規フォルダ
         </button>
 
+        <!-- フォルダ丸ごとアップロード（webkitdirectory でフォルダ選択） -->
+        <input type="file" id="folderInput" hidden webkitdirectory directory multiple>
+
+        <button class="folder-upload-btn" onclick="document.getElementById('folderInput').click()" data-i18n="folder_upload_btn">
+          📂 フォルダをアップロード
+        </button>
+
       </div>
  
       <!-- 選択中のファイルリスト（選ぶまでは非表示） -->

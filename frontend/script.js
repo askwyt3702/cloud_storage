@@ -200,6 +200,10 @@ const TRANSLATIONS = {
         move_done: "{name} を移動しました",
         move_no_dest: "移動できるフォルダがありません。先にフォルダを作成してください",
         share_blocked_subfolder: "サブフォルダ内のファイルは共有できません。ルートに移動してから共有してください",
+        folder_upload_btn: "📂 フォルダをアップロード",
+        folder_upload_making: "フォルダ構造を作成中...",
+        folder_upload_done: "「{name}」をアップロードしました（成功 {ok} / 失敗 {fail}）",
+        folder_upload_empty: "アップロードできるファイルがありませんでした",
         no_links: "発行したリンクはありません",
         no_links_sub: "共上一覧のファイルから「🔗 リンク作成」で発行できます",
         trash_empty: "ゴミ箱は空です",
@@ -502,6 +506,10 @@ const TRANSLATIONS = {
         move_done: "Moved {name}",
         move_no_dest: "No folders available. Create a folder first.",
         share_blocked_subfolder: "Files inside subfolders can't be shared. Move it to the root first.",
+        folder_upload_btn: "📂 Upload Folder",
+        folder_upload_making: "Creating folder structure...",
+        folder_upload_done: "Uploaded \"{name}\" (success {ok} / failed {fail})",
+        folder_upload_empty: "No files to upload",
         no_links: "No links have been created",
         no_links_sub: "You can create links from shared files by clicking '🔗 Create Link'",
         trash_empty: "Trash is empty",
@@ -785,6 +793,10 @@ const TRANSLATIONS = {
         move_done: "Đã di chuyển {name}",
         move_no_dest: "Không có thư mục nào. Hãy tạo thư mục trước.",
         share_blocked_subfolder: "Không thể chia sẻ tệp trong thư mục con. Hãy di chuyển ra thư mục gốc trước.",
+        folder_upload_btn: "📂 Tải lên thư mục",
+        folder_upload_making: "Đang tạo cấu trúc thư mục...",
+        folder_upload_done: "Đã tải lên \"{name}\" (thành công {ok} / thất bại {fail})",
+        folder_upload_empty: "Không có tệp để tải lên",
         no_links: "Không tìm thấy liên kết chia sẻ nào",
         no_links_sub: "Bạn có thể tạo liên kết chia sẻ từ Danh sách tệp.",
         no_shared_files: "Không có tệp chia sẻ",
@@ -2682,11 +2694,12 @@ async function _uploadAsZip(files) {
 // =====================================
 // index / total を渡すと「(2/5) ファイル名 30%」のように表示する（複数アップロード用）
 // 戻り値: アップロード成功なら true
-function uploadFileData(file, index, total) {
+function uploadFileData(file, index, total, targetPath, skipReload) {
     const formData = new FormData();
     formData.append("file", file);
-    // 今いるフォルダにアップロードする（ルートなら空文字）
-    formData.append("path", _currentPath);
+    // アップロード先フォルダ。未指定なら今いるフォルダ（ルートなら空文字）。
+    // フォルダ丸ごとアップロード時は各ファイルの相対パスを渡す。
+    formData.append("path", targetPath !== undefined ? targetPath : _currentPath);
 
     _ensureUploadProgressUI();
     const bar   = document.getElementById("uploadProgress");
@@ -2719,8 +2732,11 @@ function uploadFileData(file, index, total) {
                 if (!total || total === 1) {
                     notify(t("upload_success", { name: file.name }));
                 }
-                await loadFiles();
-                await loadStorage();
+                // バッチ（フォルダ丸ごと等）では呼び出し側が最後にまとめて再描画する
+                if (!skipReload) {
+                    await loadFiles();
+                    await loadStorage();
+                }
                 resolve(true);
             } else {
                 let msg = `${file.name}: アップロードに失敗しました`;
@@ -3133,6 +3149,137 @@ async function createFolderPrompt() {
         }
     } catch (e) {
         notify("cannot_connect");
+    }
+}
+
+
+// =====================================================
+// フォルダ丸ごとアップロード
+//   PCにある既存フォルダを、階層を保ったままアップロードする。
+//   ・ボタン（<input webkitdirectory>）
+//   ・フォルダのドラッグ&ドロップ（webkitGetAsEntry）
+//   どちらも最終的に entries = [{file, relDir}] に変換してこの関数に渡す。
+//   relDir = そのファイルが入るサブフォルダ（アップロード元フォルダ名を含む相対パス、"" なら現在地直下）
+// =====================================================
+
+// 相対フォルダパスを安全な形に整える（空・"."・".." を除去）
+function _normalizeRelDir(relDir) {
+    return (relDir || "")
+        .split("/")
+        .map(s => s.trim())
+        .filter(s => s && s !== "." && s !== "..")
+        .join("/");
+}
+
+// 指定フォルダ階層を上から順に作成（既存=409はOK扱い）。createdに作成済みを記録。
+async function _ensureFolderPath(fullRelPath, created) {
+    const segs = fullRelPath.split("/").filter(Boolean);
+    let parent = "";
+    for (const seg of segs) {
+        const cur = parent ? `${parent}/${seg}` : seg;
+        if (!created.has(cur)) {
+            try {
+                await fetch(`${API_BASE}/folders`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ path: parent, name: seg })
+                });
+                // 200=作成 / 409=既存。どちらも「存在する」のでOK扱い。
+            } catch (_) {}
+            created.add(cur);
+        }
+        parent = cur;
+    }
+}
+
+// entries=[{file, relDir}] をフォルダ構造ごとアップロード
+async function uploadFolderEntries(entries, rootLabel) {
+    if (!entries || entries.length === 0) {
+        notify(t("folder_upload_empty"));
+        return;
+    }
+
+    // 各ファイルのアップロード先（ルートからの相対パス）を確定し、作るべきフォルダを収集
+    const dirSet = new Set();
+    for (const ent of entries) {
+        const rel = _normalizeRelDir(ent.relDir);
+        const full = _currentPath ? (rel ? `${_currentPath}/${rel}` : _currentPath) : rel;
+        ent._target = full;          // アップロード先フォルダ
+        if (full) dirSet.add(full);
+    }
+
+    // 親→子の順に作成したいので、浅い階層から並べる
+    const dirs = Array.from(dirSet).sort((a, b) => a.split("/").length - b.split("/").length);
+
+    _ensureUploadProgressUI();
+    const bar   = document.getElementById("uploadProgress");
+    const label = document.getElementById("uploadProgressLabel");
+    if (bar)   bar.style.display = "block";
+    if (label) label.textContent = t("folder_upload_making");
+
+    const created = new Set();
+    for (const d of dirs) {
+        await _ensureFolderPath(d, created);
+    }
+
+    // 各ファイルをアップロード（バッチなので途中の再描画はスキップ）
+    let ok = 0, fail = 0;
+    for (let i = 0; i < entries.length; i++) {
+        const ent = entries[i];
+        const done = await uploadFileData(ent.file, i + 1, entries.length, ent._target || "", true);
+        if (done) ok++; else fail++;
+    }
+
+    if (bar) bar.style.display = "none";
+
+    notify(t("folder_upload_done", { name: rootLabel, ok, fail }));
+    await loadFiles();
+    await loadStorage();
+}
+
+// <input webkitdirectory> で選ばれた FileList を entries に変換してアップロード
+async function handleFolderInput(fileList) {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+
+    // webkitRelativePath 例: "myfolder/sub/a.txt" → relDir="myfolder/sub"
+    const entries = files.map(f => {
+        const rp = f.webkitRelativePath || f.name;
+        const parts = rp.split("/");
+        parts.pop();   // ファイル名を除く
+        return { file: f, relDir: parts.join("/") };
+    });
+
+    // アップロード元フォルダ名（先頭セグメント）をラベルに
+    const rootLabel = (files[0].webkitRelativePath || "").split("/")[0] || t("folder_label");
+    await uploadFolderEntries(entries, rootLabel);
+}
+
+// ドラッグ&ドロップのディレクトリエントリを再帰的に辿って entries を集める
+function _readAllDirectoryEntries(dirReader) {
+    return new Promise((resolve) => {
+        const all = [];
+        const readBatch = () => {
+            dirReader.readEntries((batch) => {
+                if (!batch.length) { resolve(all); return; }
+                all.push(...batch);
+                readBatch();   // readEntries は最大100件ずつなので繰り返す
+            }, () => resolve(all));
+        };
+        readBatch();
+    });
+}
+
+async function _walkEntry(entry, prefix, out) {
+    if (entry.isFile) {
+        const file = await new Promise((res, rej) => entry.file(res, rej));
+        out.push({ file, relDir: prefix });
+    } else if (entry.isDirectory) {
+        const here = prefix ? `${prefix}/${entry.name}` : entry.name;
+        const children = await _readAllDirectoryEntries(entry.createReader());
+        for (const child of children) {
+            await _walkEntry(child, here, out);
+        }
     }
 }
 
@@ -3823,7 +3970,32 @@ function setupDropArea() {
 
         // ファイル一覧ページでのみ受け付ける
         if (!document.getElementById("fileList")) return;
-        await handleDroppedFiles(e.dataTransfer.files);
+
+        // フォルダが含まれているか、webkitGetAsEntry で判定
+        const items = e.dataTransfer.items;
+        let entries = null;
+        if (items && items.length && typeof items[0].webkitGetAsEntry === "function") {
+            entries = Array.from(items)
+                .map(it => it.webkitGetAsEntry && it.webkitGetAsEntry())
+                .filter(Boolean);
+        }
+
+        const hasDir = entries && entries.some(en => en.isDirectory);
+
+        if (hasDir) {
+            // フォルダを含むドロップ → 階層を保ったまま直接アップロード
+            const collected = [];
+            for (const en of entries) {
+                await _walkEntry(en, "", collected);
+            }
+            // ドロップ元フォルダ名をラベルに（複数なら件数表記）
+            const dirNames = entries.filter(en => en.isDirectory).map(en => en.name);
+            const label = dirNames.length === 1 ? dirNames[0] : `${dirNames.length} folders`;
+            await uploadFolderEntries(collected, label);
+        } else {
+            // ファイルのみ → 従来どおりトレイへ追加
+            await handleDroppedFiles(e.dataTransfer.files);
+        }
     });
 }
 
@@ -3950,6 +4122,16 @@ window.addEventListener("load", () => {
         fileInput.addEventListener("change", () => {
             addFilesToQueue(fileInput.files);
             fileInput.value = "";   // 同じファイルを再選択できるようにクリア
+        });
+    }
+
+    // フォルダ選択（webkitdirectory）→ 構造を保ったまま即アップロード
+    const folderInput = document.getElementById("folderInput");
+    if (folderInput) {
+        folderInput.addEventListener("change", async () => {
+            const fl = folderInput.files;
+            folderInput.value = "";   // 同じフォルダを再選択できるようにクリア
+            await handleFolderInput(fl);
         });
     }
 });
