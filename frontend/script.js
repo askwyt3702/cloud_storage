@@ -183,7 +183,7 @@ const TRANSLATIONS = {
         // 空画面表示 (empty state)
         no_files: "ファイルがありません",
         no_files_sub: "「ファイル選択」やドラッグ＆ドロップでアップロードしてみましょう",
-        folder_new: "新規フォルダ",
+        folder_new: "🗂 新規フォルダ",
         folder_prompt_name: "新しいフォルダ名を入力してください",
         folder_rename_prompt: "新しいフォルダ名",
         folder_label: "フォルダ",
@@ -200,6 +200,7 @@ const TRANSLATIONS = {
         move_done: "{name} を移動しました",
         move_no_dest: "移動できるフォルダがありません。先にフォルダを作成してください",
         share_blocked_subfolder: "サブフォルダ内のファイルは共有できません。ルートに移動してから共有してください",
+        new_btn: "＋ 新規",
         folder_upload_btn: "📂 フォルダをアップロード",
         folder_upload_making: "フォルダ構造を作成中...",
         folder_upload_done: "「{name}」をアップロードしました（成功 {ok} / 失敗 {fail}）",
@@ -489,7 +490,7 @@ const TRANSLATIONS = {
         // Empty states
         no_files: "No files found",
         no_files_sub: "Try uploading files by clicking 'Add Files' or dragging them here",
-        folder_new: "New Folder",
+        folder_new: "🗂 New Folder",
         folder_prompt_name: "Enter a name for the new folder",
         folder_rename_prompt: "New folder name",
         folder_label: "Folder",
@@ -506,6 +507,7 @@ const TRANSLATIONS = {
         move_done: "Moved {name}",
         move_no_dest: "No folders available. Create a folder first.",
         share_blocked_subfolder: "Files inside subfolders can't be shared. Move it to the root first.",
+        new_btn: "＋ New",
         folder_upload_btn: "📂 Upload Folder",
         folder_upload_making: "Creating folder structure...",
         folder_upload_done: "Uploaded \"{name}\" (success {ok} / failed {fail})",
@@ -776,7 +778,7 @@ const TRANSLATIONS = {
         no_account_prompt: "Chưa có tài khoản?",
         no_files: "Không tìm thấy tệp nào",
         no_files_sub: "Tải lên tệp bằng cách kéo thả vào đây hoặc nhấp Thêm tệp.",
-        folder_new: "Thư mục mới",
+        folder_new: "🗂 Thư mục mới",
         folder_prompt_name: "Nhập tên thư mục mới",
         folder_rename_prompt: "Tên thư mục mới",
         folder_label: "Thư mục",
@@ -793,6 +795,7 @@ const TRANSLATIONS = {
         move_done: "Đã di chuyển {name}",
         move_no_dest: "Không có thư mục nào. Hãy tạo thư mục trước.",
         share_blocked_subfolder: "Không thể chia sẻ tệp trong thư mục con. Hãy di chuyển ra thư mục gốc trước.",
+        new_btn: "＋ Mới",
         folder_upload_btn: "📂 Tải lên thư mục",
         folder_upload_making: "Đang tạo cấu trúc thư mục...",
         folder_upload_done: "Đã tải lên \"{name}\" (thành công {ok} / thất bại {fail})",
@@ -3125,6 +3128,42 @@ async function renameFile(filename) {
 // =====================================================
 
 
+// =====================================
+// 「＋ 新規」ドロップダウンメニュー
+//   ファイル選択 / フォルダUL / 新規フォルダ を1つのボタンに集約
+// =====================================
+function toggleNewMenu(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById("newMenu");
+    const btn  = document.getElementById("newMenuBtn");
+    if (!menu) return;
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    if (btn) btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+}
+
+function hideNewMenu() {
+    const menu = document.getElementById("newMenu");
+    const btn  = document.getElementById("newMenuBtn");
+    if (menu && !menu.hidden) {
+        menu.hidden = true;
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+}
+
+// メニュー項目を選んだときの動作
+function newMenuPick(kind) {
+    hideNewMenu();
+    if (kind === "file") {
+        document.getElementById("fileInput").click();
+    } else if (kind === "folder-upload") {
+        document.getElementById("folderInput").click();
+    } else if (kind === "new-folder") {
+        createFolderPrompt();
+    }
+}
+
+
 // 新規フォルダを作成（今いる階層に作る）
 async function createFolderPrompt() {
     const name = prompt(t("folder_prompt_name"), "");
@@ -4115,6 +4154,10 @@ window.addEventListener("load", () => {
     setupDropArea();
     _ensureUploadProgressUI();
     setupContextMenus();   // ファイルカードの右クリックメニュー
+
+    // 「＋ 新規」メニューは外側クリック / Esc で閉じる
+    document.addEventListener("click", hideNewMenu);
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideNewMenu(); });
 
     // ファイル選択直後にトレイへ追加（複数回の選択も累積できる）
     const fileInput = document.getElementById("fileInput");
