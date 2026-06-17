@@ -50,6 +50,7 @@ from backend.services.file_service import (
     # --- ゴミ箱関連 ---
     move_to_trash,             # ← ゴミ箱へ移動（論理削除）
     list_trash,                # ← ゴミ箱一覧
+    purge_expired_trash,       # ← 期限切れゴミ箱の自動削除
     trash_file_exists,         # ← ゴミ箱に存在するか
     get_trash_file_size,       # ← ゴミ箱内ファイルのサイズ
     get_trash_file_metadata,   # ← ゴミ箱内ファイルのメタデータ
@@ -1177,7 +1178,9 @@ def get_trash():
 
 
     # ② ゴミ箱の中身を取得
+    #    一覧前に保持期間切れ（30日経過）を自動削除しておく
     current_user = get_current_user()
+    purge_expired_trash(current_user)
     trash_files = list_trash(current_user)
 
 

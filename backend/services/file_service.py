@@ -3,6 +3,7 @@ import json
 import shutil
 import stat
 import time
+import threading
 import bcrypt
 from datetime import datetime
 
@@ -21,6 +22,10 @@ UPLOAD_DIR = "uploads"
 # 各ユーザーのフォルダ内に作る: uploads/{username}/.trash/
 # 先頭がドットの隠しフォルダなので、通常のファイル一覧には出てこない
 TRASH_DIRNAME = ".trash"
+
+# ゴミ箱の保持期間（日）。これを過ぎたファイルは自動的に完全削除される。
+# ※ フロントの注意書き（trash_auto_delete_note）と数字を合わせること。
+TRASH_RETENTION_DAYS = 30
 
 # 共有フォルダ名
 # uploads/_shared/{owner}/ に共有ファイルを置く
@@ -805,6 +810,110 @@ def empty_trash(username: str) -> int:
                 log_error(f"ゴミ箱を空にする処理で失敗: {username}/{f} - {e}")
 
     return count
+
+
+# =====================================
+# ゴミ箱の自動削除（保持期間切れを完全削除）
+#
+# .trash 内のファイルの更新日時（＝ゴミ箱に入れた日時）を見て、
+# retention_days を過ぎたものを物理削除する。
+#
+# 引数:
+#   username       : 対象ユーザー
+#   retention_days : 保持日数（省略時 TRASH_RETENTION_DAYS）
+#
+# 戻り値:
+#   削除した件数（int）
+# =====================================
+def purge_expired_trash(username: str, retention_days: int = TRASH_RETENTION_DAYS) -> int:
+
+    trash_dir = get_trash_dir(username)
+
+    if not os.path.exists(trash_dir):
+        return 0
+
+    # 保持期間を秒に換算し、これより古い更新日時のファイルを対象にする
+    cutoff = time.time() - retention_days * 86400
+
+    count = 0
+
+    for f in os.listdir(trash_dir):
+
+        path = os.path.join(trash_dir, f)
+
+        if not os.path.isfile(path):
+            continue
+
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+                count += 1
+        except OSError as e:
+            log_error(f"ゴミ箱自動削除で失敗: {username}/{f} - {e}")
+
+    if count:
+        log_success(username, f"TRASH_AUTO_PURGE: {count}件")
+
+    return count
+
+
+# =====================================
+# 全ユーザーのゴミ箱を自動削除（スケジューラ用）
+#
+# uploads/ 直下の各ユーザーフォルダを走査し、保持期間切れを掃除する。
+# 予約フォルダ（_shared）は対象外。
+#
+# 戻り値:
+#   削除した合計件数（int）
+# =====================================
+def purge_all_expired_trash(retention_days: int = TRASH_RETENTION_DAYS) -> int:
+
+    if not os.path.exists(UPLOAD_DIR):
+        return 0
+
+    total = 0
+
+    for name in os.listdir(UPLOAD_DIR):
+
+        # _shared など予約名・ファイルはスキップ
+        if name in RESERVED_NAMES:
+            continue
+
+        user_dir = os.path.join(UPLOAD_DIR, name)
+        if not os.path.isdir(user_dir):
+            continue
+
+        total += purge_expired_trash(name, retention_days)
+
+    return total
+
+
+# =====================================
+# ゴミ箱自動削除スケジューラ（バックグラウンド）
+#
+# backup_service と同じく daemon スレッドで動かす。
+# 起動直後に一度掃除し、その後は1時間ごとに全ユーザー分を掃除する。
+# =====================================
+def start_trash_scheduler() -> None:
+
+    t = threading.Thread(target=_trash_scheduler_loop, daemon=True)
+    t.start()
+
+
+def _trash_scheduler_loop() -> None:
+
+    log_success("SYSTEM", "TRASH_SCHEDULER_STARTED")
+
+    while True:
+        try:
+            purged = purge_all_expired_trash()
+            if purged:
+                log_success("SYSTEM", f"TRASH_AUTO_PURGE_ALL: {purged}件")
+        except Exception as e:
+            log_error(f"ゴミ箱自動削除スケジューラエラー: {e}")
+
+        # 1時間ごとにチェック
+        time.sleep(3600)
 
 
 # =====================================================

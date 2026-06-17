@@ -3032,6 +3032,25 @@ input:checked + .slider::before {
    フォルダ階層（担当B）
    ==================================================== */
 
+/* ゴミ箱の自動削除 注意書き */
+.trash-note{
+    margin:0 0 16px;
+    padding:10px 14px;
+
+    background:rgba(245,158,11,0.10);
+    border:1px solid rgba(245,158,11,0.30);
+    border-radius:10px;
+
+    color:#fbbf24;
+    font-size:13px;
+}
+[data-theme="light"] .trash-note{
+    background:rgba(245,158,11,0.10);
+    border:1px solid rgba(245,158,11,0.35);
+    color:#b45309;
+}
+
+
 /* 「＋ 新規」ドロップダウン */
 .new-menu-wrap{
     position:relative;

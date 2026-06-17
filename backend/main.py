@@ -42,6 +42,9 @@ from backend.routes.backup import (
 )
 from backend.services.backup_service import start_backup_scheduler
 
+# ゴミ箱自動削除スケジューラ（保持期間切れを定期削除）
+from backend.services.file_service import start_trash_scheduler
+
 # 通知設定API
 from backend.routes.settings import (
     router as settings_router
@@ -102,10 +105,11 @@ app.include_router(
     settings_router
 )
 
-# 起動時に自動バックアップ監視スレッドを開始
+# 起動時に自動バックアップ監視スレッド＆ゴミ箱自動削除スレッドを開始
 @app.on_event("startup")
 def startup_event():
     start_backup_scheduler()
+    start_trash_scheduler()
 
 
 # ==========================
