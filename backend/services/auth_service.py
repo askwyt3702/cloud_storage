@@ -6,7 +6,6 @@ from security.logger import log_success, log_failed, log_error
 # セッション管理（ログイン中のユーザー情報を保持）
 _active_session: dict = {}
 
-
 class MFAService:
     @staticmethod
     def generate_secret() -> str:
