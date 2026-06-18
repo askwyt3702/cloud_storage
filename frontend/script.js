@@ -202,6 +202,9 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "サブフォルダ内のファイルは共有できません。ルートに移動してから共有してください",
         new_btn: "＋ 新規",
         trash_auto_delete_note: "⏳ ゴミ箱のファイルは30日経過すると自動的に完全削除されます",
+        load_more: "もっと見る（残り{count}件）",
+        search_no_result: "「{q}」に一致するファイルがありません",
+        category_no_result: "このカテゴリのファイルはありません",
         folder_upload_btn: "📂 フォルダをアップロード",
         folder_upload_making: "フォルダ構造を作成中...",
         folder_upload_done: "「{name}」をアップロードしました（成功 {ok} / 失敗 {fail}）",
@@ -510,6 +513,9 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "Files inside subfolders can't be shared. Move it to the root first.",
         new_btn: "＋ New",
         trash_auto_delete_note: "⏳ Files in the Trash are permanently deleted automatically after 30 days",
+        load_more: "Show more ({count} left)",
+        search_no_result: "No files match \"{q}\"",
+        category_no_result: "No files in this category",
         folder_upload_btn: "📂 Upload Folder",
         folder_upload_making: "Creating folder structure...",
         folder_upload_done: "Uploaded \"{name}\" (success {ok} / failed {fail})",
@@ -799,6 +805,9 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "Không thể chia sẻ tệp trong thư mục con. Hãy di chuyển ra thư mục gốc trước.",
         new_btn: "＋ Mới",
         trash_auto_delete_note: "⏳ Tệp trong Thùng rác sẽ tự động bị xóa vĩnh viễn sau 30 ngày",
+        load_more: "Xem thêm (còn {count})",
+        search_no_result: "Không có tệp khớp với \"{q}\"",
+        category_no_result: "Không có tệp trong danh mục này",
         folder_upload_btn: "📂 Tải lên thư mục",
         folder_upload_making: "Đang tạo cấu trúc thư mục...",
         folder_upload_done: "Đã tải lên \"{name}\" (thành công {ok} / thất bại {fail})",
@@ -2047,82 +2056,20 @@ async function loadFiles() {
             return;
         }
 
-        // --- フォルダカード（常に上に並べる） ---
-        const folderHTML = folders.map(folder => {
-            const safe = encodeURIComponent(folder.name);
-            const disp = escapeHtml(folder.name);
-            const count = folder.item_count;
-            const modified = escapeHtml(folder.modified_at || "");
-            return `
-            <div class="file-card folder-card" data-ctx="folder" data-filename="${disp}">
-                <div class="file-info-clickable" onclick="navigateInto(decodeURIComponent('${safe}'))">
-                    <div class="file-icon folder-bg"><i class="fa-solid fa-folder"></i></div>
-                    <div>
-                        <div class="file-name" title="${disp}">${disp}</div>
-                        <div class="file-detail">${escapeHtml(t("folder_label"))} ・ ${count} ${escapeHtml(t("unit_count"))} ・ ${modified}</div>
-                    </div>
-                </div>
-                <div class="file-actions">
-                    <button class="download-btn" onclick="downloadFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_dl"))}"><i class="fa-solid fa-file-zipper"></i></button>
-                    <button class="rename-btn"   onclick="renameFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_rename"))}"><i class="fa-solid fa-pen"></i></button>
-                    <button class="delete-btn"   onclick="deleteFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_delete"))}"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>`;
-        }).join("");
+        // 全件を保持し、描画はクライアント側で段階的に行う。
+        // 検索・カテゴリ・お気に入りは「全件」を対象にしたいので、ここで全部持っておく。
+        _allFolders = folders;
 
         // お気に入りを上部に固定（サーバーの並び順は各グループ内で維持）
         const favs = _getFavorites();
-        const orderedFiles = [
+        _allFiles = [
             ...data.files.filter(f => favs.includes(f.name)),
             ...data.files.filter(f => !favs.includes(f.name)),
         ];
 
-        const fileHTML = orderedFiles.map(file => {
-            const { icon, bg } = getFileIcon(file.name);
-            const safeName = encodeURIComponent(file.name);   // onclick/URL用（安全）
-            const dispName = escapeHtml(file.name);            // 画面表示用（XSS対策）
-            const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
-            const starred = isFavorite(file.name);
-
-            // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
-            //   - クリックでフルサイズプレビュー（モーダル）が開く
-            //   - 画像が壊れていたら色付きアイコンにフォールバック
-            const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
-            const imgUrl = `${API_BASE}/preview/${safeName}${_pathParam(false)}`;
-            const thumb = isImg
-                ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
-                        onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
-                        onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
-                : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
-
-            const clickHandler = `previewFile(decodeURIComponent('${safeName}'))`;
-
-            return `
-            <div class="file-card ${starred ? 'is-favorite' : ''}" data-ctx="main" data-filename="${dispName}">
-                <input type="checkbox" class="file-check" value="${dispName}" style="margin-right: 12px;">
-                <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="${t('star_title')}" data-i18n-title="star_title">${starred ? '★' : '☆'}</button>
-                <div class="file-info-clickable" onclick="${clickHandler}">
-                    ${thumb}
-                    <div>
-                        <div class="file-name" title="${dispName}">${dispName}</div>
-                        <div class="file-detail">${dispType} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.uploaded_at)}</div>
-                    </div>
-                </div>
-                <div class="file-actions">
-                    <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))" data-i18n="download_btn_text">${t("download_btn_text")}</button>
-                    <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="${t("menu_preview")}" data-i18n-title="menu_preview"><i class="fa-solid fa-eye"></i></button>
-                    <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="${t("menu_rename")}" data-i18n-title="menu_rename"><i class="fa-solid fa-pen"></i></button>
-                    <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="${t("menu_share")}" data-i18n-title="menu_share"><i class="fa-solid fa-share-nodes"></i></button>
-                    <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="${t("delete")}" data-i18n-title="delete"><i class="fa-solid fa-trash"></i></button>
-                </div>
-            </div>`;
-        }).join("");
-
-        // フォルダ（上）→ ファイル（下）の順でまとめて描画
-        fileList.innerHTML = folderHTML + fileHTML;
-
-        // 検索バーに入力があれば、再描画後も絞り込みを保つ
-        filterFiles();
+        // 段階表示の件数をリセットして描画（検索バーの入力があれば自動で反映される）
+        _fileRenderLimit = FILE_PAGE_SIZE;
+        renderFileList();
 
         // 自動分類ビューが表示されているなら、そちらも同期して再読込する
         const uploadedList = document.getElementById("uploadedListView");
@@ -2134,30 +2081,169 @@ async function loadFiles() {
         fileList.innerHTML = "<p style='color:#f87171'>サーバーに接続できません</p>";
     }
 }
-const searchInput =
-    document.getElementById("searchInput");
+// =====================================================
+// 段階表示（クライアント側ページネーション）
+//   _allFiles / _allFolders : サーバーから取得した全件
+//   FILE_PAGE_SIZE          : 1回に描画するファイル数
+//   _fileRenderLimit        : 現在描画しているファイル数の上限
+//   検索・カテゴリ・お気に入りは常に「全件」を対象にし、
+//   描画だけを少しずつ行う（「もっと見る」で追加）。
+// =====================================================
+let _allFiles = [];
+let _allFolders = [];
+const FILE_PAGE_SIZE = 30;
+let _fileRenderLimit = FILE_PAGE_SIZE;
 
-if (searchInput) {
+// 現在の検索キーワード（小文字）
+function _currentQuery() {
+    const input = document.getElementById("fileSearch");
+    return input ? input.value.trim().toLowerCase() : "";
+}
 
-    searchInput.addEventListener("input", function () {
+// 検索でフォルダを絞り込む（カテゴリはフォルダに適用しない）
+function _visibleFolders() {
+    const q = _currentQuery();
+    return _allFolders.filter(d => d.name.toLowerCase().includes(q));
+}
 
-        const keyword =
-            this.value.toLowerCase();
-
-        const files =
-            document.querySelectorAll(".file-card");
-
-        files.forEach(file => {
-
-            const name =
-                file.textContent.toLowerCase();
-
-            file.style.display =
-                name.includes(keyword)
-                ? "flex"
-                : "none";
-        });
+// 検索＋カテゴリでファイルを絞り込む
+function _visibleFiles() {
+    const q = _currentQuery();
+    return _allFiles.filter(f => {
+        const name = f.name.toLowerCase();
+        const matchText = name.includes(q);
+        const matchCat  = (_categoryFilter === "all")
+            || (getCategoryByFilename(name) === _categoryFilter);
+        return matchText && matchCat;
     });
+}
+
+// フォルダカードのHTML
+function _folderCardHTML(folder) {
+    const safe = encodeURIComponent(folder.name);
+    const disp = escapeHtml(folder.name);
+    const count = folder.item_count;
+    const modified = escapeHtml(folder.modified_at || "");
+    return `
+    <div class="file-card folder-card" data-ctx="folder" data-filename="${disp}">
+        <div class="file-info-clickable" onclick="navigateInto(decodeURIComponent('${safe}'))">
+            <div class="file-icon folder-bg"><i class="fa-solid fa-folder"></i></div>
+            <div>
+                <div class="file-name" title="${disp}">${disp}</div>
+                <div class="file-detail">${escapeHtml(t("folder_label"))} ・ ${count} ${escapeHtml(t("unit_count"))} ・ ${modified}</div>
+            </div>
+        </div>
+        <div class="file-actions">
+            <button class="download-btn" onclick="downloadFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_dl"))}"><i class="fa-solid fa-file-zipper"></i></button>
+            <button class="rename-btn"   onclick="renameFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_rename"))}"><i class="fa-solid fa-pen"></i></button>
+            <button class="delete-btn"   onclick="deleteFolder(decodeURIComponent('${safe}'))" title="${escapeHtml(t("menu_folder_delete"))}"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>`;
+}
+
+// ファイルカードのHTML
+function _fileCardHTML(file) {
+    const { icon, bg } = getFileIcon(file.name);
+    const safeName = encodeURIComponent(file.name);   // onclick/URL用（安全）
+    const dispName = escapeHtml(file.name);            // 画面表示用（XSS対策）
+    const dispType = escapeHtml((file.file_type || "").toUpperCase().replace(".", ""));
+    const starred = isFavorite(file.name);
+
+    // 画像ファイルなら、色付きアイコンの代わりにサムネ表示
+    const isImg = /\.(jpe?g|jfif|png|gif|webp|bmp|tiff?)$/i.test(file.name);
+    const imgUrl = `${API_BASE}/preview/${safeName}${_pathParam(false)}`;
+    const thumb = isImg
+        ? `<img class="file-thumb" src="${imgUrl}" alt="${dispName}"
+                onclick="previewFile(decodeURIComponent('${safeName}')); event.stopPropagation();"
+                onerror="this.outerHTML='<div class=&quot;file-icon ${bg}&quot;><i class=&quot;fa-solid ${icon}&quot;></i></div>'">`
+        : `<div class="file-icon ${bg}"><i class="fa-solid ${icon}"></i></div>`;
+
+    const clickHandler = `previewFile(decodeURIComponent('${safeName}'))`;
+
+    return `
+    <div class="file-card ${starred ? 'is-favorite' : ''}" data-ctx="main" data-filename="${dispName}">
+        <input type="checkbox" class="file-check" value="${dispName}" style="margin-right: 12px;">
+        <button class="star-btn ${starred ? 'starred' : ''}" onclick="toggleFavorite(decodeURIComponent('${safeName}'))" title="${t('star_title')}" data-i18n-title="star_title">${starred ? '★' : '☆'}</button>
+        <div class="file-info-clickable" onclick="${clickHandler}">
+            ${thumb}
+            <div>
+                <div class="file-name" title="${dispName}">${dispName}</div>
+                <div class="file-detail">${dispType} ・ ${escapeHtml(file.size)} ・ ${escapeHtml(file.uploaded_at)}</div>
+            </div>
+        </div>
+        <div class="file-actions">
+            <button class="download-btn" onclick="downloadFile(decodeURIComponent('${safeName}'))" data-i18n="download_btn_text">${t("download_btn_text")}</button>
+            <button class="preview-btn"  onclick="previewFile(decodeURIComponent('${safeName}'))" title="${t("menu_preview")}" data-i18n-title="menu_preview"><i class="fa-solid fa-eye"></i></button>
+            <button class="rename-btn"   onclick="renameFile(decodeURIComponent('${safeName}'))" title="${t("menu_rename")}" data-i18n-title="menu_rename"><i class="fa-solid fa-pen"></i></button>
+            <button class="share-btn"    onclick="shareFile(decodeURIComponent('${safeName}'))" title="${t("menu_share")}" data-i18n-title="menu_share"><i class="fa-solid fa-share-nodes"></i></button>
+            <button class="delete-btn"   onclick="deleteFile(decodeURIComponent('${safeName}'))" title="${t("delete")}" data-i18n-title="delete"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>`;
+}
+
+// 「もっと見る」ボタンのHTML（残り件数を表示）
+function _loadMoreHTML(remaining) {
+    return `<button class="load-more-btn" onclick="showMoreFiles()">${escapeHtml(t("load_more", { count: remaining }))}</button>`;
+}
+
+// 現在の検索／カテゴリ／段階表示の状態に従って一覧を描画する
+function renderFileList() {
+    const fileList = document.getElementById("fileList");
+    if (!fileList) return;
+
+    // 検索クリアボタンの表示制御
+    const clearBtn = document.getElementById("searchClear");
+    if (clearBtn) clearBtn.style.display = _currentQuery() ? "block" : "none";
+
+    const folders = _visibleFolders();
+    const files   = _visibleFiles();
+
+    // フォルダもファイルも無い → 空状態 or 「該当なし」
+    if (folders.length === 0 && files.length === 0) {
+        const filtering = _currentQuery() || _categoryFilter !== "all";
+        if (filtering) {
+            const q = _currentQuery();
+            const msg = q
+                ? t("search_no_result", { q: escapeHtml(document.getElementById("fileSearch").value.trim()) })
+                : t("category_no_result");
+            fileList.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:30px">${msg}</p>`;
+        } else {
+            fileList.innerHTML = _emptyStateHTML("fa-folder-open", t("no_files"), t("no_files_sub"));
+        }
+        return;
+    }
+
+    const folderHTML = folders.map(_folderCardHTML).join("");
+    const shown = files.slice(0, _fileRenderLimit);
+    const fileHTML = shown.map(_fileCardHTML).join("");
+
+    const remaining = files.length - shown.length;
+    const moreHTML = remaining > 0 ? _loadMoreHTML(remaining) : "";
+
+    fileList.innerHTML = folderHTML + fileHTML + moreHTML;
+}
+
+// 「もっと見る」：次のページ分を “追記” する（既存カードのチェック状態を保つため）
+function showMoreFiles() {
+    const fileList = document.getElementById("fileList");
+    if (!fileList) return;
+
+    const files = _visibleFiles();
+    const prev = _fileRenderLimit;
+    _fileRenderLimit += FILE_PAGE_SIZE;
+
+    const next = files.slice(prev, _fileRenderLimit);
+    const moreBtn = fileList.querySelector(".load-more-btn");
+    if (!moreBtn) return;
+
+    moreBtn.insertAdjacentHTML("beforebegin", next.map(_fileCardHTML).join(""));
+
+    const remaining = files.length - Math.min(_fileRenderLimit, files.length);
+    if (remaining > 0) {
+        moreBtn.outerHTML = _loadMoreHTML(remaining);
+    } else {
+        moreBtn.remove();
+    }
 }
 
 
@@ -2176,51 +2262,11 @@ function setCategoryFilter(cat, btn) {
     filterFiles();
 }
 
+// 検索／カテゴリの変更時に呼ばれる。段階表示をリセットして再描画する。
+// （検索は全件 _allFiles を対象にするので、未描画のファイルも漏れなくヒットする）
 function filterFiles() {
-    const input = document.getElementById("fileSearch");
-    const clearBtn = document.getElementById("searchClear");
-    if (!input) return;
-
-    const q = input.value.trim().toLowerCase();
-    if (clearBtn) clearBtn.style.display = q ? "block" : "none";
-
-    const cards = document.querySelectorAll("#fileList .file-card");
-    let shown = 0;
-
-    cards.forEach(card => {
-        const nameEl = card.querySelector(".file-name");
-        const name = nameEl ? (nameEl.getAttribute("title") || nameEl.textContent).toLowerCase() : "";
-        const isFolder = card.classList.contains("folder-card");
-
-        // 検索文字列で絞り込み（フォルダも対象）
-        const matchText = name.includes(q);
-        // カテゴリ絞り込みはファイルのみに適用（フォルダは常に対象）
-        const matchCat  = isFolder
-            || (_categoryFilter === "all")
-            || (getCategoryByFilename(name) === _categoryFilter);
-
-        const match = matchText && matchCat;
-        card.style.display = match ? "" : "none";
-        if (match) shown++;
-    });
-
-    // 絞り込み結果が0件のときのメッセージ
-    let noResult = document.getElementById("searchNoResult");
-    const filtering = q || _categoryFilter !== "all";
-    if (filtering && shown === 0 && cards.length > 0) {
-        if (!noResult) {
-            noResult = document.createElement("p");
-            noResult.id = "searchNoResult";
-            noResult.style.cssText = "color:#94a3b8;text-align:center;padding:30px";
-            document.getElementById("fileList").appendChild(noResult);
-        }
-        noResult.textContent = q
-            ? `「${input.value.trim()}」に一致するファイルがありません`
-            : "このカテゴリのファイルはありません";
-        noResult.style.display = "block";
-    } else if (noResult) {
-        noResult.style.display = "none";
-    }
+    _fileRenderLimit = FILE_PAGE_SIZE;
+    renderFileList();
 }
 
 // 検索をクリア
