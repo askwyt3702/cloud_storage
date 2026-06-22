@@ -3032,6 +3032,34 @@ input:checked + .slider::before {
    フォルダ階層（担当B）
    ==================================================== */
 
+/* 「もっと見る」ボタン（段階表示） */
+.load-more-btn{
+    display:block;
+    width:100%;
+    margin-top:6px;
+
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,255,255,0.12);
+    box-shadow:none;
+
+    color:#cbd5e1;
+    font-weight:600;
+}
+.load-more-btn:hover{
+    background:rgba(96,165,250,0.15);
+    border-color:rgba(96,165,250,0.5);
+    box-shadow:none;
+}
+[data-theme="light"] .load-more-btn{
+    background:rgba(0,0,0,0.03);
+    border:1px solid rgba(0,0,0,0.10);
+    color:#475569;
+}
+[data-theme="light"] .load-more-btn:hover{
+    background:rgba(37,99,235,0.08);
+}
+
+
 /* ゴミ箱の自動削除 注意書き */
 .trash-note{
     margin:0 0 16px;
