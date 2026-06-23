@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Body, Response
 
 from backend.schemas import LoginRequest, RegisterRequest, ResetPasswordRequest
 from backend.services.auth_service import (
@@ -29,7 +29,7 @@ router = APIRouter()
 #   401 : 認証失敗 (アカウントロック含む)
 # =====================================
 @router.post("/login")
-def login(body: LoginRequest):
+def login(body: LoginRequest, response: Response):
 
     # 入力チェック
     if not body.username_or_email or not body.password:
@@ -41,6 +41,15 @@ def login(body: LoginRequest):
     result = login_user(body.username_or_email, body.password)
 
     if result["success"]:
+        # トークンを Cookie に設定 (MFAが必要な場合も一旦暫定トークンを設定)
+        response.set_cookie(
+            key="access_token",
+            value=result["token"],
+            httponly=True,
+            samesite="lax",
+            max_age=86400
+        )
+
         # MFA（2段階認証）が必要な場合
         if result["mfa_required"]:
             return {
@@ -109,16 +118,24 @@ def register(body: RegisterRequest):
 # POST /login/mfa
 # =====================================
 @router.post("/login/mfa")
-def login_mfa(code: str = Body(..., embed=True)):
+def login_mfa(response: Response, code: str = Body(..., embed=True)):
     if not code:
         raise HTTPException(
             status_code=400,
             detail="認証コードを入力してください"
         )
 
-    is_valid = verify_mfa_login(code)
+    token = verify_mfa_login(code)
 
-    if is_valid:
+    if token:
+        # MFA認証成功。正式トークンで Cookie を上書き
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=86400
+        )
         return {
             "success": True,
             "message": "2段階認証に成功しました。ログイン完了です！"
@@ -171,9 +188,12 @@ def reset_pw(body: ResetPasswordRequest):
 #   400 : 未ログイン状態でのログアウト
 # =====================================
 @router.post("/logout")
-def logout():
+def logout(response: Response):
 
     success = logout_user()
+
+    # ログアウト時は常に Cookie をクリア
+    response.delete_cookie("access_token")
 
     if not success:
         raise HTTPException(

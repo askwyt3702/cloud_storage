@@ -1210,3 +1210,126 @@ def verify_shared_password(owner: str, filename: str, password: str | None) -> b
         )
     except Exception:
         return False
+
+
+# =====================================================
+# ここから下：分割（チャンク）アップロード関連の関数
+# =====================================================
+
+import re
+
+# 一時保管用ディレクトリ
+TEMP_DIRNAME = "_temp"
+
+def _get_temp_dir(username: str, identifier: str) -> str:
+    # identifierのサニタイズ（英数字、ハイフン、アンダースコアのみ許可してパストラバーサルを防ぐ）
+    safe_id = re.sub(r"[^a-zA-Z0-9_-]", "", identifier)
+    return os.path.join(UPLOAD_DIR, TEMP_DIRNAME, f"{username}_{safe_id}")
+
+
+# =====================================
+# チャンクの保存
+#
+# 引数:
+#   username    : 対象ユーザー
+#   identifier  : アップロードID
+#   chunk_number: チャンク番号
+#   data        : チャンクデータ (bytes)
+#
+# 戻り値:
+#   成功したか (bool)
+# =====================================
+def save_chunk(username: str, identifier: str, chunk_number: int, data: bytes) -> bool:
+    try:
+        temp_dir = _get_temp_dir(username, identifier)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        chunk_file = os.path.join(temp_dir, str(chunk_number))
+        with open(chunk_file, "wb") as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        log_error(f"チャンク保存失敗: {username}/{identifier} chunk={chunk_number} - {e}")
+        return False
+
+
+# =====================================
+# チャンクの結合＆クリーンアップ
+#
+# 一時フォルダ内のチャンクを番号順に結合し、本来の保存先に保存する。
+# 結合後は一時ファイルを完全に削除する。
+#
+# 引数:
+#   username      : 対象ユーザー
+#   identifier    : アップロードID
+#   total_chunks  : 総チャンク数
+#   safe_filename : 保存先ファイル名
+#   safe_path     : 保存先相対パス
+#
+# 戻り値:
+#   成功したか (bool)
+# =====================================
+def assemble_chunks(username: str, identifier: str, total_chunks: int, safe_filename: str, safe_path: str) -> bool:
+    temp_dir = _get_temp_dir(username, identifier)
+    if not os.path.isdir(temp_dir):
+        return False
+        
+    dest_dir = get_user_dir(username)
+    if safe_path:
+        dest_dir = os.path.join(dest_dir, safe_path)
+    
+    os.makedirs(dest_dir, exist_ok=True)
+    dest_file = os.path.join(dest_dir, safe_filename)
+    
+    # チャンクがすべて揃っているか確認
+    for i in range(1, total_chunks + 1):
+        chunk_path = os.path.join(temp_dir, str(i))
+        if not os.path.isfile(chunk_path):
+            log_error(f"結合エラー: チャンク {i} が見つかりません - {identifier}")
+            return False
+            
+    # 結合処理
+    try:
+        with open(dest_file, "wb") as out_f:
+            for i in range(1, total_chunks + 1):
+                chunk_path = os.path.join(temp_dir, str(i))
+                with open(chunk_path, "rb") as in_f:
+                    shutil.copyfileobj(in_f, out_f)
+                    
+        # 後片付け（一時フォルダを削除）
+        shutil.rmtree(temp_dir)
+        return True
+    except Exception as e:
+        log_error(f"チャンク結合失敗: {username}/{safe_filename} - {e}")
+        if os.path.exists(dest_file):
+            try:
+                os.remove(dest_file)
+            except Exception:
+                pass
+        return False
+
+
+# =====================================
+# 一時アップロード情報のクリーンアップ（エラー時用）
+# =====================================
+def cleanup_temp_chunks(username: str, identifier: str) -> None:
+    temp_dir = _get_temp_dir(username, identifier)
+    if os.path.exists(temp_dir):
+        try:
+            shutil.rmtree(temp_dir)
+        except Exception:
+            pass
+
+
+# =====================================
+# 一時アップロードされたチャンクの合計サイズ（バイト）を取得
+# =====================================
+def get_temp_chunks_size(username: str, identifier: str) -> int:
+    temp_dir = _get_temp_dir(username, identifier)
+    total_size = 0
+    if os.path.isdir(temp_dir):
+        for f in os.listdir(temp_dir):
+            f_path = os.path.join(temp_dir, f)
+            if os.path.isfile(f_path):
+                total_size += os.path.getsize(f_path)
+    return total_size

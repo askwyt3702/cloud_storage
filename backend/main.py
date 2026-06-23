@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 
 # FastAPI起動
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -45,6 +45,14 @@ from backend.services.backup_service import start_backup_scheduler
 # ゴミ箱自動削除スケジューラ（保持期間切れを定期削除）
 from backend.services.file_service import start_trash_scheduler
 
+# 認証用の contextvars と検証関数のインポート
+from backend.services.auth_service import (
+    verify_token,
+    current_user_var,
+    current_role_var,
+    mfa_verified_var
+)
+
 # 通知設定API
 from backend.routes.settings import (
     router as settings_router
@@ -60,6 +68,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# HTTPミドルウェアでリクエストごとにCookieから認証情報を復元し、contextvarsに設定する
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    token = request.cookies.get("access_token")
+    payload = verify_token(token)
+    
+    if payload:
+        username = payload.get("username")
+        role = payload.get("role")
+        mfa_verified = payload.get("mfa_verified", False)
+    else:
+        username = None
+        role = None
+        mfa_verified = False
+        
+    # contextvars のスレッド/タスクローカル設定
+    token_user = current_user_var.set(username)
+    token_role = current_role_var.set(role)
+    token_mfa = mfa_verified_var.set(mfa_verified)
+    
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        # リクエスト終了後にクリーンアップ
+        current_user_var.reset(token_user)
+        current_role_var.reset(token_role)
+        mfa_verified_var.reset(token_mfa)
 
 
 # ==========================

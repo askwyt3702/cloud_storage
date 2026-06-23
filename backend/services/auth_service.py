@@ -1,10 +1,73 @@
 import pyotp
+import contextvars
+import hmac
+import hashlib
+import base64
+import json
+import time
 from database.db import get_db_connection
 from security.password import login_check, hash_password, validate_password
 from security.logger import log_success, log_failed, log_error
 
-# セッション管理（ログイン中のユーザー情報を保持）
-_active_session: dict = {}
+# スレッドセーフなコンテキスト変数
+current_user_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_user", default=None)
+current_role_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_role", default=None)
+mfa_verified_var: contextvars.ContextVar[bool] = contextvars.ContextVar("mfa_verified", default=False)
+
+# トークン署名用のシークレットキー（十分に長いランダムな文字列）
+JWT_SECRET = "cloud_storage_super_secret_key_for_hmac_sha256_2026_06_22"
+
+def create_token(username: str, role: str, mfa_verified: bool, expires_in: int = 86400) -> str:
+    payload = {
+        "username": username,
+        "role": role,
+        "mfa_verified": mfa_verified,
+        "exp": int(time.time()) + expires_in
+    }
+    header = {"alg": "HS256", "typ": "JWT"}
+    
+    header_bytes = json.dumps(header, separators=(',', ':')).encode('utf-8')
+    payload_bytes = json.dumps(payload, separators=(',', ':')).encode('utf-8')
+    
+    header_b64 = base64.urlsafe_b64encode(header_bytes).decode('utf-8').rstrip('=')
+    payload_b64 = base64.urlsafe_b64encode(payload_bytes).decode('utf-8').rstrip('=')
+    
+    signing_input = f"{header_b64}.{payload_b64}".encode('utf-8')
+    sig = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).decode('utf-8').rstrip('=')
+    
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+def verify_token(token: str | None) -> dict | None:
+    if not token:
+        return None
+    try:
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        
+        header_b64, payload_b64, sig_b64 = parts
+        
+        signing_input = f"{header_b64}.{payload_b64}".encode('utf-8')
+        expected_sig = hmac.new(JWT_SECRET.encode('utf-8'), signing_input, hashlib.sha256).digest()
+        expected_sig_b64 = base64.urlsafe_b64encode(expected_sig).decode('utf-8').rstrip('=')
+        
+        if not hmac.compare_digest(sig_b64, expected_sig_b64):
+            return None
+        
+        rem = len(payload_b64) % 4
+        if rem > 0:
+            payload_b64 += '=' * (4 - rem)
+        
+        payload_bytes = base64.urlsafe_b64decode(payload_b64.encode('utf-8'))
+        payload = json.loads(payload_bytes.decode('utf-8'))
+        
+        if payload.get("exp", 0) < time.time():
+            return None
+            
+        return payload
+    except Exception:
+        return None
 
 class MFAService:
     @staticmethod
@@ -55,17 +118,16 @@ def login_user(
         check_result = login_check(db_username, password, stored_hash)
 
         if check_result["status"] == "SUCCESS":
-            _active_session["username"] = db_username
-            _active_session["role"] = role
-            
             if mfa_enabled:
-                _active_session["mfa_verified"] = False  # まだ2段階認証が完了していない
+                # 暫定トークン（mfa_verified=False）を生成
+                token = create_token(db_username, role, mfa_verified=False)
                 log_success(db_username, "LOGIN_STAGE_1")
-                return {"success": True, "mfa_required": True, "username": db_username}
+                return {"success": True, "mfa_required": True, "username": db_username, "token": token}
             else:
-                _active_session["mfa_verified"] = True
+                # 正規トークン（mfa_verified=True）を生成
+                token = create_token(db_username, role, mfa_verified=True)
                 log_success(db_username, "LOGIN_STAGE_2")
-                return {"success": True, "mfa_required": False, "username": db_username}
+                return {"success": True, "mfa_required": False, "username": db_username, "token": token}
 
         elif check_result["status"] == "LOCKED":
             log_failed(db_username, "LOGIN", f"アカウントロック中 (残り {check_result['remaining_seconds']} 秒)")
@@ -85,13 +147,14 @@ def login_user(
             conn.close()
 
 
-def verify_mfa_login(code: str) -> bool:
+def verify_mfa_login(code: str) -> str | None:
     """
     ID・パスワード成功後に、6桁のMFAコードを検証してログインを完全完了させます。
     """
-    username = _active_session.get("username")
+    username = current_user_var.get()
+    role = current_role_var.get()
     if not username:
-        return False
+        return None
 
     try:
         # 🛠️ 【テスト用変更】DBの空欄を回避するため、固定のテスト用シークレットキーを使用
@@ -100,12 +163,13 @@ def verify_mfa_login(code: str) -> bool:
         is_valid = MFAService.verify_code(user_secret, code)
         
         if is_valid:
-            _active_session["mfa_verified"] = True  # 2段階目もクリア！
+            # 認証成功。mfa_verified=True のトークンを発行
+            token = create_token(username, role or "user", mfa_verified=True)
             log_success(username, "LOGIN_MFA_SUCCESS")
-            return True
+            return token
         else:
             log_failed(username, "LOGIN_MFA_FAILED", "MFAコード不一致")
-            return False
+            return None
             
     except Exception as e:
         log_error(f"MFA検証エラー: {e}")
@@ -236,10 +300,11 @@ def logout_user() -> bool:
     """
     ログアウト処理
     """
-    if "username" not in _active_session:
+    username = current_user_var.get()
+    if not username:
         return False
 
-    _active_session.clear()
+    log_success(username, "LOGOUT")
     return True
 
 
@@ -247,7 +312,7 @@ def is_logged_in() -> bool:
     """
     ログイン判定（MFAもクリアしているか）
     """
-    return _active_session.get("username") is not None and _active_session.get("mfa_verified") is True
+    return current_user_var.get() is not None and mfa_verified_var.get() is True
 
 
 def get_current_user() -> str | None:
@@ -256,7 +321,7 @@ def get_current_user() -> str | None:
     """
     if not is_logged_in():
         return None
-    return _active_session.get("username")
+    return current_user_var.get()
 
 
 def get_current_role() -> str | None:
@@ -265,4 +330,4 @@ def get_current_role() -> str | None:
     """
     if not is_logged_in():
         return None
-    return _active_session.get("role")
+    return current_role_var.get()

@@ -202,6 +202,7 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "サブフォルダ内のファイルは共有できません。ルートに移動してから共有してください",
         new_btn: "＋ 新規",
         trash_auto_delete_note: "⏳ ゴミ箱のファイルは30日経過すると自動的に完全削除されます",
+        upload_chunk_progress: "分割送信中",
         load_more: "もっと見る（残り{count}件）",
         search_no_result: "「{q}」に一致するファイルがありません",
         category_no_result: "このカテゴリのファイルはありません",
@@ -513,6 +514,7 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "Files inside subfolders can't be shared. Move it to the root first.",
         new_btn: "＋ New",
         trash_auto_delete_note: "⏳ Files in the Trash are permanently deleted automatically after 30 days",
+        upload_chunk_progress: "Uploading Chunk",
         load_more: "Show more ({count} left)",
         search_no_result: "No files match \"{q}\"",
         category_no_result: "No files in this category",
@@ -805,6 +807,7 @@ const TRANSLATIONS = {
         share_blocked_subfolder: "Không thể chia sẻ tệp trong thư mục con. Hãy di chuyển ra thư mục gốc trước.",
         new_btn: "＋ Mới",
         trash_auto_delete_note: "⏳ Tệp trong Thùng rác sẽ tự động bị xóa vĩnh viễn sau 30 ngày",
+        upload_chunk_progress: "Đang gửi phân đoạn",
         load_more: "Xem thêm (còn {count})",
         search_no_result: "Không có tệp khớp với \"{q}\"",
         category_no_result: "Không có tệp trong danh mục này",
@@ -2746,11 +2749,20 @@ async function _uploadAsZip(files) {
 // =====================================
 // index / total を渡すと「(2/5) ファイル名 30%」のように表示する（複数アップロード用）
 // 戻り値: アップロード成功なら true
+// ファイルアップロード処理 (サイズに応じて一括/分割を自動判別)
 function uploadFileData(file, index, total, targetPath, skipReload) {
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+    if (file.size <= CHUNK_SIZE) {
+        return uploadFileDataSingle(file, index, total, targetPath, skipReload);
+    } else {
+        return uploadFileDataChunked(file, index, total, targetPath, skipReload, CHUNK_SIZE);
+    }
+}
+
+// 5MB以下の通常一括アップロード
+function uploadFileDataSingle(file, index, total, targetPath, skipReload) {
     const formData = new FormData();
     formData.append("file", file);
-    // アップロード先フォルダ。未指定なら今いるフォルダ（ルートなら空文字）。
-    // フォルダ丸ごとアップロード時は各ファイルの相対パスを渡す。
     formData.append("path", targetPath !== undefined ? targetPath : _currentPath);
 
     _ensureUploadProgressUI();
@@ -2758,14 +2770,12 @@ function uploadFileData(file, index, total, targetPath, skipReload) {
     const fill  = document.getElementById("uploadProgressFill");
     const label = document.getElementById("uploadProgressLabel");
 
-    // 複数のときだけ "(2/5)" の接頭辞を付ける
     const prefix = (total && total > 1) ? `(${index}/${total}) ` : "";
 
     return new Promise((resolve) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `${API_BASE}/upload`);
 
-        // アップロード進捗イベント
         xhr.upload.addEventListener("progress", (e) => {
             if (!e.lengthComputable) return;
             const pct = Math.round((e.loaded / e.total) * 100);
@@ -2774,17 +2784,14 @@ function uploadFileData(file, index, total, targetPath, skipReload) {
             if (label) label.textContent = `${prefix}${file.name}  ${pct}%`;
         });
 
-        // 完了
         xhr.addEventListener("load", async () => {
             if (bar)  bar.style.display = "none";
             if (fill) fill.style.width  = "0%";
 
             if (xhr.status >= 200 && xhr.status < 300) {
-                // 単体アップロード時のみ個別トースト（複数時はまとめて出す）
                 if (!total || total === 1) {
                     notify(t("upload_success", { name: file.name }));
                 }
-                // バッチ（フォルダ丸ごと等）では呼び出し側が最後にまとめて再描画する
                 if (!skipReload) {
                     await loadFiles();
                     await loadStorage();
@@ -2801,7 +2808,6 @@ function uploadFileData(file, index, total, targetPath, skipReload) {
             }
         });
 
-        // ネットワークエラー
         xhr.addEventListener("error", () => {
             if (bar) bar.style.display = "none";
             notify(t("upload_failed", { name: file.name }));
@@ -2809,6 +2815,101 @@ function uploadFileData(file, index, total, targetPath, skipReload) {
         });
 
         xhr.send(formData);
+    });
+}
+
+// 5MB超の大容量分割アップロード
+function uploadFileDataChunked(file, index, total, targetPath, skipReload, chunkSize) {
+    const totalChunks = Math.ceil(file.size / chunkSize);
+    const cleanName = file.name.replace(/[^a-zA-Z0-9_-]/g, "");
+    const identifier = `${cleanName}-${file.size}-${Date.now()}`;
+    const safePath = targetPath !== undefined ? targetPath : _currentPath;
+    const prefix = (total && total > 1) ? `(${index}/${total}) ` : "";
+
+    _ensureUploadProgressUI();
+    const bar   = document.getElementById("uploadProgress");
+    const fill  = document.getElementById("uploadProgressFill");
+    const label = document.getElementById("uploadProgressLabel");
+
+    return new Promise(async (resolve) => {
+        let chunkNumber = 1;
+        let success = true;
+        const chunkLoaded = new Array(totalChunks).fill(0);
+
+        while (chunkNumber <= totalChunks && success) {
+            const start = (chunkNumber - 1) * chunkSize;
+            const end = Math.min(start + chunkSize, file.size);
+            const chunk = file.slice(start, end);
+
+            const formData = new FormData();
+            formData.append("file", chunk);
+            formData.append("path", safePath);
+            formData.append("filename", file.name);
+            formData.append("chunkNumber", chunkNumber);
+            formData.append("totalChunks", totalChunks);
+            formData.append("identifier", identifier);
+
+            const currChunkNum = chunkNumber; // 進捗コールバック用
+
+            success = await new Promise((resolveChunk) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open("POST", `${API_BASE}/upload/chunk`);
+
+                // チャンク送信進捗
+                xhr.upload.addEventListener("progress", (e) => {
+                    if (!e.lengthComputable) return;
+                    chunkLoaded[currChunkNum - 1] = e.loaded;
+
+                    // 全体の送信進捗計算
+                    const totalLoaded = chunkLoaded.reduce((acc, val) => acc + val, 0);
+                    const pct = Math.round((totalLoaded / file.size) * 100);
+
+                    if (bar)   bar.style.display = "block";
+                    if (fill)  fill.style.width  = pct + "%";
+                    if (label) label.textContent = `${prefix}${file.name} (${t("upload_chunk_progress")} ${currChunkNum}/${totalChunks}) ${pct}%`;
+                });
+
+                xhr.addEventListener("load", () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        chunkLoaded[currChunkNum - 1] = end - start;
+                        resolveChunk(true);
+                    } else {
+                        let msg = `${file.name}: 分割データの送信に失敗しました`;
+                        try {
+                            const err = JSON.parse(xhr.responseText);
+                            if (err && err.detail) msg = `${file.name}: ${err.detail}`;
+                        } catch (_) {}
+                        notify(msg);
+                        resolveChunk(false);
+                    }
+                });
+
+                xhr.addEventListener("error", () => {
+                    notify(t("upload_failed", { name: file.name }));
+                    resolveChunk(false);
+                });
+
+                xhr.send(formData);
+            });
+
+            chunkNumber++;
+        }
+
+        if (bar)  bar.style.display = "none";
+        if (fill) fill.style.width  = "0%";
+
+        if (success) {
+            if (!total || total === 1) {
+                notify(t("upload_success", { name: file.name }));
+            }
+            if (!skipReload) {
+                await loadFiles();
+                await loadStorage();
+            }
+            resolve(true);
+        } else {
+            resolve(false);
+        }
     });
 }
 
